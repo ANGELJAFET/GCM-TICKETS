@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Environment variables (sensitive data)
+.env
+
+# Uploads and backups (local data)
+uploads/
+backups/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+dist/
+build/

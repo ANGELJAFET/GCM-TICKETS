@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 420" fill="white">
+
+  <!-- Antenas largas -->
+  <path d="M88,88 Q44,38 12,6"     stroke="white" stroke-width="4"   fill="none" stroke-linecap="round"/>
+  <path d="M92,94 Q50,50 20,22"    stroke="white" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+
+  <!-- Antenulas cortas -->
+  <path d="M83,85 Q60,62 46,52"    stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M83,85 Q62,66 50,58"    stroke="white" stroke-width="2"   fill="none" stroke-linecap="round"/>
+
+  <!-- Ojos -->
+  <circle cx="86" cy="100" r="9"/>
+  <circle cx="74" cy="104" r="6"/>
+
+  <!-- Rostrum (pico) -->
+  <polygon points="76,95 42,62 74,93"/>
+
+  <!-- Caparazón (cabeza + tórax fusionados) -->
+  <ellipse cx="148" cy="118" rx="88" ry="48" transform="rotate(-15 148 118)"/>
+
+  <!-- Segmentos abdominales (cada uno más pequeño y más girado) -->
+  <ellipse cx="232" cy="110" rx="50" ry="27" transform="rotate(-8  232 110)"/>
+  <ellipse cx="284" cy="120" rx="44" ry="23" transform="rotate( 6  284 120)"/>
+  <ellipse cx="330" cy="143" rx="38" ry="20" transform="rotate(22  330 143)"/>
+  <ellipse cx="364" cy="176" rx="32" ry="17" transform="rotate(40  364 176)"/>
+  <ellipse cx="388" cy="214" rx="26" ry="14" transform="rotate(58  388 214)"/>
+  <ellipse cx="400" cy="254" rx="21" ry="11" transform="rotate(74  400 254)"/>
+
+  <!-- Telson (pieza central de la cola) -->
+  <ellipse cx="400" cy="295" rx="14" ry="25" transform="rotate(82 400 295)"/>
+
+  <!-- Uropodos — abanico de cola (4 aletas) -->
+  <ellipse cx="440" cy="308" rx="10" ry="38" transform="rotate( 58 440 308)"/>
+  <ellipse cx="423" cy="319" rx="10" ry="34" transform="rotate( 70 423 319)"/>
+  <ellipse cx="383" cy="319" rx="10" ry="34" transform="rotate(110 383 319)"/>
+  <ellipse cx="366" cy="307" rx="10" ry="38" transform="rotate(122 366 307)"/>
+
+  <!-- Patas caminadoras (5 pares bajo el caparazón) -->
+  <g stroke="white" stroke-width="2.5" stroke-linecap="round" fill="none">
+    <line x1="104" y1="152" x2="90"  y2="194"/>
+    <line x1="120" y1="158" x2="108" y2="202"/>
+    <line x1="138" y1="163" x2="129" y2="207"/>
+    <line x1="157" y1="164" x2="151" y2="208"/>
+    <line x1="175" y1="161" x2="173" y2="205"/>
+    <!-- Pinzas en primeras 2 pares -->
+    <line x1="90"  y1="194" x2="83"  y2="202"/>
+    <line x1="90"  y1="194" x2="96"  y2="203"/>
+    <line x1="108" y1="202" x2="101" y2="210"/>
+    <line x1="108" y1="202" x2="114" y2="211"/>
+  </g>
+
+  <!-- Pleópodos (pequeñas nadadoras bajo el abdomen) -->
+  <g stroke="white" stroke-width="2" stroke-linecap="round" fill="none">
+    <line x1="238" y1="130" x2="226" y2="158"/>
+    <line x1="281" y1="140" x2="270" y2="168"/>
+    <line x1="323" y1="160" x2="314" y2="188"/>
+    <line x1="357" y1="189" x2="350" y2="216"/>
+    <line x1="379" y1="226" x2="374" y2="252"/>
+  </g>
+
+</svg>

@@ -1,0 +1,388 @@
+-- ============================================================
+--  GCM Tickets — Script de despliegue de base de datos
+--  Motor : SQL Server 2014 o superior
+--  Uso   : Ejecutar en SSMS (Abrir archivo → F5)
+--          o mediante sqlcmd antes de lanzar la aplicación.
+--
+--  El script es idempotente: se puede ejecutar varias veces
+--  sin pérdida de datos (usa IF NOT EXISTS / IF OBJECT_ID).
+--
+--  Tras ejecutar este script, inicia la app con:
+--      node server.js
+--  El usuario admin se crea automáticamente al primer arranque.
+-- ============================================================
+
+-- ============================================================
+-- 1.  Base de datos
+-- ============================================================
+IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'gcm_tickets')
+  CREATE DATABASE [gcm_tickets];
+GO
+
+USE [gcm_tickets];
+GO
+
+-- ============================================================
+-- 2.  Tablas (orden respeta dependencias FK)
+-- ============================================================
+
+-- ------------------------------------------------------------
+-- 2.1  departamentos
+-- ------------------------------------------------------------
+IF OBJECT_ID('departamentos','U') IS NULL
+CREATE TABLE departamentos (
+  id         INT IDENTITY(1,1) PRIMARY KEY,
+  nombre     NVARCHAR(100) NOT NULL,
+  activo     BIT           NOT NULL DEFAULT 1,
+  created_at DATETIME2     NOT NULL DEFAULT GETDATE()
+);
+GO
+
+-- ------------------------------------------------------------
+-- 2.2  contadores  (secuencias personalizadas para IDs)
+-- ------------------------------------------------------------
+IF OBJECT_ID('contadores','U') IS NULL
+CREATE TABLE contadores (
+  nombre NVARCHAR(50) PRIMARY KEY,
+  valor  INT NOT NULL DEFAULT 0
+);
+GO
+
+-- ------------------------------------------------------------
+-- 2.3  roles  (catálogo normalizado de roles de usuario)
+-- ------------------------------------------------------------
+IF OBJECT_ID('roles','U') IS NULL
+CREATE TABLE roles (
+  id          TINYINT IDENTITY(1,1) PRIMARY KEY,
+  nombre      NVARCHAR(20)  NOT NULL,
+  nivel       TINYINT       NOT NULL,   -- 1=empleado 2=tecnico 3=admin 4=superadmin
+  descripcion NVARCHAR(200),
+  CONSTRAINT UQ_roles_nombre UNIQUE (nombre)
+);
+GO
+
+-- ------------------------------------------------------------
+-- 2.4  usuarios
+-- ------------------------------------------------------------
+IF OBJECT_ID('usuarios','U') IS NULL
+CREATE TABLE usuarios (
+  id                    INT IDENTITY(1,1) PRIMARY KEY,
+  username              NVARCHAR(100) NOT NULL,
+  email                 NVARCHAR(255),
+  password_hash         NVARCHAR(255),
+  nombre                NVARCHAR(100) NOT NULL,
+  apellido              NVARCHAR(100),
+  telefono              NVARCHAR(20),
+  departamento_id       INT     REFERENCES departamentos(id),
+  rol_id                TINYINT NOT NULL DEFAULT 1 REFERENCES roles(id),
+  activo                BIT     NOT NULL DEFAULT 1,
+  registro_aprobado     BIT     NOT NULL DEFAULT 0,
+  registro_aprobado_por INT,
+  registro_aprobado_en  DATETIME2,
+  created_by            INT,
+  ultimo_login          DATETIME2,
+  created_at            DATETIME2 NOT NULL DEFAULT GETDATE(),
+  updated_at            DATETIME2,
+  email_verificado      BIT       NOT NULL DEFAULT 1,   -- 1 = cuentas existentes/admin ya verificadas
+  CONSTRAINT UQ_usuarios_username UNIQUE (username)
+);
+GO
+
+-- Índice único en email (permite varios NULL)
+IF NOT EXISTS (
+  SELECT 1 FROM sys.indexes
+  WHERE name = 'IX_usuarios_email' AND object_id = OBJECT_ID('usuarios')
+)
+  CREATE UNIQUE INDEX IX_usuarios_email ON usuarios(email) WHERE email IS NOT NULL;
+GO
+
+-- ------------------------------------------------------------
+-- 2.5  dispositivos  (equipos recibidos en taller)
+-- ------------------------------------------------------------
+IF OBJECT_ID('dispositivos','U') IS NULL
+CREATE TABLE dispositivos (
+  id             NVARCHAR(20)  PRIMARY KEY,
+  ticket_id      NVARCHAR(20),
+  tipo           NVARCHAR(100) NOT NULL,
+  marca          NVARCHAR(100) NOT NULL,
+  modelo         NVARCHAR(100),
+  numero_serie   NVARCHAR(200),
+  estado_fisico  NVARCHAR(20)  DEFAULT 'bueno',
+  falla_cliente  NVARCHAR(MAX),
+  accesorios     NVARCHAR(MAX),
+  cliente_nombre NVARCHAR(200),
+  cliente_tel    NVARCHAR(50),
+  tecnico_id     INT REFERENCES usuarios(id),
+  created_at     DATETIME2     NOT NULL DEFAULT GETDATE(),
+  updated_at     DATETIME2
+);
+GO
+
+-- ------------------------------------------------------------
+-- 2.6  tickets
+-- ------------------------------------------------------------
+IF OBJECT_ID('tickets','U') IS NULL
+CREATE TABLE tickets (
+  id              NVARCHAR(20)  PRIMARY KEY,
+  titulo          NVARCHAR(500) NOT NULL,
+  descripcion     NVARCHAR(MAX),
+  status          NVARCHAR(20)  NOT NULL DEFAULT 'abierto',
+  prioridad       NVARCHAR(20)  NOT NULL DEFAULT 'Media',
+  categoria       NVARCHAR(50)  NOT NULL DEFAULT 'Otro',
+  reporter_nombre NVARCHAR(200),
+  asignado_id     INT REFERENCES usuarios(id),
+  device_id       NVARCHAR(20),
+  created_at      DATETIME2     NOT NULL DEFAULT GETDATE(),
+  updated_at      DATETIME2,
+  closed_at       DATETIME2
+);
+GO
+
+-- ------------------------------------------------------------
+-- 2.7  comentarios
+-- ------------------------------------------------------------
+IF OBJECT_ID('comentarios','U') IS NULL
+CREATE TABLE comentarios (
+  id           INT IDENTITY(1,1) PRIMARY KEY,
+  ticket_id    NVARCHAR(20)  NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
+  autor_nombre NVARCHAR(200),
+  texto        NVARCHAR(MAX) NOT NULL,
+  es_interno   BIT           NOT NULL DEFAULT 0,
+  created_at   DATETIME2     NOT NULL DEFAULT GETDATE()
+);
+GO
+
+-- ------------------------------------------------------------
+-- 2.8  historial_tickets
+-- ------------------------------------------------------------
+IF OBJECT_ID('historial_tickets','U') IS NULL
+CREATE TABLE historial_tickets (
+  id               INT IDENTITY(1,1) PRIMARY KEY,
+  ticket_id        NVARCHAR(20)  NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
+  usuario_nombre   NVARCHAR(200),
+  accion           NVARCHAR(500),
+  campo_modificado NVARCHAR(100),
+  valor_anterior   NVARCHAR(500),
+  valor_nuevo      NVARCHAR(500),
+  created_at       DATETIME2     NOT NULL DEFAULT GETDATE()
+);
+GO
+
+-- ------------------------------------------------------------
+-- 2.9  adjuntos  (archivos adjuntos a tickets)
+-- ------------------------------------------------------------
+IF OBJECT_ID('adjuntos','U') IS NULL
+CREATE TABLE adjuntos (
+  id              INT IDENTITY(1,1) PRIMARY KEY,
+  ticket_id       NVARCHAR(20)  NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
+  nombre_original NVARCHAR(500),
+  nombre_archivo  NVARCHAR(500),
+  ruta            NVARCHAR(500),
+  tipo_mime       NVARCHAR(100),
+  tamano_bytes    BIGINT,
+  created_at      DATETIME2     NOT NULL DEFAULT GETDATE()
+);
+GO
+
+-- ------------------------------------------------------------
+-- 2.10  inventario  (equipos del inventario TI)
+-- ------------------------------------------------------------
+IF OBJECT_ID('inventario','U') IS NULL
+CREATE TABLE inventario (
+  id             NVARCHAR(20)  PRIMARY KEY,
+  tipo           NVARCHAR(100) NOT NULL,
+  marca          NVARCHAR(100) NOT NULL,
+  modelo         NVARCHAR(100),
+  numero_serie   NVARCHAR(200),
+  color          NVARCHAR(100),
+  condicion      NVARCHAR(20)  DEFAULT 'bueno',
+  estado         NVARCHAR(20)  DEFAULT 'disponible',
+  ubicacion      NVARCHAR(200),
+  responsable_id INT REFERENCES usuarios(id),
+  notas          NVARCHAR(MAX),
+  garantia       NVARCHAR(500),
+  fecha_ingreso  DATE,
+  created_at     DATETIME2     NOT NULL DEFAULT GETDATE(),
+  updated_at     DATETIME2
+);
+GO
+
+-- ------------------------------------------------------------
+-- 2.11  historial_inventario
+-- ------------------------------------------------------------
+IF OBJECT_ID('historial_inventario','U') IS NULL
+CREATE TABLE historial_inventario (
+  id            INT IDENTITY(1,1) PRIMARY KEY,
+  inventario_id NVARCHAR(20)  NOT NULL REFERENCES inventario(id),
+  usuario_id    INT REFERENCES usuarios(id),
+  accion        NVARCHAR(500),
+  created_at    DATETIME2     NOT NULL DEFAULT GETDATE()
+);
+GO
+
+-- ------------------------------------------------------------
+-- 2.12  prestamos
+-- ------------------------------------------------------------
+IF OBJECT_ID('prestamos','U') IS NULL
+CREATE TABLE prestamos (
+  id                        NVARCHAR(20)  PRIMARY KEY,
+  inventario_id             NVARCHAR(20)  NOT NULL REFERENCES inventario(id),
+  empleado_id               INT REFERENCES usuarios(id),
+  empleado_nombre           NVARCHAR(200),
+  departamento              NVARCHAR(100),
+  fecha_prestamo            DATETIME2     NOT NULL DEFAULT GETDATE(),
+  fecha_devolucion_estimada DATE,
+  fecha_devolucion_real     DATETIME2,
+  estado                    NVARCHAR(20)  DEFAULT 'activo',
+  autorizado_por_id         INT REFERENCES usuarios(id),
+  notas                     NVARCHAR(MAX),
+  created_at                DATETIME2     NOT NULL DEFAULT GETDATE()
+);
+GO
+
+-- ------------------------------------------------------------
+-- 2.13  solicitudes_registro  (peticiones de acceso de empleados)
+-- ------------------------------------------------------------
+IF OBJECT_ID('solicitudes_registro','U') IS NULL
+CREATE TABLE solicitudes_registro (
+  id                   INT IDENTITY(1,1) PRIMARY KEY,
+  nombre               NVARCHAR(100) NOT NULL,
+  apellido             NVARCHAR(100),
+  email                NVARCHAR(255),
+  username             NVARCHAR(100) NOT NULL,
+  password_hash        NVARCHAR(255),
+  telefono             NVARCHAR(20),
+  departamento_id      INT REFERENCES departamentos(id),
+  departamento_nombre  NVARCHAR(255) NULL,
+  mensaje              NVARCHAR(MAX),
+  estado               NVARCHAR(20)  NOT NULL DEFAULT 'pendiente',
+  revisado_por         INT REFERENCES usuarios(id),
+  revisado_en          DATETIME2,
+  motivo_rechazo       NVARCHAR(500),
+  created_at           DATETIME2 NOT NULL DEFAULT GETDATE()
+);
+GO
+
+-- ------------------------------------------------------------
+-- 2.14  auditoria  (bitácora de acciones administrativas)
+-- ------------------------------------------------------------
+IF OBJECT_ID('auditoria','U') IS NULL
+CREATE TABLE auditoria (
+  id           INT IDENTITY(1,1) PRIMARY KEY,
+  fecha        DATETIME2    NOT NULL DEFAULT GETDATE(),
+  actor        NVARCHAR(150),
+  accion       NVARCHAR(300) NOT NULL,
+  entidad      NVARCHAR(50),
+  entidad_id   NVARCHAR(50),
+  detalle      NVARCHAR(MAX)
+);
+GO
+
+-- ============================================================
+-- 3.  Datos iniciales (seeds)
+-- ============================================================
+
+-- Roles (requerido antes de insertar usuarios)
+IF NOT EXISTS (SELECT 1 FROM roles WHERE nombre = 'empleado')
+  INSERT INTO roles (nombre, nivel, descripcion) VALUES
+    (N'empleado',   1, N'Portal empleados: crea y consulta sus tickets'),
+    (N'tecnico',    2, N'Panel admin: gestiona tickets asignados'),
+    (N'admin',      3, N'Panel admin: gestión completa del sistema'),
+    (N'superadmin', 4, N'Panel admin: control total sin restricciones');
+GO
+
+-- Departamentos
+IF NOT EXISTS (SELECT 1 FROM departamentos WHERE nombre = N'Sistemas / TI')
+  INSERT INTO departamentos (nombre) VALUES
+    (N'Sistemas / TI'),
+    (N'Administración'),
+    (N'Recursos Humanos'),
+    (N'Contabilidad'),
+    (N'Ventas'),
+    (N'Operaciones'),
+    (N'Gerencia');
+GO
+
+-- Contadores de secuencia
+IF NOT EXISTS (SELECT 1 FROM contadores WHERE nombre = 'tickets')      INSERT INTO contadores VALUES ('tickets',      0);
+IF NOT EXISTS (SELECT 1 FROM contadores WHERE nombre = 'dispositivos') INSERT INTO contadores VALUES ('dispositivos', 0);
+IF NOT EXISTS (SELECT 1 FROM contadores WHERE nombre = 'inventario')   INSERT INTO contadores VALUES ('inventario',   0);
+IF NOT EXISTS (SELECT 1 FROM contadores WHERE nombre = 'prestamos')    INSERT INTO contadores VALUES ('prestamos',    0);
+GO
+
+-- ============================================================
+-- 4.  Migración: rol TEXT → rol_id FK  (solo BDs antiguas)
+--     Si la BD ya tiene rol_id estas sentencias no hacen nada.
+-- ============================================================
+
+-- 4.1  Añadir columna rol_id si aún no existe
+IF NOT EXISTS (
+  SELECT 1 FROM sys.columns
+  WHERE object_id = OBJECT_ID('usuarios') AND name = 'rol_id'
+)
+  ALTER TABLE usuarios ADD rol_id TINYINT NULL;
+GO
+
+-- 4.2  Poblar rol_id desde el texto antiguo
+IF EXISTS (
+  SELECT 1 FROM sys.columns
+  WHERE object_id = OBJECT_ID('usuarios') AND name = 'rol'
+)
+BEGIN
+  EXEC('UPDATE u SET u.rol_id = r.id FROM usuarios u JOIN roles r ON r.nombre = u.rol WHERE u.rol_id IS NULL');
+  EXEC('UPDATE usuarios SET rol_id = 1 WHERE rol_id IS NULL');
+END
+GO
+
+-- 4.3  DEFAULT 1 para rol_id
+IF NOT EXISTS (
+  SELECT 1 FROM sys.default_constraints dc
+  JOIN sys.columns c ON dc.parent_object_id = c.object_id
+                    AND dc.parent_column_id  = c.column_id
+  WHERE c.object_id = OBJECT_ID('usuarios') AND c.name = 'rol_id'
+)
+  ALTER TABLE usuarios ADD DEFAULT 1 FOR rol_id;
+GO
+
+-- 4.4  Hacer NOT NULL
+IF EXISTS (
+  SELECT 1 FROM sys.columns
+  WHERE object_id = OBJECT_ID('usuarios') AND name = 'rol_id' AND is_nullable = 1
+)
+  ALTER TABLE usuarios ALTER COLUMN rol_id TINYINT NOT NULL;
+GO
+
+-- 4.5  FK hacia roles (si no existe ninguna en esa columna)
+IF NOT EXISTS (
+  SELECT 1 FROM sys.foreign_keys f
+  JOIN sys.foreign_key_columns fc ON f.object_id = fc.constraint_object_id
+  JOIN sys.columns c ON fc.parent_object_id = c.object_id
+                    AND fc.parent_column_id  = c.column_id
+  WHERE c.object_id = OBJECT_ID('usuarios') AND c.name = 'rol_id'
+)
+  ALTER TABLE usuarios ADD CONSTRAINT FK_usuarios_rol_id
+    FOREIGN KEY (rol_id) REFERENCES roles(id);
+GO
+
+-- 4.6  Eliminar columna antigua 'rol'
+IF EXISTS (
+  SELECT 1 FROM sys.columns
+  WHERE object_id = OBJECT_ID('usuarios') AND name = 'rol'
+)
+BEGIN
+  DECLARE @con NVARCHAR(200);
+  SELECT @con = dc.name
+    FROM sys.default_constraints dc
+    JOIN sys.columns c ON dc.parent_object_id = c.object_id
+                      AND dc.parent_column_id  = c.column_id
+   WHERE c.object_id = OBJECT_ID('usuarios') AND c.name = 'rol';
+  IF @con IS NOT NULL EXEC('ALTER TABLE usuarios DROP CONSTRAINT ' + @con);
+  ALTER TABLE usuarios DROP COLUMN rol;
+END
+GO
+
+-- ============================================================
+-- Fin del script
+-- Siguiente paso: node server.js
+-- El usuario admin se crea automáticamente al primer arranque.
+-- ============================================================

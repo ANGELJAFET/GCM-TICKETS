@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GCM Tickets — Panel Administrativo | Grupo Milcien</title>
+  <link rel="icon" type="image/jpeg" href="gcm.jpg">
+  <link rel="apple-touch-icon" href="gcm.jpg">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+  <link rel="stylesheet" href="admin.css">
+  <script>
+    (function(){
+      var d = localStorage.getItem('gcm_dark') === '1';
+      if (d) document.documentElement.setAttribute('data-theme','dark');
+    })();
+  </script>
+</head>
+<body>
+
+<!-- ── Login ── -->
+<div id="loginScreen">
+  <div class="adm-orb adm-orb-1"></div>
+  <div class="adm-orb adm-orb-2"></div>
+  <div class="adm-orb adm-orb-3"></div>
+  <img src="camaron.svg" class="adm-shrimp adm-shrimp-1" aria-hidden="true">
+  <img src="camaron.svg" class="adm-shrimp adm-shrimp-2" aria-hidden="true">
+  <img src="camaron.svg" class="adm-shrimp adm-shrimp-3" aria-hidden="true">
+
+  <div class="login-card">
+
+    <!-- Panel izquierdo: marca -->
+    <div class="adm-brand">
+      <div class="adm-brand-accent"></div>
+      <img src="gcm.jpg" alt="GCM Grupo Milcien" class="login-logo">
+      <div class="adm-brand-title">GCM Tickets</div>
+      <div class="adm-brand-sub">Panel Administrativo<br>Grupo Milcien S.A. de C.V.</div>
+      <div class="adm-brand-badge">
+        <i class="ti ti-shield-lock"></i> Acceso restringido
+      </div>
+    </div>
+
+    <!-- Panel derecho: formulario -->
+    <div class="adm-form">
+      <div class="adm-form-title">Iniciar sesión</div>
+      <div class="adm-form-sub">Solo personal de TI autorizado</div>
+      <div class="login-field">
+        <label>Usuario</label>
+        <input id="loginUser" type="text" placeholder="admin" autocomplete="username">
+      </div>
+      <div class="login-field">
+        <label>Contraseña</label>
+        <input id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <div class="login-error" id="loginError">
+        <i class="ti ti-alert-circle" aria-hidden="true"></i> Usuario o contraseña incorrectos
+      </div>
+      <button class="btn-login" onclick="doLogin()">
+        <i class="ti ti-login" aria-hidden="true"></i> Ingresar al sistema
+      </button>
+      <p class="adm-hint"><i class="ti ti-lock"></i> Sesión cifrada y protegida</p>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Main App ── -->
+<div id="mainApp">
+
+  <div class="header">
+    <div class="header-left">
+      <img src="gcm.jpg" alt="GCM Grupo Milcien" class="header-logo-admin">
+      <h1>GCM Tickets</h1>
+      <span class="admin-badge" id="adminBadge">ADMIN</span>
+    </div>
+    <div class="header-right">
+      <button class="icon-btn" title="Gestionar usuarios admin" onclick="openAdminManager()">
+        <i class="ti ti-users-group" aria-hidden="true"></i>
+      </button>
+      <div style="position:relative">
+        <button class="notif-btn" id="notifBtn" onclick="toggleNotifications()" title="Notificaciones">
+          <i class="ti ti-bell" aria-hidden="true"></i>
+          <span class="notif-dot" id="notifDot" style="display:none"></span>
+        </button>
+        <div class="notif-panel" id="notifPanel">
+          <div class="np-header">
+            <span class="np-header-title"><i class="ti ti-bell"></i> Notificaciones</span>
+            <button class="np-clear-btn" onclick="clearNotifs()" title="Limpiar todo">
+              <i class="ti ti-trash"></i>
+            </button>
+          </div>
+          <div class="np-body" id="notifPanelBody"></div>
+        </div>
+      </div>
+      <button class="user-portal-link" id="usuariosHeaderBtn" onclick="toggleUsuarios()" title="Gestión de usuarios">
+        <i class="ti ti-address-book" aria-hidden="true"></i> Usuarios
+        <span class="count" id="cnt-usuarios" style="background:rgba(255,255,255,0.25);color:white"></span>
+      </button>
+      <button class="user-portal-link" id="auditoriaHeaderBtn" onclick="toggleAuditoria()" title="Bitácora del sistema">
+        <i class="ti ti-history" aria-hidden="true"></i> Bitácora
+      </button>
+      <button class="user-portal-link" id="inventarioHeaderBtn" onclick="toggleInventario()" title="Inventario de equipos">
+        <i class="ti ti-package" aria-hidden="true"></i> Inventario
+        <span class="count" id="cnt-inventario" style="background:rgba(255,255,255,0.25);color:white">0</span>
+      </button>
+      <a href="usuario.html" class="user-portal-link">
+        <i class="ti ti-users" aria-hidden="true"></i> Portal empleados
+      </a>
+      <button class="icon-btn" id="darkModeBtn" onclick="toggleDarkMode()" title="Modo oscuro / claro">
+        <i class="ti ti-moon" aria-hidden="true"></i>
+      </button>
+      <button class="icon-btn" title="Cerrar sesión" onclick="logout()">
+        <i class="ti ti-logout" aria-hidden="true"></i>
+      </button>
+    </div>
+  </div>
+
+  <div class="ion-toolbar">
+    <button class="tab-btn active" onclick="setTab('todos',this)">
+      <i class="ti ti-layout-list" aria-hidden="true"></i> Todos
+      <span class="count" id="cnt-todos">0</span>
+    </button>
+    <button class="tab-btn" onclick="setTab('abierto',this)">
+      <i class="ti ti-circle-dot" aria-hidden="true"></i> Abiertos
+      <span class="count" id="cnt-abierto">0</span>
+    </button>
+    <button class="tab-btn" onclick="setTab('en_progreso',this)">
+      <i class="ti ti-loader" aria-hidden="true"></i> En progreso
+      <span class="count" id="cnt-en_progreso">0</span>
+    </button>
+    <button class="tab-btn" onclick="setTab('cerrado',this)">
+      <i class="ti ti-circle-check" aria-hidden="true"></i> Cerrados
+      <span class="count" id="cnt-cerrado">0</span>
+    </button>
+  </div>
+
+  <div class="filter-row" id="filterRow">
+    <div class="search-wrap">
+      <i class="ti ti-search" aria-hidden="true"></i>
+      <input class="search-box" id="searchInput" type="text" placeholder="Buscar tickets..." oninput="currentPage=1;renderList()">
+    </div>
+    <select class="filter-select" id="prioridad" onchange="currentPage=1;renderList()">
+      <option value="">Prioridad</option>
+      <option value="Crítica">Crítica</option>
+      <option value="Alta">Alta</option>
+      <option value="Media">Media</option>
+      <option value="Baja">Baja</option>
+    </select>
+    <select class="filter-select" id="categoria" onchange="currentPage=1;renderList()">
+      <option value="">Categoría</option>
+      <option value="Hardware">Hardware</option>
+      <option value="Software">Software</option>
+      <option value="Red">Red</option>
+      <option value="Acceso">Acceso</option>
+      <option value="Otro">Otro</option>
+    </select>
+    <select class="filter-select" id="filterAsignado" onchange="currentPage=1;renderList()">
+      <option value="">Técnico</option>
+      <option value="Sin asignar">Sin asignar</option>
+    </select>
+    <input class="filter-date" id="dateFrom" type="date" title="Desde" onchange="currentPage=1;renderList()">
+    <input class="filter-date" id="dateTo"   type="date" title="Hasta" onchange="currentPage=1;renderList()">
+    <button class="btn-clear-filters" onclick="clearFilters()" title="Limpiar filtros">
+      <i class="ti ti-filter-off" aria-hidden="true"></i>
+    </button>
+    <button class="btn-export" onclick="exportToExcel()">
+      <i class="ti ti-file-spreadsheet" aria-hidden="true"></i> Excel
+    </button>
+  </div>
+
+  <div class="ion-content">
+    <div class="stats-grid" id="statsGrid"></div>
+
+    <!-- Dashboard de gráficas -->
+    <div class="charts-section" id="chartsSection" style="display:none">
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-title"><i class="ti ti-chart-donut" aria-hidden="true"></i> Por estado</div>
+          <canvas id="chartStatus" height="200"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title"><i class="ti ti-chart-bar" aria-hidden="true"></i> Por técnico</div>
+          <canvas id="chartTech" height="200"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title"><i class="ti ti-chart-pie" aria-hidden="true"></i> Por categoría</div>
+          <canvas id="chartCat" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="tickets-list" id="ticketsList"></div>
+    <div class="pagination" id="pagination"></div>
+    <div id="receptionSection" style="display:none"></div>
+    <div id="auditSection"    style="display:none"></div>
+  </div>
+
+</div>
+
+<!-- ── Detail panel ── -->
+<div class="overlay-dim" id="dim" onclick="closeDetail()"></div>
+<div class="detail-panel" id="detailPanel">
+  <div class="detail-header">
+    <button class="icon-btn" style="width:32px;height:32px;font-size:17px" onclick="closeDetail()">
+      <i class="ti ti-x" aria-hidden="true"></i>
+    </button>
+    <h2 id="detailTitle">Detalle</h2>
+    <span id="detailBadge"></span>
+  </div>
+  <div class="detail-tabs">
+    <button class="dtab active" onclick="switchDetailTab('info',this)">
+      <i class="ti ti-info-circle" aria-hidden="true"></i> Info
+    </button>
+    <button class="dtab" onclick="switchDetailTab('notes',this)">
+      <i class="ti ti-lock" aria-hidden="true"></i> Notas internas
+    </button>
+    <button class="dtab" onclick="switchDetailTab('history',this)">
+      <i class="ti ti-history" aria-hidden="true"></i> Historial
+    </button>
+  </div>
+  <div class="detail-body" id="detailBody"></div>
+</div>
+
+<!-- ── Modal gestión de admins ── -->
+<div class="modal-backdrop" id="adminManagerBackdrop">
+  <div class="modal" style="width:480px">
+    <div class="modal-header">
+      <h2><i class="ti ti-users-group" aria-hidden="true"></i> Usuarios administradores</h2>
+      <button class="icon-btn" onclick="closeAdminManager()" aria-label="Cerrar">
+        <i class="ti ti-x" aria-hidden="true"></i>
+      </button>
+    </div>
+    <div class="modal-body" style="gap:20px">
+
+      <!-- Lista de admins actuales -->
+      <div>
+        <div class="amgr-section-title">Usuarios existentes</div>
+        <div id="adminList"></div>
+      </div>
+
+      <!-- Formulario crear admin (solo visible para admin) -->
+      <div id="amCreateSection">
+        <div class="amgr-section-title">Crear nuevo usuario</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div class="field-row">
+            <div class="field-group">
+              <label>Nombre completo *</label>
+              <input id="am-nombre" type="text" placeholder="Ej: Carlos Martínez">
+            </div>
+            <div class="field-group">
+              <label>Usuario *</label>
+              <input id="am-user" type="text" placeholder="Ej: carlos" autocomplete="off">
+            </div>
+          </div>
+          <div class="field-group">
+            <label>Contraseña *</label>
+            <input id="am-pass" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+          </div>
+          <div id="amError" class="login-error"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-action btn-cancel" onclick="closeAdminManager()">Cerrar</button>
+      <button class="btn-action btn-primary" id="amCreateBtn" onclick="createAdmin()">
+        <i class="ti ti-user-plus" aria-hidden="true"></i> Crear usuario
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Nuevo / Editar equipo de inventario ── -->
+<div class="modal-backdrop" id="inventoryModalBackdrop">
+  <div class="modal" style="width:580px">
+    <div class="modal-header">
+      <h2 id="invModalTitle"><i class="ti ti-package" aria-hidden="true"></i> Nuevo equipo</h2>
+      <button class="icon-btn" onclick="closeInventoryModal()" aria-label="Cerrar">
+        <i class="ti ti-x" aria-hidden="true"></i>
+      </button>
+    </div>
+    <div class="modal-body" style="gap:14px" id="inventoryModalBody">
+      <!-- filled by JS -->
+    </div>
+    <div class="modal-footer">
+      <button class="btn-action btn-cancel" onclick="closeInventoryModal()">Cancelar</button>
+      <button class="btn-action btn-primary" id="invModalSaveBtn" onclick="saveInventoryItem()">
+        <i class="ti ti-device-floppy"></i> Guardar equipo
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Nuevo préstamo ── -->
+<div class="modal-backdrop" id="loanModalBackdrop">
+  <div class="modal" style="width:500px">
+    <div class="modal-header">
+      <h2><i class="ti ti-exchange" aria-hidden="true"></i> Registrar préstamo</h2>
+      <button class="icon-btn" onclick="closeLoanModal()" aria-label="Cerrar">
+        <i class="ti ti-x" aria-hidden="true"></i>
+      </button>
+    </div>
+    <div class="modal-body" style="gap:14px" id="loanModalBody">
+      <!-- filled by JS -->
+    </div>
+    <div class="modal-footer">
+      <button class="btn-action btn-cancel" onclick="closeLoanModal()">Cancelar</button>
+      <button class="btn-action btn-primary" onclick="saveLoan()">
+        <i class="ti ti-check"></i> Registrar préstamo
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<!-- ── Modal: Detalle de usuario ── -->
+<div class="modal-backdrop" id="usrDetailBackdrop">
+  <div class="modal" style="width:480px">
+    <div class="modal-header">
+      <h3 class="modal-title" id="usrDetailTitle"><i class="ti ti-user-circle"></i> Detalle de usuario</h3>
+      <button class="modal-close" onclick="closeUsrDetail()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body" id="usrDetailBody"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GCM Tickets — Portal de Soporte | Grupo Milcien</title>
+  <link rel="icon" type="image/jpeg" href="gcm.jpg">
+  <link rel="apple-touch-icon" href="gcm.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+  <link rel="stylesheet" href="usuario.css?v=2">
+  <script>
+    (function(){
+      var d = localStorage.getItem('gcm_dark') === '1';
+      if (d) document.documentElement.setAttribute('data-theme','dark');
+    })();
+  </script>
+</head>
+<body>
+
+<!-- ── Pantalla de identificación ── -->
+<div class="ident-screen" id="identScreen">
+  <div class="ident-orb ident-orb-1"></div>
+  <div class="ident-orb ident-orb-2"></div>
+  <div class="ident-orb ident-orb-3"></div>
+  <img src="camaron.svg" class="ident-shrimp ident-shrimp-1" aria-hidden="true">
+  <img src="camaron.svg" class="ident-shrimp ident-shrimp-2" aria-hidden="true">
+  <img src="camaron.svg" class="ident-shrimp ident-shrimp-3" aria-hidden="true">
+  <div class="ident-card">
+
+    <!-- Panel izquierdo: marca -->
+    <div class="ident-brand">
+      <div class="ident-brand-ring"></div>
+      <img src="gcm.jpg" alt="GCM Grupo Milcien" class="ident-logo">
+      <div class="ident-brand-title">GCM Tickets</div>
+      <div class="ident-brand-sub">Portal de Soporte Técnico<br>Grupo Milcien S.A. de C.V.</div>
+      <div class="ident-brand-badge">
+        <i class="ti ti-shield-check"></i> Sistema interno corporativo
+      </div>
+    </div>
+
+    <!-- Panel derecho: formulario -->
+    <div class="ident-form">
+      <div class="ident-form-title">Bienvenido</div>
+      <div class="ident-form-sub">Ingresa tus credenciales para continuar</div>
+      <div class="ident-field">
+        <label>Usuario</label>
+        <input id="loginUsername" type="text" placeholder="jlopez" autocomplete="username"
+               onkeydown="if(event.key==='Enter') document.getElementById('loginPassword').focus()">
+      </div>
+      <div class="ident-field">
+        <label>Contraseña</label>
+        <input id="loginPassword" type="password" placeholder="••••••••" autocomplete="current-password"
+               onkeydown="if(event.key==='Enter') doLogin()">
+      </div>
+      <div class="ident-error" id="identError"></div>
+      <button class="ident-btn" id="loginBtn" onclick="doLogin()">
+        <i class="ti ti-login" aria-hidden="true"></i> Iniciar sesión
+      </button>
+      <p class="ident-register-p">
+        ¿Sin cuenta? <a href="registro.html" class="ident-register-link">Solicitar acceso</a>
+      </p>
+    </div>
+
+  </div>
+</div>
+
+<header class="header">
+  <div class="header-left">
+    <img src="gcm.jpg" alt="GCM Grupo Milcien" class="header-logo">
+    <div class="header-brand">
+      <span class="brand-name">GCM Tickets</span>
+      <span class="brand-tag">Grupo Milcien S.A. de C.V. — Soporte Técnico</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <button class="icon-btn" id="darkModeBtn" onclick="toggleDarkMode()" title="Modo oscuro / claro">
+      <i class="ti ti-moon" aria-hidden="true"></i>
+    </button>
+    <button class="logout-shrimp-btn" onclick="changeIdentity()" title="Cerrar sesión" aria-label="Cerrar sesión">
+      <img src="camaron.svg" class="logout-shrimp-img" aria-hidden="true">
+    </button>
+    <div class="user-chip" title="Usuario activo" style="cursor:default">
+      <i class="ti ti-user-circle" aria-hidden="true"></i>
+      <span id="nombreUsuario">—</span>
+    </div>
+  </div>
+</header>
+
+<div class="page">
+
+  <!-- Hero banner -->
+  <div class="hero-card">
+    <div class="hero-glow"></div>
+    <div class="hero-body">
+      <div class="hero-icon-wrap">
+        <img src="gcm.jpg" alt="GCM Grupo Milcien" class="hero-logo-icon">
+      </div>
+      <div class="hero-text">
+        <div class="hero-label">
+          <i class="ti ti-waves" aria-hidden="true"></i> Soporte Técnico Interno
+        </div>
+        <h2>Grupo Milcien S.A. de C.V.</h2>
+        <p>Desde las plantas camaroneras hasta las oficinas, el equipo de TI está contigo. Reporta cualquier incidencia y te atenderemos a la brevedad.</p>
+      </div>
+      <button class="btn-nuevo" onclick="openModal()">
+        <i class="ti ti-plus" aria-hidden="true"></i>
+        Nuevo ticket
+      </button>
+    </div>
+    <div class="hero-waves" aria-hidden="true">
+      <!-- Capa 5: agua profunda (fondo) -->
+      <div class="wt wt5">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2880 100" preserveAspectRatio="none">
+          <path fill="rgba(26,60,120,0.28)" d="M0,80 C360,68 720,90 1080,84 C1260,80 1400,76 1440,80 C1800,68 2160,90 2520,84 C2700,80 2840,76 2880,80 L2880,100 L0,100 Z"/>
+        </svg>
+      </div>
+      <!-- Capa 4: oleaje fino rápido -->
+      <div class="wt wt4">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2880 100" preserveAspectRatio="none">
+          <path fill="rgba(200,235,255,0.07)" d="M0,76 C90,58 180,88 360,82 C540,76 630,62 720,76 C810,92 900,90 1080,84 C1260,78 1350,64 1440,76 C1530,58 1620,88 1800,82 C1980,76 2070,62 2160,76 C2250,92 2340,90 2520,84 C2700,78 2790,64 2880,76 L2880,100 L0,100 Z"/>
+        </svg>
+      </div>
+      <!-- Capa 3: ola media -->
+      <div class="wt wt3">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2880 100" preserveAspectRatio="none">
+          <path fill="rgba(255,255,255,0.07)" d="M0,64 C260,30 500,88 740,72 C980,56 1220,26 1440,64 C1700,30 1940,88 2180,72 C2420,56 2660,26 2880,64 L2880,100 L0,100 Z"/>
+        </svg>
+      </div>
+      <!-- Capa 2: ola media inversa -->
+      <div class="wt wt2">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2880 100" preserveAspectRatio="none">
+          <path fill="rgba(180,220,255,0.09)" d="M0,58 C200,80 360,90 580,82 C800,72 960,20 1140,20 C1320,20 1400,44 1440,58 C1640,80 1800,90 2020,82 C2240,72 2400,20 2580,20 C2760,20 2840,44 2880,58 L2880,100 L0,100 Z"/>
+        </svg>
+      </div>
+      <!-- Capa 1: ola grande delantera con espuma -->
+      <div class="wt wt1">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2880 100" preserveAspectRatio="none">
+          <path fill="rgba(255,255,255,0.14)" d="M0,50 C100,50 280,10 420,10 C560,10 660,46 860,75 C1060,95 1180,86 1220,83 C1260,80 1390,56 1440,50 C1540,50 1720,10 1860,10 C2000,10 2100,46 2300,75 C2500,95 2620,86 2660,83 C2700,80 2830,56 2880,50 L2880,100 L0,100 Z"/>
+          <path fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="1.8" stroke-linecap="round" d="M0,50 C100,50 280,10 420,10 C560,10 660,46 860,75 C1060,95 1180,86 1220,83 C1260,80 1390,56 1440,50 C1540,50 1720,10 1860,10 C2000,10 2100,46 2300,75 C2500,95 2620,86 2660,83 C2700,80 2830,56 2880,50"/>
+        </svg>
+      </div>
+    </div>
+    <div class="hero-features">
+      <div class="hero-feature">
+        <i class="ti ti-clock-bolt" aria-hidden="true"></i>
+        <span>Respuesta rápida</span>
+      </div>
+      <div class="hero-feature">
+        <i class="ti ti-shield-check" aria-hidden="true"></i>
+        <span>Soporte certificado</span>
+      </div>
+      <div class="hero-feature">
+        <i class="ti ti-eye" aria-hidden="true"></i>
+        <span>Seguimiento en vivo</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tickets section -->
+  <div class="section-bar">
+    <div class="section-title">
+      <i class="ti ti-list-check" aria-hidden="true"></i>
+      Mis tickets
+      <span id="myCount" class="count-badge"></span>
+    </div>
+    <span class="section-hint">Solo ves tus propias solicitudes</span>
+  </div>
+
+  <div class="uft-tabs">
+    <button class="uft-btn active" onclick="setUserFilter('todos', this)">
+      <i class="ti ti-layout-list" aria-hidden="true"></i> Todos
+      <span class="uft-badge" id="uft-todos"></span>
+    </button>
+    <button class="uft-btn" onclick="setUserFilter('abierto', this)">
+      <i class="ti ti-circle-dot" aria-hidden="true"></i> Abiertos
+      <span class="uft-badge uft-open" id="uft-abierto"></span>
+    </button>
+    <button class="uft-btn" onclick="setUserFilter('en_progreso', this)">
+      <i class="ti ti-loader" aria-hidden="true"></i> En progreso
+      <span class="uft-badge uft-prog" id="uft-en_progreso"></span>
+    </button>
+    <button class="uft-btn" onclick="setUserFilter('cerrado', this)">
+      <i class="ti ti-circle-check" aria-hidden="true"></i> Cerrados
+      <span class="uft-badge uft-closed" id="uft-cerrado"></span>
+    </button>
+  </div>
+
+  <div id="myTickets"></div>
+
+</div>
+
+<!-- Modal nuevo ticket -->
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-header-inner">
+        <div class="modal-header-icon">
+          <i class="ti ti-ticket" aria-hidden="true"></i>
+        </div>
+        <div>
+          <h2>Nueva solicitud de soporte</h2>
+          <p class="modal-subtitle">Completa el formulario y te atenderemos a la brevedad</p>
+        </div>
+      </div>
+      <button class="icon-btn" onclick="closeModal()" aria-label="Cerrar">
+        <i class="ti ti-x" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="field-group">
+        <label><i class="ti ti-user" aria-hidden="true"></i> Tu nombre *</label>
+        <input id="f-name" type="text" placeholder="Ej: Juan Pérez">
+      </div>
+      <div class="field-group">
+        <label><i class="ti ti-alert-circle" aria-hidden="true"></i> Título del problema *</label>
+        <input id="f-title" type="text" placeholder="Ej: No puedo iniciar sesión en el sistema">
+      </div>
+      <div class="field-group">
+        <label><i class="ti ti-notes" aria-hidden="true"></i> Descripción del problema</label>
+        <textarea id="f-desc" rows="3" placeholder="Cuéntanos qué está pasando con el mayor detalle posible..."></textarea>
+      </div>
+      <div class="field-row">
+        <div class="field-group">
+          <label><i class="ti ti-tag" aria-hidden="true"></i> Categoría</label>
+          <select id="f-cat">
+            <option>Hardware</option>
+            <option>Software</option>
+            <option>Red</option>
+            <option>Acceso</option>
+            <option>Otro</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label><i class="ti ti-flag" aria-hidden="true"></i> Prioridad</label>
+          <select id="f-prio">
+            <option>Baja</option>
+            <option selected>Media</option>
+            <option>Alta</option>
+            <option>Crítica</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-group">
+        <label>
+          <i class="ti ti-paperclip" aria-hidden="true"></i> Foto o video adjunto
+          <span class="label-hint">(imagen o video corto — máx. 50 MB)</span>
+        </label>
+        <div class="file-drop-zone" id="fileDropZone"
+          onclick="document.getElementById('f-file').click()"
+          ondragover="fileDragOver(event)"
+          ondragleave="fileDragLeave(event)"
+          ondrop="fileDrop(event)">
+          <i class="ti ti-upload" aria-hidden="true"></i>
+          <span id="fileLabel">Haz clic o arrastra un archivo aquí</span>
+          <span class="file-hint">JPG, PNG, GIF, MP4, MOV — máx. 50 MB</span>
+        </div>
+        <input id="f-file" type="file"
+          accept=".jpg,.jpeg,.png,.gif,.webp,.mp4,.mov,.avi,.webm"
+          style="display:none" onchange="fileSelected(this)">
+        <button type="button" class="btn-mobile-upload" onclick="openQRModal()">
+          <i class="ti ti-qrcode" aria-hidden="true"></i>
+          Subir desde celular
+        </button>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-action btn-cancel" onclick="closeModal()">
+        Cancelar
+      </button>
+      <button class="btn-action btn-primary" onclick="createTicket()" id="btnEnviar">
+        <i class="ti ti-send" aria-hidden="true"></i> Enviar ticket
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Modal QR: subir desde celular -->
+<div class="modal-backdrop" id="qrBackdrop">
+  <div class="modal qr-modal">
+    <div class="modal-header">
+      <div class="modal-header-inner">
+        <div class="modal-header-icon">
+          <i class="ti ti-qrcode" aria-hidden="true"></i>
+        </div>
+        <div>
+          <h2>Subir foto desde tu celular</h2>
+          <p class="modal-subtitle">Escanea el código con la cámara de tu teléfono</p>
+        </div>
+      </div>
+      <button class="icon-btn" onclick="closeQRModal()" aria-label="Cerrar">
+        <i class="ti ti-x" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <div class="modal-body qr-body">
+      <!-- Estado: cargando QR -->
+      <div class="qr-state" id="qrStateLoading">
+        <div class="qr-spinner"></div>
+        <p>Generando código QR…</p>
+      </div>
+
+      <!-- Estado: QR listo, esperando foto -->
+      <div class="qr-state" id="qrStatePending" style="display:none">
+        <img id="qrImg" src="" alt="Código QR" class="qr-img">
+        <div class="qr-steps">
+          <div class="qr-step"><span class="qr-step-n">1</span> Abre la cámara de tu celular</div>
+          <div class="qr-step"><span class="qr-step-n">2</span> Apunta al código QR para escanearlo</div>
+          <div class="qr-step"><span class="qr-step-n">3</span> Toma o selecciona la foto</div>
+          <div class="qr-step"><span class="qr-step-n">4</span> La foto aparecerá aquí automáticamente</div>
+        </div>
+        <div class="qr-waiting">
+          <div class="qr-dot-pulse"></div>
+          <span id="qrWaitLabel">Esperando foto…</span>
+        </div>
+        <div class="qr-timer" id="qrTimer">Expira en <strong id="qrCountdown">5:00</strong></div>
+      </div>
+
+      <!-- Estado: foto recibida -->
+      <div class="qr-state" id="qrStateReady" style="display:none">
+        <div class="qr-ok-icon"><i class="ti ti-circle-check" aria-hidden="true"></i></div>
+        <h3>Foto recibida</h3>
+        <p id="qrFileName" class="qr-fname"></p>
+        <p style="font-size:13px;color:var(--text-sec);margin-top:6px">Se adjuntará al ticket al enviarlo</p>
+      </div>
+
+      <!-- Estado: expirado -->
+      <div class="qr-state" id="qrStateExpired" style="display:none">
+        <div style="font-size:40px;margin-bottom:10px">⏱</div>
+        <h3>Código expirado</h3>
+        <p style="font-size:13px;color:var(--text-sec);margin-top:6px">Genera uno nuevo para intentarlo de nuevo</p>
+        <button class="btn-action btn-primary" style="margin-top:18px;width:100%" onclick="openQRModal()">
+          <i class="ti ti-refresh" aria-hidden="true"></i> Generar nuevo QR
+        </button>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-action btn-cancel" onclick="closeQRModal()">
+        <i class="ti ti-x" aria-hidden="true"></i> Cancelar
+      </button>
+      <button class="btn-action btn-primary" id="qrUseBtn" style="display:none" onclick="confirmMobileFile()">
+        <i class="ti ti-check" aria-hidden="true"></i> Usar esta foto
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="usuario.js"></script>
+</body>
+</html>
