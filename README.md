@@ -55,7 +55,7 @@ Abre el navegador en `http://localhost:3000`
 
 | Usuario | Contraseña | Rol |
 |---|---|---|
-| `admin` | `Admin@2024!` | Superadmin |
+| `admin` | `admin123` | Superadmin |
 
 > Cambia la contraseña del admin después del primer acceso.
 
