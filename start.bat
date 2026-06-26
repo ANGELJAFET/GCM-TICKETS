@@ -24,9 +24,11 @@ if %errorlevel% neq 0 (
 echo  Node.js detectado correctamente.
 echo.
 
-:: Instalar dependencias si no existen
+:: Primera instalacion: instalar dependencias y configurar base de datos
 if not exist "node_modules" (
-    echo  Instalando dependencias por primera vez...
+    echo  Primera instalacion detectada.
+    echo.
+    echo  [1/2] Instalando dependencias...
     echo  Esto puede tardar 1-2 minutos, espera...
     echo.
     npm install
@@ -40,7 +42,18 @@ if not exist "node_modules" (
         exit /b 1
     )
     echo.
-    echo  Dependencias instaladas correctamente.
+    echo  [2/2] Configurando base de datos ^(tablas y procedimientos^)...
+    echo.
+    node setup.js
+    if %errorlevel% neq 0 (
+        color 0C
+        echo.
+        echo  ERROR: No se pudo configurar la base de datos.
+        echo  Verifica que SQL Server este activo y los datos de conexion.
+        echo.
+        pause
+        exit /b 1
+    )
     echo.
 )
 

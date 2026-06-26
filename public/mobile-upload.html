@@ -11,7 +11,7 @@
       background: #f1f5f9;
       font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
       color: #0f172a;
-      min-height: 100svh;
+      min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -149,7 +149,7 @@
 <body>
 
 <div class="hdr">
-  <img src="gcm.jpg" alt="GCM Grupo Milcien">
+  <img src="assets/gcm.jpg" alt="GCM Grupo Milcien">
   <div class="hdr-text">
     <h1>GCM Tickets</h1>
     <p>Grupo Milcien — Adjuntar evidencia al ticket</p>
@@ -263,7 +263,6 @@
       setChosenFile(file, 'video', Math.round(vid.duration));
     };
     vid.onerror = () => {
-      // Si no se puede leer metadata, aceptamos igual (validación en servidor)
       setChosenFile(file, 'video');
     };
     vid.src = URL.createObjectURL(file);
@@ -279,7 +278,6 @@
     const durBadge  = document.getElementById('durBadge');
     const objectURL = URL.createObjectURL(file);
 
-    // Ocultar botones de selección
     document.querySelectorAll('.action-btn').forEach(b => b.style.display = 'none');
     document.querySelector('.dur-info').style.display = 'none';
     section.classList.add('show');
@@ -334,7 +332,7 @@
       if (res.status === 410 || res.status === 404) { show('panelErr'); return; }
       if (!res.ok) throw new Error('server');
       show('panelOk');
-    } catch {
+    } catch(e) {
       show('panelSelect');
       document.getElementById('btnSend').disabled = false;
       showErr('No se pudo enviar. Verifica tu conexión e intenta de nuevo.');

@@ -1674,7 +1674,7 @@ function generateLoanWord(loanId) {
   const condMap  = { excelente:'Excelente', bueno:'Bueno', regular:'Regular', danado:'Dañado' };
   const condicion = condMap[item.condicion] || item.condicion || '';
   const tipoDesc  = [item.tipo, item.marca, item.modelo].filter(Boolean).join(' ');
-  const logoUrl   = window.location.origin + '/gcm.jpg';
+  const logoUrl   = window.location.origin + '/assets/gcm.jpg';
 
   const S  = 'font-family:Arial,sans-serif;font-size:11pt;color:#000;';
   const SB = 'font-family:Arial,sans-serif;font-size:11pt;color:#000;font-weight:bold;';

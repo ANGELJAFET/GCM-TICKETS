@@ -136,7 +136,7 @@ function renderMyTickets() {
       : '<p style="font-size:12px;color:var(--gray)">Sin actualizaciones aún.</p>';
 
     const assigneeHtml = t.asignado && t.asignado !== 'Sin asignar'
-      ? `<span style="font-size:11px;color:var(--text-sec);display:flex;align-items:center;gap:3px"><i class="ti ti-user-check" style="font-size:12px" aria-hidden="true"></i> ${t.asignado}</span>`
+      ? `<span style="font-size:11px;color:var(--text-sec);display:flex;align-items:center;gap:3px"><i class="ti ti-user-check" style="font-size:12px" aria-hidden="true"></i> Equipo de Soporte</span>`
       : `<span style="font-size:11px;color:var(--red);font-weight:600;display:flex;align-items:center;gap:3px"><i class="ti ti-user-off" style="font-size:12px" aria-hidden="true"></i> Sin asignar</span>`;
 
 
@@ -514,6 +514,7 @@ async function doLogin() {
     myUser = data.nombre;
     sessionStorage.setItem(AUTH_KEY, JSON.stringify({ nombre: data.nombre, rol: data.rol, rol_nivel: data.rol_nivel }));
     document.getElementById('nombreUsuario').textContent = myUser;
+    document.getElementById('logoutBtn').style.display = '';
     document.getElementById('identScreen').style.display = 'none';
     refreshTickets();
 
@@ -527,15 +528,17 @@ async function doLogin() {
 }
 
 function changeIdentity() {
-  if (!confirm('¿Cerrar sesión?')) return;
   myUser = '';
   sessionStorage.removeItem(AUTH_KEY);
+  sessionStorage.removeItem(USER_KEY);
   document.getElementById('loginUsername').value = '';
   document.getElementById('loginPassword').value = '';
   document.getElementById('identError').innerHTML = '';
   document.getElementById('identError').classList.remove('show');
   document.getElementById('nombreUsuario').textContent = '—';
+  document.getElementById('logoutBtn').style.display = 'none';
   showIdentScreen();
+  showToast('Sesión cerrada');
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
@@ -543,6 +546,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal
 
 if (myUser) {
   document.getElementById('nombreUsuario').textContent = myUser;
+  document.getElementById('logoutBtn').style.display = '';
   refreshTickets();
 } else {
   showIdentScreen();

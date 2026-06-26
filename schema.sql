@@ -79,11 +79,9 @@ CREATE TABLE usuarios (
   registro_aprobado     BIT     NOT NULL DEFAULT 0,
   registro_aprobado_por INT,
   registro_aprobado_en  DATETIME2,
-  created_by            INT,
   ultimo_login          DATETIME2,
   created_at            DATETIME2 NOT NULL DEFAULT GETDATE(),
   updated_at            DATETIME2,
-  email_verificado      BIT       NOT NULL DEFAULT 1,   -- 1 = cuentas existentes/admin ya verificadas
   CONSTRAINT UQ_usuarios_username UNIQUE (username)
 );
 GO
@@ -252,7 +250,6 @@ CREATE TABLE solicitudes_registro (
   username             NVARCHAR(100) NOT NULL,
   password_hash        NVARCHAR(255),
   telefono             NVARCHAR(20),
-  departamento_id      INT REFERENCES departamentos(id),
   departamento_nombre  NVARCHAR(255) NULL,
   mensaje              NVARCHAR(MAX),
   estado               NVARCHAR(20)  NOT NULL DEFAULT 'pendiente',
@@ -382,7 +379,115 @@ END
 GO
 
 -- ============================================================
+-- 5.  Migraciones de columnas (solo BDs antiguas)
+--     En instalaciones nuevas estas columnas ya existen.
+-- ============================================================
+
+-- usuarios: columnas de aprobación (v2)
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('usuarios') AND name = 'registro_aprobado')
+  ALTER TABLE usuarios ADD registro_aprobado BIT NOT NULL DEFAULT 0;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('usuarios') AND name = 'registro_aprobado_por')
+  ALTER TABLE usuarios ADD registro_aprobado_por INT NULL;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('usuarios') AND name = 'registro_aprobado_en')
+  ALTER TABLE usuarios ADD registro_aprobado_en DATETIME2 NULL;
+GO
+
+-- usuarios: columnas de perfil
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('usuarios') AND name = 'email')
+  ALTER TABLE usuarios ADD email NVARCHAR(255) NULL;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('usuarios') AND name = 'apellido')
+  ALTER TABLE usuarios ADD apellido NVARCHAR(100) NULL;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('usuarios') AND name = 'telefono')
+  ALTER TABLE usuarios ADD telefono NVARCHAR(20) NULL;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('usuarios') AND name = 'departamento_id')
+  ALTER TABLE usuarios ADD departamento_id INT NULL;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('usuarios') AND name = 'created_by')
+  ALTER TABLE usuarios ADD created_by INT NULL;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('usuarios') AND name = 'ultimo_login')
+  ALTER TABLE usuarios ADD ultimo_login DATETIME2 NULL;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('usuarios') AND name = 'updated_at')
+  ALTER TABLE usuarios ADD updated_at DATETIME2 NULL;
+GO
+
+-- Índice único en email que permite múltiples NULL
+IF EXISTS (SELECT 1 FROM sys.key_constraints
+           WHERE name = 'UQ_usuarios_email' AND parent_object_id = OBJECT_ID('usuarios'))
+  ALTER TABLE usuarios DROP CONSTRAINT UQ_usuarios_email;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes
+               WHERE name = 'IX_usuarios_email' AND object_id = OBJECT_ID('usuarios'))
+  CREATE UNIQUE INDEX IX_usuarios_email ON usuarios(email) WHERE email IS NOT NULL;
+GO
+
+-- solicitudes_registro: columna de departamento en texto libre
+IF NOT EXISTS (SELECT 1 FROM sys.columns
+               WHERE object_id = OBJECT_ID('solicitudes_registro') AND name = 'departamento_nombre')
+  ALTER TABLE solicitudes_registro ADD departamento_nombre NVARCHAR(255) NULL;
+GO
+
+-- Usuarios activos que quedaron con registro_aprobado = 0 (flujo antiguo de email)
+-- Se aprueban automáticamente ya que están activos y son usuarios legítimos
+UPDATE usuarios SET registro_aprobado = 1
+WHERE activo = 1 AND registro_aprobado = 0;
+GO
+
+-- email_verificado: columna eliminada (ya no se usa verificación por correo)
+IF EXISTS (SELECT 1 FROM sys.columns
+           WHERE object_id = OBJECT_ID('usuarios') AND name = 'email_verificado')
+BEGIN
+  DECLARE @defEV NVARCHAR(200);
+  SELECT @defEV = dc.name
+    FROM sys.default_constraints dc
+    JOIN sys.columns c ON dc.parent_object_id = c.object_id
+                      AND dc.parent_column_id  = c.column_id
+   WHERE c.object_id = OBJECT_ID('usuarios') AND c.name = 'email_verificado';
+  IF @defEV IS NOT NULL EXEC('ALTER TABLE usuarios DROP CONSTRAINT ' + @defEV);
+  ALTER TABLE usuarios DROP COLUMN email_verificado;
+END;
+GO
+
+-- usuarios.created_by: nunca se asigna en ningún flujo del sistema
+IF EXISTS (SELECT 1 FROM sys.columns
+           WHERE object_id = OBJECT_ID('usuarios') AND name = 'created_by')
+  ALTER TABLE usuarios DROP COLUMN created_by;
+GO
+
+-- solicitudes_registro.departamento_id: siempre NULL; el sistema usa departamento_nombre
+IF EXISTS (SELECT 1 FROM sys.columns
+           WHERE object_id = OBJECT_ID('solicitudes_registro') AND name = 'departamento_id')
+BEGIN
+  DECLARE @fkDept NVARCHAR(200);
+  SELECT @fkDept = f.name
+    FROM sys.foreign_keys f
+    JOIN sys.foreign_key_columns fc ON f.object_id = fc.constraint_object_id
+    JOIN sys.columns c ON fc.parent_object_id = c.object_id
+                      AND fc.parent_column_id  = c.column_id
+   WHERE c.object_id = OBJECT_ID('solicitudes_registro') AND c.name = 'departamento_id';
+  IF @fkDept IS NOT NULL EXEC('ALTER TABLE solicitudes_registro DROP CONSTRAINT ' + @fkDept);
+  ALTER TABLE solicitudes_registro DROP COLUMN departamento_id;
+END;
+GO
+
+-- email_verify_token / email_verify_deadline: columnas huérfanas de versión anterior
+IF EXISTS (SELECT 1 FROM sys.columns
+           WHERE object_id = OBJECT_ID('usuarios') AND name = 'email_verify_token')
+  ALTER TABLE usuarios DROP COLUMN email_verify_token;
+GO
+
+IF EXISTS (SELECT 1 FROM sys.columns
+           WHERE object_id = OBJECT_ID('usuarios') AND name = 'email_verify_deadline')
+  ALTER TABLE usuarios DROP COLUMN email_verify_deadline;
+GO
+
+-- ============================================================
 -- Fin del script
--- Siguiente paso: node server.js
--- El usuario admin se crea automáticamente al primer arranque.
+-- Siguiente paso: ejecutar procedimientos.sql y luego node server.js
 -- ============================================================

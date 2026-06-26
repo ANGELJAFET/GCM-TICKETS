@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GCM Tickets — Portal de Soporte | Grupo Milcien</title>
-  <link rel="icon" type="image/jpeg" href="gcm.jpg">
-  <link rel="apple-touch-icon" href="gcm.jpg">
+  <link rel="icon" type="image/jpeg" href="assets/gcm.jpg">
+  <link rel="apple-touch-icon" href="assets/gcm.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -25,15 +25,15 @@
   <div class="ident-orb ident-orb-1"></div>
   <div class="ident-orb ident-orb-2"></div>
   <div class="ident-orb ident-orb-3"></div>
-  <img src="camaron.svg" class="ident-shrimp ident-shrimp-1" aria-hidden="true">
-  <img src="camaron.svg" class="ident-shrimp ident-shrimp-2" aria-hidden="true">
-  <img src="camaron.svg" class="ident-shrimp ident-shrimp-3" aria-hidden="true">
+  <img src="assets/camaron.svg" class="ident-shrimp ident-shrimp-1" aria-hidden="true">
+  <img src="assets/camaron.svg" class="ident-shrimp ident-shrimp-2" aria-hidden="true">
+  <img src="assets/camaron.svg" class="ident-shrimp ident-shrimp-3" aria-hidden="true">
   <div class="ident-card">
 
     <!-- Panel izquierdo: marca -->
     <div class="ident-brand">
       <div class="ident-brand-ring"></div>
-      <img src="gcm.jpg" alt="GCM Grupo Milcien" class="ident-logo">
+      <img src="assets/gcm.jpg" alt="GCM Grupo Milcien" class="ident-logo">
       <div class="ident-brand-title">GCM Tickets</div>
       <div class="ident-brand-sub">Portal de Soporte Técnico<br>Grupo Milcien S.A. de C.V.</div>
       <div class="ident-brand-badge">
@@ -69,7 +69,7 @@
 
 <header class="header">
   <div class="header-left">
-    <img src="gcm.jpg" alt="GCM Grupo Milcien" class="header-logo">
+    <img src="assets/gcm.jpg" alt="GCM Grupo Milcien" class="header-logo">
     <div class="header-brand">
       <span class="brand-name">GCM Tickets</span>
       <span class="brand-tag">Grupo Milcien S.A. de C.V. — Soporte Técnico</span>
@@ -79,9 +79,10 @@
     <button class="icon-btn" id="darkModeBtn" onclick="toggleDarkMode()" title="Modo oscuro / claro">
       <i class="ti ti-moon" aria-hidden="true"></i>
     </button>
-    <button class="logout-shrimp-btn" onclick="changeIdentity()" title="Cerrar sesión" aria-label="Cerrar sesión">
-      <img src="camaron.svg" class="logout-shrimp-img" aria-hidden="true">
+    <button class="logout-shrimp-btn" id="logoutBtn" onclick="changeIdentity()" title="Cerrar sesión" aria-label="Cerrar sesión" style="display:none">
+      <i class="ti ti-logout" aria-hidden="true"></i>
     </button>
+     
     <div class="user-chip" title="Usuario activo" style="cursor:default">
       <i class="ti ti-user-circle" aria-hidden="true"></i>
       <span id="nombreUsuario">—</span>
@@ -96,14 +97,14 @@
     <div class="hero-glow"></div>
     <div class="hero-body">
       <div class="hero-icon-wrap">
-        <img src="gcm.jpg" alt="GCM Grupo Milcien" class="hero-logo-icon">
+        <img src="assets/gcm.jpg" alt="GCM Grupo Milcien" class="hero-logo-icon">
       </div>
       <div class="hero-text">
         <div class="hero-label">
           <i class="ti ti-waves" aria-hidden="true"></i> Soporte Técnico Interno
         </div>
         <h2>Grupo Milcien S.A. de C.V.</h2>
-        <p>Desde las plantas camaroneras hasta las oficinas, el equipo de TI está contigo. Reporta cualquier incidencia y te atenderemos a la brevedad.</p>
+        <p> el equipo de TI está contigo. Reporta cualquier incidencia y te atenderemos a la brevedad.</p>
       </div>
       <button class="btn-nuevo" onclick="openModal()">
         <i class="ti ti-plus" aria-hidden="true"></i>
