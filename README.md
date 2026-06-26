@@ -57,7 +57,8 @@ Abre el navegador en `http://localhost:3000`
 |---|---|---|
 | `admin` | `admin123` | Superadmin |
 
-> Cambia la contraseña del admin después del primer acceso.
+> Para cambiar la contraseña inicial antes de instalar, edita `ADMIN_PASSWORD` en tu archivo `.env`.
+> Solo aplica si el usuario `admin` no existe aún — si ya existe, el setup no lo modifica.
 
 ## Estructura del proyecto
 

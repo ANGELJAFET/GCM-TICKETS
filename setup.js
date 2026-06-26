@@ -1,9 +1,12 @@
 require('dotenv').config();
-const sql  = require('mssql');
-const fs   = require('fs');
-const path = require('path');
+const sql    = require('mssql');
+const bcrypt = require('bcrypt');
+const fs     = require('fs');
+const path   = require('path');
 
-const DB_NAME = process.env.DB_NAME || 'gcm_tickets';
+const DB_NAME        = process.env.DB_NAME        || 'gcm_tickets';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+const BCRYPT_ROUNDS  = parseInt(process.env.BCRYPT_ROUNDS || '12');
 
 const baseConfig = {
   user:     process.env.DB_USER     || 'sa',
@@ -37,6 +40,30 @@ async function runBatches(pool, batches, label) {
   console.log(`  ✓ ${label} — ${batches.length} bloques ejecutados`);
 }
 
+async function createAdminIfNotExists(pool) {
+  const exists = await pool.request().query(
+    `SELECT 1 FROM usuarios WHERE username = 'admin'`
+  );
+  if (exists.recordset.length > 0) {
+    console.log('   ✓ Usuario admin ya existe — sin cambios');
+    return;
+  }
+
+  const hash  = await bcrypt.hash(ADMIN_PASSWORD, BCRYPT_ROUNDS);
+  const rolId = await pool.request().query(
+    `SELECT id FROM roles WHERE nombre = 'superadmin'`
+  );
+
+  const req = pool.request();
+  req.input('hash',  sql.NVarChar, hash);
+  req.input('rolId', sql.TinyInt,  rolId.recordset[0].id);
+  await req.query(`
+    INSERT INTO usuarios (username, password_hash, nombre, rol_id, activo, registro_aprobado)
+    VALUES ('admin', @hash, 'Administrador', @rolId, 1, 1)
+  `);
+  console.log(`   ✓ Usuario admin creado (contraseña: ${ADMIN_PASSWORD})`);
+}
+
 async function main() {
   console.log('\n=== GCM Tickets — Setup de base de datos ===\n');
 
@@ -60,6 +87,10 @@ async function main() {
   // Paso 4: stored procedures
   console.log('\n3. Ejecutando procedimientos.sql...');
   await runBatches(pool, readBatches('procedimientos.sql'), 'procedimientos.sql');
+
+  // Paso 5: usuario admin inicial
+  console.log('\n4. Verificando usuario admin...');
+  await createAdminIfNotExists(pool);
 
   await pool.close();
   console.log('\n✓ Setup completado. Arranca el servidor con:\n\n    node server.js\n');
