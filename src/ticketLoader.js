@@ -74,4 +74,4 @@ async function loadAllTickets() {
   ));
 }
 
-module.exports = { loadTicket, loadAllTickets, shapeTicket };
+module.exports = { loadTicket, loadAllTickets };

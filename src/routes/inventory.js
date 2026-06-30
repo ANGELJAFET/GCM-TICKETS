@@ -1,7 +1,8 @@
 const express      = require('express');
 const router       = express.Router();
 const db           = require('../db');
-const { fmtDate, logAudit } = require('../helpers');
+const { fmtDate, logAudit }  = require('../helpers');
+const { loadTicket }         = require('../ticketLoader');
 
 // GET /api/devices
 router.get('/devices', async (req, res) => {
@@ -72,7 +73,7 @@ router.post('/devices', async (req, res) => {
 
     res.status(201).json({
       device: (await db.queryOne('SELECT * FROM dispositivos WHERE id = ?', [devId])),
-      ticket: await (require('../ticketLoader')).loadTicket(ticketId)
+      ticket: await loadTicket(ticketId)
     });
   } catch (err) {
     console.error(err);

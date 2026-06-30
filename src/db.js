@@ -87,6 +87,16 @@ async function isAdmin(username) {
   return !!user;
 }
 
+async function findEmailByNombre(nombre) {
+  if (!nombre) return null;
+  const row = await queryOne(
+    `SELECT email FROM usuarios
+     WHERE LOWER(LTRIM(RTRIM(CONCAT(nombre,' ',ISNULL(apellido,''))))) = LOWER(?) AND activo = 1`,
+    [nombre]
+  );
+  return row?.email || null;
+}
+
 async function findUserByNombre(nombre) {
   if (!nombre || nombre === 'Sin asignar') return null;
   return await queryOne(
@@ -113,4 +123,4 @@ async function initDB() {
   }
 }
 
-module.exports = { pool, query, queryOne, exec, execOne, nextId, isAdmin, findUserByNombre, initDB, bcrypt, ROUNDS };
+module.exports = { pool, query, queryOne, exec, execOne, nextId, isAdmin, findUserByNombre, findEmailByNombre, initDB, bcrypt, ROUNDS };

@@ -57,15 +57,10 @@ router.post('/', async (req, res) => {
   // Notificar al usuario — bloque aislado, no afecta la respuesta ya enviada
   try {
     if (!reporter || !ticketId) return;
-    const userRow = await db.queryOne(
-      `SELECT email FROM usuarios
-       WHERE LOWER(LTRIM(RTRIM(CONCAT(nombre,' ',ISNULL(apellido,''))))) = LOWER(?) AND activo = 1`,
-      [reporter]
-    );
-    console.log(`[mailer] Ticket nuevo ${ticketId}: reporter="${reporter}" → email=${userRow?.email || 'sin email'}`);
-    if (!userRow?.email) return;
+    const email = await db.findEmailByNombre(reporter);
+    if (!email) return;
     const tpl = mailer.emailTicketNuevo({ folio: ticketId, titulo: title, prioridad: prioridad || 'Media', nombre: reporter, departamento: null });
-    mailer.send({ to: userRow.email, ...tpl });
+    mailer.send({ to: email, ...tpl });
   } catch (emailErr) {
     console.error('[mailer] Error notificando ticket nuevo:', emailErr.message);
   }
@@ -144,13 +139,8 @@ router.patch('/:id', async (req, res) => {
   try {
     const nuevoStatus = req.body.status;
     if (!nuevoStatus || nuevoStatus === row.status || !row.reporter_nombre) return;
-    const reporterRow = await db.queryOne(
-      `SELECT email FROM usuarios
-       WHERE LOWER(LTRIM(RTRIM(CONCAT(nombre,' ',ISNULL(apellido,''))))) = LOWER(?) AND activo = 1`,
-      [row.reporter_nombre]
-    );
-    console.log(`[mailer] Estado ${id}: "${row.status}"→"${nuevoStatus}" reporter="${row.reporter_nombre}" → email=${reporterRow?.email || 'sin email'}`);
-    if (!reporterRow?.email) return;
+    const email = await db.findEmailByNombre(row.reporter_nombre);
+    if (!email) return;
     const tpl = mailer.emailCambioEstado({
       folio:          id,
       titulo:         row.titulo,
@@ -159,7 +149,7 @@ router.patch('/:id', async (req, res) => {
       nombre:         row.reporter_nombre,
       comentario:     req.body.comentario || null,
     });
-    mailer.send({ to: reporterRow.email, ...tpl });
+    mailer.send({ to: email, ...tpl });
   } catch (emailErr) {
     console.error('[mailer] Error notificando cambio de estado:', emailErr.message);
   }

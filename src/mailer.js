@@ -124,30 +124,9 @@ function emailCambioEstado({ folio, titulo, estadoAnterior, estadoNuevo, nombre,
   };
 }
 
-function emailPrueba(destinatario) {
-  return {
-    subject: '✅ Correo de prueba — GCM Tickets funcionando',
-    html: baseHtml(`
-      <h2 style="color:#16a34a;margin-top:0;">¡Correo configurado correctamente!</h2>
-      <p style="color:#475569;">El sistema GCM Tickets puede enviar notificaciones por correo electrónico.</p>
-      <table width="100%" cellpadding="8" cellspacing="0" style="border-collapse:collapse;margin:16px 0;">
-        <tr style="background:#f1f5f9;"><td style="color:#64748b;font-size:13px;width:140px;"><b>Servidor</b></td><td style="color:#1e293b;font-size:13px;">10.0.1.108:3000</td></tr>
-        <tr><td style="color:#64748b;font-size:13px;"><b>SMTP</b></td><td style="color:#1e293b;font-size:13px;">smtp.gmail.com:587</td></tr>
-        <tr style="background:#f1f5f9;"><td style="color:#64748b;font-size:13px;"><b>Destinatario</b></td><td style="color:#1e293b;font-size:13px;">${destinatario}</td></tr>
-        <tr><td style="color:#64748b;font-size:13px;"><b>Fecha</b></td><td style="color:#1e293b;font-size:13px;">${new Date().toLocaleString('es-MX')}</td></tr>
-      </table>
-      <p style="color:#64748b;font-size:13px;">A partir de ahora el sistema enviará notificaciones automáticas para:<br>
-      • Nuevas solicitudes de registro de usuarios<br>
-      • Confirmación de tickets creados<br>
-      • Cambios de estado en tickets</p>
-    `),
-  };
-}
-
 module.exports = {
   send,
   emailNuevoRegistro,
   emailTicketNuevo,
   emailCambioEstado,
-  emailPrueba,
 };

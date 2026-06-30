@@ -5,10 +5,6 @@ function fmtDate(d) {
   return new Date(d).toLocaleDateString('es-HN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function fmtTime(d) {
-  return new Date(d).toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' });
-}
-
 function fmtTs(d) {
   return new Date(d).toLocaleString('es-HN', {
     day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
@@ -49,4 +45,4 @@ async function logAudit(actor, accion, entidad, entidadId, detalle) {
   }
 }
 
-module.exports = { fmtDate, fmtTime, fmtTs, getLocalIP, logAudit };
+module.exports = { fmtDate, fmtTs, getLocalIP, logAudit };
