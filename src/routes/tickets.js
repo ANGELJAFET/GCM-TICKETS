@@ -22,11 +22,12 @@ router.get('/', async (req, res) => {
 
 // POST /api/tickets
 router.post('/', async (req, res) => {
-  try {
-    const { title, desc, status, prioridad, categoria, asignado, reporter } = req.body;
-    if (!title) return res.status(400).json({ error: 'El título es requerido' });
+  const { title, desc, status, prioridad, categoria, asignado, reporter } = req.body;
+  if (!title) return res.status(400).json({ error: 'El título es requerido' });
 
-    const id = await db.nextId('tickets', 'TK');
+  let ticketId = null;
+  try {
+    ticketId = await db.nextId('tickets', 'TK');
 
     let asignadoId = null;
     if (asignado && asignado !== 'Sin asignar') {
@@ -38,36 +39,35 @@ router.post('/', async (req, res) => {
       `INSERT INTO tickets (id, titulo, descripcion, status, prioridad, categoria,
                             reporter_nombre, asignado_id)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, title, desc || 'Sin descripción.', status || 'abierto',
+      [ticketId, title, desc || 'Sin descripción.', status || 'abierto',
        prioridad || 'Media', categoria || 'Otro', reporter || '', asignadoId]
     );
 
     await db.query(
       'INSERT INTO historial_tickets (ticket_id, usuario_nombre, accion) VALUES (?, ?, ?)',
-      [id, 'Sistema', `Ticket creado por ${reporter || 'Usuario'}`]
+      [ticketId, 'Sistema', `Ticket creado por ${reporter || 'Usuario'}`]
     );
 
-    const ticket = await loadTicket(id);
-    res.status(201).json(ticket);
-
-    // Notificar al usuario que creó el ticket si tiene email registrado
-    const userRow = await db.queryOne(
-      `SELECT email FROM usuarios WHERE LTRIM(RTRIM(CONCAT(nombre,' ',ISNULL(apellido,'')))) = ? AND activo = 1`,
-      [reporter || '']
-    );
-    if (userRow?.email) {
-      const tpl = mailer.emailTicketNuevo({
-        folio:       id,
-        titulo:      title,
-        prioridad:   prioridad || 'Media',
-        nombre:      reporter || '',
-        departamento: null,
-      });
-      mailer.send({ to: userRow.email, ...tpl });
-    }
+    res.status(201).json(await loadTicket(ticketId));
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Error al crear ticket' });
+    return res.status(500).json({ error: 'Error al crear ticket' });
+  }
+
+  // Notificar al usuario — bloque aislado, no afecta la respuesta ya enviada
+  try {
+    if (!reporter || !ticketId) return;
+    const userRow = await db.queryOne(
+      `SELECT email FROM usuarios
+       WHERE LOWER(LTRIM(RTRIM(CONCAT(nombre,' ',ISNULL(apellido,''))))) = LOWER(?) AND activo = 1`,
+      [reporter]
+    );
+    console.log(`[mailer] Ticket nuevo ${ticketId}: reporter="${reporter}" → email=${userRow?.email || 'sin email'}`);
+    if (!userRow?.email) return;
+    const tpl = mailer.emailTicketNuevo({ folio: ticketId, titulo: title, prioridad: prioridad || 'Media', nombre: reporter, departamento: null });
+    mailer.send({ to: userRow.email, ...tpl });
+  } catch (emailErr) {
+    console.error('[mailer] Error notificando ticket nuevo:', emailErr.message);
   }
 });
 
@@ -85,9 +85,10 @@ router.get('/:id', async (req, res) => {
 
 // PATCH /api/tickets/:id
 router.patch('/:id', async (req, res) => {
+  const id  = req.params.id;
+  let row = null;
   try {
-    const id  = req.params.id;
-    const row = await db.queryOne('SELECT * FROM tickets WHERE id = ?', [id]);
+    row = await db.queryOne('SELECT * FROM tickets WHERE id = ?', [id]);
     if (!row) return res.status(404).json({ error: 'Ticket no encontrado' });
 
     const adminUser = req.body.adminUser || 'Admin';
@@ -133,31 +134,34 @@ router.patch('/:id', async (req, res) => {
       }
     }
 
-    const updated = await loadTicket(id);
-    res.json(updated);
-
-    // Notificar al reporter si el estado cambió
-    const nuevoStatus = req.body.status;
-    if (nuevoStatus && nuevoStatus !== row.status) {
-      const reporterRow = await db.queryOne(
-        `SELECT email FROM usuarios WHERE LTRIM(RTRIM(CONCAT(nombre,' ',ISNULL(apellido,'')))) = ? AND activo = 1`,
-        [row.reporter_nombre || '']
-      );
-      if (reporterRow?.email) {
-        const tpl = mailer.emailCambioEstado({
-          folio:         id,
-          titulo:        row.titulo,
-          estadoAnterior: row.status,
-          estadoNuevo:   nuevoStatus,
-          nombre:        row.reporter_nombre,
-          comentario:    req.body.comentario || null,
-        });
-        mailer.send({ to: reporterRow.email, ...tpl });
-      }
-    }
+    res.json(await loadTicket(id));
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Error al actualizar ticket' });
+    return res.status(500).json({ error: 'Error al actualizar ticket' });
+  }
+
+  // Notificar cambio de estado — bloque aislado
+  try {
+    const nuevoStatus = req.body.status;
+    if (!nuevoStatus || nuevoStatus === row.status || !row.reporter_nombre) return;
+    const reporterRow = await db.queryOne(
+      `SELECT email FROM usuarios
+       WHERE LOWER(LTRIM(RTRIM(CONCAT(nombre,' ',ISNULL(apellido,''))))) = LOWER(?) AND activo = 1`,
+      [row.reporter_nombre]
+    );
+    console.log(`[mailer] Estado ${id}: "${row.status}"→"${nuevoStatus}" reporter="${row.reporter_nombre}" → email=${reporterRow?.email || 'sin email'}`);
+    if (!reporterRow?.email) return;
+    const tpl = mailer.emailCambioEstado({
+      folio:          id,
+      titulo:         row.titulo,
+      estadoAnterior: row.status,
+      estadoNuevo:    nuevoStatus,
+      nombre:         row.reporter_nombre,
+      comentario:     req.body.comentario || null,
+    });
+    mailer.send({ to: reporterRow.email, ...tpl });
+  } catch (emailErr) {
+    console.error('[mailer] Error notificando cambio de estado:', emailErr.message);
   }
 });
 
