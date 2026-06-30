@@ -1,6 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const db      = require('../db');
+const mailer  = require('../mailer');
 
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
@@ -53,6 +54,17 @@ router.post('/register', async (req, res) => {
     });
 
     res.status(201).json({ ok: true });
+
+    // Notificar al admin sobre la nueva solicitud de registro
+    const adminEmail = process.env.SMTP_USER;
+    if (adminEmail) {
+      const tpl = mailer.emailNuevoRegistro({
+        nombre:       `${nombre.trim()} ${(apellido || '').trim()}`.trim(),
+        username:     username.trim(),
+        departamento: departamento || null,
+      });
+      mailer.send({ to: adminEmail, ...tpl });
+    }
   } catch (err) {
     if (err.number === 50409) return res.status(409).json({ error: err.message });
     console.error(err);

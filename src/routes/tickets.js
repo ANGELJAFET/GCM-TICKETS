@@ -4,6 +4,7 @@ const path             = require('path');
 const router           = express.Router();
 const db               = require('../db');
 const { logAudit }     = require('../helpers');
+const mailer           = require('../mailer');
 const { loadTicket, loadAllTickets } = require('../ticketLoader');
 const { upload }       = require('../middleware/upload');
 const { mobileSessions } = require('../mobileSessions');
@@ -46,7 +47,24 @@ router.post('/', async (req, res) => {
       [id, 'Sistema', `Ticket creado por ${reporter || 'Usuario'}`]
     );
 
-    res.status(201).json(await loadTicket(id));
+    const ticket = await loadTicket(id);
+    res.status(201).json(ticket);
+
+    // Notificar al usuario que creó el ticket si tiene email registrado
+    const userRow = await db.queryOne(
+      `SELECT email FROM usuarios WHERE LTRIM(RTRIM(CONCAT(nombre,' ',ISNULL(apellido,'')))) = ? AND activo = 1`,
+      [reporter || '']
+    );
+    if (userRow?.email) {
+      const tpl = mailer.emailTicketNuevo({
+        folio:       id,
+        titulo:      title,
+        prioridad:   prioridad || 'Media',
+        nombre:      reporter || '',
+        departamento: null,
+      });
+      mailer.send({ to: userRow.email, ...tpl });
+    }
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al crear ticket' });
@@ -115,7 +133,28 @@ router.patch('/:id', async (req, res) => {
       }
     }
 
-    res.json(await loadTicket(id));
+    const updated = await loadTicket(id);
+    res.json(updated);
+
+    // Notificar al reporter si el estado cambió
+    const nuevoStatus = req.body.status;
+    if (nuevoStatus && nuevoStatus !== row.status) {
+      const reporterRow = await db.queryOne(
+        `SELECT email FROM usuarios WHERE LTRIM(RTRIM(CONCAT(nombre,' ',ISNULL(apellido,'')))) = ? AND activo = 1`,
+        [row.reporter_nombre || '']
+      );
+      if (reporterRow?.email) {
+        const tpl = mailer.emailCambioEstado({
+          folio:         id,
+          titulo:        row.titulo,
+          estadoAnterior: row.status,
+          estadoNuevo:   nuevoStatus,
+          nombre:        row.reporter_nombre,
+          comentario:    req.body.comentario || null,
+        });
+        mailer.send({ to: reporterRow.email, ...tpl });
+      }
+    }
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al actualizar ticket' });
