@@ -54,13 +54,13 @@ router.post('/', async (req, res) => {
     return res.status(500).json({ error: 'Error al crear ticket' });
   }
 
-  // Notificar al usuario — bloque aislado, no afecta la respuesta ya enviada
+  // Notificar al admin que llegó un ticket nuevo
   try {
-    if (!reporter || !ticketId) return;
-    const email = await db.findEmailByNombre(reporter);
-    if (!email) return;
-    const tpl = mailer.emailTicketNuevo({ folio: ticketId, titulo: title, prioridad: prioridad || 'Media', nombre: reporter, departamento: null });
-    mailer.send({ to: email, ...tpl });
+    if (!ticketId) return;
+    const adminEmail = process.env.SMTP_USER;
+    if (!adminEmail) return;
+    const tpl = mailer.emailTicketNuevo({ folio: ticketId, titulo: title, prioridad: prioridad || 'Media', nombre: reporter || '', departamento: null });
+    mailer.send({ to: adminEmail, ...tpl });
   } catch (emailErr) {
     console.error('[mailer] Error notificando ticket nuevo:', emailErr.message);
   }
@@ -138,9 +138,8 @@ router.patch('/:id', async (req, res) => {
   // Notificar cambio de estado — bloque aislado
   try {
     const nuevoStatus = req.body.status;
-    if (!nuevoStatus || nuevoStatus === row.status || !row.reporter_nombre) return;
-    const email = await db.findEmailByNombre(row.reporter_nombre);
-    if (!email) return;
+    if (!nuevoStatus || nuevoStatus === row.status) return;
+    const adminEmail = process.env.SMTP_USER;
     const tpl = mailer.emailCambioEstado({
       folio:          id,
       titulo:         row.titulo,
@@ -149,7 +148,11 @@ router.patch('/:id', async (req, res) => {
       nombre:         row.reporter_nombre,
       comentario:     req.body.comentario || null,
     });
-    mailer.send({ to: email, ...tpl });
+    // Notificar al admin siempre
+    if (adminEmail) mailer.send({ to: adminEmail, ...tpl });
+    // Notificar al reporter si tiene email y es diferente al admin
+    const reporterEmail = await db.findEmailByNombre(row.reporter_nombre);
+    if (reporterEmail && reporterEmail !== adminEmail) mailer.send({ to: reporterEmail, ...tpl });
   } catch (emailErr) {
     console.error('[mailer] Error notificando cambio de estado:', emailErr.message);
   }
