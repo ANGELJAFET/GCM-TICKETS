@@ -2194,15 +2194,19 @@ async function toggleUserActivo(id, activo) {
 
 // ── Auditoría ─────────────────────────────────────────────────────────────────
 let auditCache = [];
+let auditFilters = { actor: '', entidad: '', desde: '', hasta: '' };
 
 async function loadAuditData() {
   const section = document.getElementById('auditSection');
-  section.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-sec)"><i class="ti ti-loader-2" style="font-size:28px"></i><br>Cargando bitácora…</div>';
 
-  const actor   = document.getElementById('audit-filter-actor')?.value   || '';
-  const entidad = document.getElementById('audit-filter-entidad')?.value || '';
-  const desde   = document.getElementById('audit-filter-desde')?.value   || '';
-  const hasta   = document.getElementById('audit-filter-hasta')?.value   || '';
+  auditFilters.actor   = document.getElementById('audit-filter-actor')?.value   || '';
+  auditFilters.entidad = document.getElementById('audit-filter-entidad')?.value || '';
+  auditFilters.desde   = document.getElementById('audit-filter-desde')?.value   || '';
+  auditFilters.hasta   = document.getElementById('audit-filter-hasta')?.value   || '';
+
+  const { actor, entidad, desde, hasta } = auditFilters;
+
+  section.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-sec)"><i class="ti ti-loader-2" style="font-size:28px"></i><br>Cargando bitácora…</div>';
 
   const params = new URLSearchParams({ limit: 300 });
   if (actor)   params.set('actor',   actor);
@@ -2246,22 +2250,22 @@ function renderAuditSection() {
     <div class="audit-filters">
       <input class="audit-input" id="audit-filter-actor" type="text"
              placeholder="Filtrar por usuario…" list="audit-actors-list"
-             value="${document.getElementById('audit-filter-actor')?.value || ''}"
+             value="${auditFilters.actor}"
              onchange="loadAuditData()" oninput="if(!this.value)loadAuditData()">
       <datalist id="audit-actors-list">${actores.map(a => `<option value="${a}">`).join('')}</datalist>
       <select class="audit-sel" id="audit-filter-entidad" onchange="loadAuditData()">
         <option value="">Todas las áreas</option>
-        <option value="ticket"     ${document.getElementById('audit-filter-entidad')?.value==='ticket'     ?'selected':''}>Tickets</option>
-        <option value="inventario" ${document.getElementById('audit-filter-entidad')?.value==='inventario' ?'selected':''}>Inventario</option>
-        <option value="prestamo"   ${document.getElementById('audit-filter-entidad')?.value==='prestamo'   ?'selected':''}>Préstamos</option>
-        <option value="usuario"    ${document.getElementById('audit-filter-entidad')?.value==='usuario'    ?'selected':''}>Usuarios</option>
-        <option value="solicitud"  ${document.getElementById('audit-filter-entidad')?.value==='solicitud'  ?'selected':''}>Solicitudes</option>
+        <option value="ticket"     ${auditFilters.entidad==='ticket'     ?'selected':''}>Tickets</option>
+        <option value="inventario" ${auditFilters.entidad==='inventario' ?'selected':''}>Inventario</option>
+        <option value="prestamo"   ${auditFilters.entidad==='prestamo'   ?'selected':''}>Préstamos</option>
+        <option value="usuario"    ${auditFilters.entidad==='usuario'    ?'selected':''}>Usuarios</option>
+        <option value="solicitud"  ${auditFilters.entidad==='solicitud'  ?'selected':''}>Solicitudes</option>
       </select>
       <input class="audit-input" id="audit-filter-desde" type="date"
-             value="${document.getElementById('audit-filter-desde')?.value || ''}"
+             value="${auditFilters.desde}"
              onchange="loadAuditData()">
       <input class="audit-input" id="audit-filter-hasta" type="date"
-             value="${document.getElementById('audit-filter-hasta')?.value || ''}"
+             value="${auditFilters.hasta}"
              onchange="loadAuditData()">
       <button class="audit-clear-btn" onclick="clearAuditFilters()" title="Limpiar filtros">
         <i class="ti ti-x"></i> Limpiar
@@ -2308,10 +2312,7 @@ function renderAuditSection() {
 }
 
 function clearAuditFilters() {
-  document.getElementById('audit-filter-actor').value   = '';
-  document.getElementById('audit-filter-entidad').value = '';
-  document.getElementById('audit-filter-desde').value   = '';
-  document.getElementById('audit-filter-hasta').value   = '';
+  auditFilters = { actor: '', entidad: '', desde: '', hasta: '' };
   loadAuditData();
 }
 
