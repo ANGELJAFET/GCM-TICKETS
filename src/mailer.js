@@ -18,8 +18,9 @@ const transporter = enabled
     })
   : null;
 
-const FROM = process.env.SMTP_FROM || `"GCM Tickets" <${process.env.SMTP_USER}>`;
-const APP_URL = process.env.APP_URL || 'http://10.0.1.108:3000';
+const FROM    = process.env.SMTP_FROM || `"GCM Tickets" <${process.env.SMTP_USER}>`;
+const APP_URL = process.env.APP_URL   || 'http://10.0.1.108:3000';
+const CC      = process.env.SMTP_CC   || null;
 
 async function send({ to, subject, html }) {
   if (!transporter) {
@@ -27,8 +28,10 @@ async function send({ to, subject, html }) {
     return;
   }
   try {
-    const info = await transporter.sendMail({ from: FROM, to, subject, html });
-    console.log(`[mailer] Enviado a ${to} — ${info.messageId}`);
+    const msg = { from: FROM, to, subject, html };
+    if (CC && CC !== to) msg.cc = CC;
+    const info = await transporter.sendMail(msg);
+    console.log(`[mailer] Enviado a ${to}${CC && CC !== to ? ` (cc: ${CC})` : ''} — ${info.messageId}`);
     return info;
   } catch (err) {
     console.error(`[mailer] Error al enviar a ${to}:`, err.message);
