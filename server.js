@@ -37,15 +37,6 @@ app.use('/api',               usuarioRoutes);
 app.use('/api',               inventoryRoutes);
 app.use('/api/mobile-upload', mobileUploadRoutes);
 
-app.get('/api/departamentos', async (req, res) => {
-  try {
-    res.json(await db.exec('sp_GetDepartamentos'));
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Error al cargar departamentos' });
-  }
-});
-
 db.initDB().then(() => {
   app.listen(PORT, '0.0.0.0', () => {
     const localIP = getLocalIP();
