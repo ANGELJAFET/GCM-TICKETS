@@ -22,7 +22,9 @@ const transporter = enabled
 
 const FROM    = process.env.SMTP_FROM || `"GCM Tickets" <${process.env.SMTP_USER}>`;
 const APP_URL = process.env.APP_URL   || 'http://10.0.1.108:3000';
-const CC      = process.env.SMTP_CC   || null;
+const CC_LIST = process.env.SMTP_CC
+  ? process.env.SMTP_CC.split(',').map(e => e.trim()).filter(Boolean)
+  : [];
 
 const LOGO_PATH = path.join(__dirname, '..', 'public', 'assets', 'gcm.jpg');
 const LOGO_CID  = 'gcm-logo@gcmtickets';
@@ -37,10 +39,11 @@ async function send({ to, subject, html }) {
     return;
   }
   try {
+    const ccAddresses = CC_LIST.filter(addr => addr !== to);
     const msg = { from: FROM, to, subject, html, attachments: logoAttachment };
-    if (CC && CC !== to) msg.cc = CC;
+    if (ccAddresses.length) msg.cc = ccAddresses.join(', ');
     const info = await transporter.sendMail(msg);
-    console.log(`[mailer] Enviado a ${to}${CC && CC !== to ? ` (cc: ${CC})` : ''} — ${info.messageId}`);
+    console.log(`[mailer] Enviado a ${to}${ccAddresses.length ? ` (cc: ${ccAddresses.join(', ')})` : ''} — ${info.messageId}`);
     return info;
   } catch (err) {
     console.error(`[mailer] Error al enviar a ${to}:`, err.message);
