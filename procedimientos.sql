@@ -8,6 +8,10 @@
 USE [gcm_tickets];
 GO
 
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+GO
+
 -- ============================================================
 -- sp_GetUserForLogin  — devuelve usuario + rol para autenticación
 -- ============================================================
@@ -287,9 +291,12 @@ BEGIN
   SET NOCOUNT ON;
   SELECT t.*,
          LTRIM(RTRIM(CONCAT(a.nombre, ' ', ISNULL(a.apellido, '')))) AS asignado_display,
-         a.username AS asignado_username
+         a.username AS asignado_username,
+         CASE WHEN r.id IS NULL THEN t.reporter_nombre
+              ELSE LTRIM(RTRIM(CONCAT(r.nombre, ' ', ISNULL(r.apellido, '')))) END AS reporter_display
   FROM tickets t
   LEFT JOIN usuarios a ON a.id = t.asignado_id
+  LEFT JOIN usuarios r ON r.id = t.reporter_id
   ORDER BY t.created_at DESC;
 END;
 GO
@@ -306,9 +313,12 @@ BEGIN
   SET NOCOUNT ON;
   SELECT t.*,
          LTRIM(RTRIM(CONCAT(a.nombre, ' ', ISNULL(a.apellido, '')))) AS asignado_display,
-         a.username AS asignado_username
+         a.username AS asignado_username,
+         CASE WHEN r.id IS NULL THEN t.reporter_nombre
+              ELSE LTRIM(RTRIM(CONCAT(r.nombre, ' ', ISNULL(r.apellido, '')))) END AS reporter_display
   FROM tickets t
   LEFT JOIN usuarios a ON a.id = t.asignado_id
+  LEFT JOIN usuarios r ON r.id = t.reporter_id
   WHERE t.id = @id;
 END;
 GO
@@ -324,10 +334,15 @@ CREATE PROCEDURE sp_GetComentarios
 AS
 BEGIN
   SET NOCOUNT ON;
-  SELECT autor_nombre, texto, created_at
-  FROM comentarios
-  WHERE ticket_id = @ticket_id AND es_interno = @es_interno
-  ORDER BY created_at;
+  SELECT CASE WHEN u.id IS NULL THEN c.autor_nombre
+              ELSE LTRIM(RTRIM(CONCAT(u.nombre, ' ', ISNULL(u.apellido, '')))) END AS autor_display,
+         r.nivel AS autor_rol_nivel,
+         c.texto, c.created_at
+  FROM comentarios c
+  LEFT JOIN usuarios u ON u.id = c.autor_id
+  LEFT JOIN roles r ON r.id = u.rol_id
+  WHERE c.ticket_id = @ticket_id AND c.es_interno = @es_interno
+  ORDER BY c.created_at;
 END;
 GO
 
@@ -341,10 +356,13 @@ CREATE PROCEDURE sp_GetHistorialTicket
 AS
 BEGIN
   SET NOCOUNT ON;
-  SELECT usuario_nombre, accion, created_at
-  FROM historial_tickets
-  WHERE ticket_id = @ticket_id
-  ORDER BY created_at;
+  SELECT CASE WHEN u.id IS NULL THEN h.usuario_nombre
+              ELSE LTRIM(RTRIM(CONCAT(u.nombre, ' ', ISNULL(u.apellido, '')))) END AS usuario_display,
+         h.accion, h.created_at
+  FROM historial_tickets h
+  LEFT JOIN usuarios u ON u.id = h.usuario_id
+  WHERE h.ticket_id = @ticket_id
+  ORDER BY h.created_at;
 END;
 GO
 
@@ -379,6 +397,63 @@ BEGIN
   FROM dispositivos d
   LEFT JOIN usuarios u ON u.id = d.tecnico_id
   ORDER BY d.created_at DESC;
+END;
+GO
+
+-- ============================================================
+-- sp_CrearDispositivoConTicket
+--   Crea el dispositivo de taller y su ticket de reparación en
+--   una sola transacción (antes eran 2 INSERT sueltos desde Node,
+--   sin atomicidad ante fallos a mitad de camino).
+-- ============================================================
+IF OBJECT_ID('sp_CrearDispositivoConTicket','P') IS NOT NULL DROP PROCEDURE sp_CrearDispositivoConTicket;
+GO
+CREATE PROCEDURE sp_CrearDispositivoConTicket
+  @dev_id          NVARCHAR(20),
+  @ticket_id       NVARCHAR(20),
+  @tipo            NVARCHAR(100),
+  @marca           NVARCHAR(100),
+  @modelo          NVARCHAR(100) = NULL,
+  @numero_serie    NVARCHAR(200) = NULL,
+  @estado_fisico   NVARCHAR(20)  = 'bueno',
+  @falla_cliente   NVARCHAR(MAX),
+  @accesorios      NVARCHAR(MAX) = NULL,
+  @cliente_nombre  NVARCHAR(200),
+  @cliente_tel     NVARCHAR(50)  = NULL,
+  @tecnico_id      INT           = NULL,
+  @tecnico_display NVARCHAR(200) = NULL,
+  @titulo          NVARCHAR(500),
+  @descripcion     NVARCHAR(MAX),
+  @reporter_nombre NVARCHAR(300) = NULL
+AS
+BEGIN
+  SET NOCOUNT ON;
+  BEGIN TRANSACTION;
+  BEGIN TRY
+    INSERT INTO dispositivos
+      (id, tipo, marca, modelo, numero_serie, estado_fisico,
+       falla_cliente, accesorios, cliente_nombre, cliente_tel, tecnico_id)
+    VALUES
+      (@dev_id, @tipo, @marca, @modelo, @numero_serie, @estado_fisico,
+       @falla_cliente, @accesorios, @cliente_nombre, @cliente_tel, @tecnico_id);
+
+    INSERT INTO tickets
+      (id, titulo, descripcion, status, prioridad, categoria,
+       reporter_nombre, asignado_id, device_id)
+    VALUES
+      (@ticket_id, @titulo, @descripcion, 'abierto', 'Media', 'Hardware',
+       @reporter_nombre, @tecnico_id, @dev_id);
+
+    INSERT INTO historial_tickets (ticket_id, usuario_nombre, accion)
+    VALUES (@ticket_id, ISNULL(@tecnico_display, 'Sin asignar'),
+            CONCAT('Equipo recibido de ', @cliente_nombre, '. ID dispositivo: ', @dev_id));
+
+    COMMIT TRANSACTION;
+  END TRY
+  BEGIN CATCH
+    ROLLBACK TRANSACTION;
+    THROW;
+  END CATCH;
 END;
 GO
 
@@ -478,5 +553,5 @@ END;
 GO
 
 -- ============================================================
--- Fin del script — procedimientos creados: 19
+-- Fin del script — procedimientos creados: 20
 -- ============================================================

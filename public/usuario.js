@@ -1,5 +1,5 @@
-const USER_KEY  = 'soporte_user_session';
 const AUTH_KEY  = 'gcm_auth_session';
+const TOKEN_KEY = 'gcm_auth_token';
 const DARK_KEY  = 'gcm_dark';
 
 function toggleDarkMode() {
@@ -15,19 +15,27 @@ function toggleDarkMode() {
   if (icon && localStorage.getItem(DARK_KEY) === '1') icon.className = 'ti ti-sun';
 })();
 
-let myUser = (() => {
+const authSession = (() => {
   const s = sessionStorage.getItem(AUTH_KEY);
-  if (!s) return '';
-  try { return JSON.parse(s).nombre || ''; } catch { return ''; }
+  if (!s) return null;
+  try { return JSON.parse(s); } catch { return null; }
 })();
+let myUser   = authSession?.nombre || '';
+let myUserId = authSession?.id || null;
 let ticketCache   = [];
 let currentFilter = 'todos';
 
 // ── API ───────────────────────────────────────────────────────────────────────
+function authHeaders() {
+  const token = sessionStorage.getItem(TOKEN_KEY);
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 async function api(url, method = 'GET', body = null) {
-  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  const opts = { method, headers: { 'Content-Type': 'application/json', ...authHeaders() } };
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(url, opts);
+  if (res.status === 401) { changeIdentity(); throw new Error('Sesión expirada'); }
   if (!res.ok) throw new Error(`Error ${res.status}`);
   return res.json();
 }
@@ -48,17 +56,12 @@ function statusLabel(s) {
 function statusIcon(s) {
   return { abierto:'ti-circle-dot', en_progreso:'ti-loader', cerrado:'ti-circle-check' }[s] || 'ti-circle';
 }
-function nowHM() {
-  const d = new Date();
-  return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
-}
 function commentHtml(c) {
-  const isUser = c.startsWith('[U]');
-  const text   = isUser ? c.slice(3).trim() : c;
+  const isUser = c.rolNivel < 2;
   const icon   = isUser
     ? '<i class="ti ti-user-circle" style="font-size:12px;color:var(--blue);vertical-align:-1px" aria-hidden="true"></i>'
     : '<i class="ti ti-headset" style="font-size:12px;color:var(--gray);vertical-align:-1px" aria-hidden="true"></i>';
-  return `<div class="comment-item ${isUser ? 'user-msg' : 'admin-msg'}">${icon} ${text}</div>`;
+  return `<div class="comment-item ${isUser ? 'user-msg' : 'admin-msg'}">${icon} <strong>${c.user || '—'}</strong> (${c.ts}): ${c.text}</div>`;
 }
 
 // ── Adjuntos ──────────────────────────────────────────────────────────────────
@@ -94,7 +97,7 @@ function setUserFilter(filter, btn) {
 
 // ── Render ────────────────────────────────────────────────────────────────────
 function renderMyTickets() {
-  const mine   = myUser ? ticketCache.filter(t => t.reporter === myUser) : [];
+  const mine   = myUserId ? ticketCache.filter(t => t.reporterId === myUserId) : [];
   const el     = document.getElementById('myTickets');
   const count  = document.getElementById('myCount');
   count.textContent = mine.length || '';
@@ -200,7 +203,7 @@ async function addUserComment(id) {
   if (!txt) { textarea.style.borderColor = 'var(--red)'; textarea.focus(); return; }
   textarea.style.borderColor = '';
   try {
-    await api(`/api/tickets/${id}/comments`, 'POST', { text: `[U] ${myUser} (${nowHM()}): ${txt}` });
+    await api(`/api/tickets/${id}/comments`, 'POST', { text: txt });
     await refreshTickets();
     showToast('Respuesta enviada ✓');
   } catch { showToast('Error al enviar respuesta'); }
@@ -265,24 +268,16 @@ function openModal() {
   mobileFile   = null;
   document.getElementById('f-file').value = '';
   updateFileLabel();
-  if (myUser) document.getElementById('f-name').value = myUser;
-  setTimeout(() => document.getElementById(myUser ? 'f-title' : 'f-name').focus(), 100);
+  setTimeout(() => document.getElementById('f-title').focus(), 100);
 }
 function closeModal() {
   document.getElementById('modalBackdrop').classList.remove('open');
 }
 
 async function createTicket() {
-  const name  = document.getElementById('f-name').value.trim();
   const title = document.getElementById('f-title').value.trim();
-  if (!name)  { document.getElementById('f-name').style.borderColor  = 'var(--red)'; document.getElementById('f-name').focus(); return; }
   if (!title) { document.getElementById('f-title').style.borderColor = 'var(--red)'; document.getElementById('f-title').focus(); return; }
-  document.getElementById('f-name').style.borderColor  = '';
   document.getElementById('f-title').style.borderColor = '';
-
-  myUser = name;
-  sessionStorage.setItem(USER_KEY, myUser);
-  document.getElementById('nombreUsuario').textContent = myUser;
 
   const btn = document.getElementById('btnEnviar');
   btn.disabled = true;
@@ -296,20 +291,18 @@ async function createTicket() {
       prioridad: document.getElementById('f-prio').value,
       categoria: document.getElementById('f-cat').value,
       asignado:  'Sin asignar',
-      reporter:  name,
       fecha:     new Date().toLocaleDateString('es-HN', { day:'numeric', month:'short', year:'numeric' })
     });
 
     // Subir archivo adjunto
     if (mobileToken && mobileFile) {
-      await api(`/api/tickets/${ticket.id}/attachments/from-mobile`, 'POST', { token: mobileToken, uploader: name });
+      await api(`/api/tickets/${ticket.id}/attachments/from-mobile`, 'POST', { token: mobileToken });
       mobileToken = null;
       mobileFile  = null;
     } else if (selectedFile) {
       const form = new FormData();
       form.append('file', selectedFile);
-      form.append('uploader', name);
-      await fetch(`/api/tickets/${ticket.id}/attachments`, { method: 'POST', body: form });
+      await fetch(`/api/tickets/${ticket.id}/attachments`, { method: 'POST', headers: authHeaders(), body: form });
     }
 
     closeModal();
@@ -511,8 +504,10 @@ async function doLogin() {
       return;
     }
 
-    myUser = data.nombre;
-    sessionStorage.setItem(AUTH_KEY, JSON.stringify({ nombre: data.nombre, rol: data.rol, rol_nivel: data.rol_nivel }));
+    myUser   = data.nombre;
+    myUserId = data.id;
+    sessionStorage.setItem(AUTH_KEY, JSON.stringify({ id: data.id, nombre: data.nombre, rol: data.rol, rol_nivel: data.rol_nivel }));
+    sessionStorage.setItem(TOKEN_KEY, data.token);
     document.getElementById('nombreUsuario').textContent = myUser;
     document.getElementById('logoutBtn').style.display = '';
     document.getElementById('identScreen').style.display = 'none';
@@ -528,9 +523,10 @@ async function doLogin() {
 }
 
 function changeIdentity() {
-  myUser = '';
+  myUser   = '';
+  myUserId = null;
   sessionStorage.removeItem(AUTH_KEY);
-  sessionStorage.removeItem(USER_KEY);
+  sessionStorage.removeItem(TOKEN_KEY);
   document.getElementById('loginUsername').value = '';
   document.getElementById('loginPassword').value = '';
   document.getElementById('identError').innerHTML = '';
@@ -544,9 +540,10 @@ function changeIdentity() {
 // ── Init ──────────────────────────────────────────────────────────────────────
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeQRModal(); } });
 
-if (myUser) {
+if (myUser && sessionStorage.getItem(TOKEN_KEY)) {
   document.getElementById('nombreUsuario').textContent = myUser;
   document.getElementById('logoutBtn').style.display = '';
+  document.getElementById('identScreen').style.display = 'none';
   refreshTickets();
 } else {
   showIdentScreen();

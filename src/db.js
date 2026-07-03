@@ -77,26 +77,6 @@ async function nextId(counter, prefix, padding = 3) {
   return `${prefix}-${String(row.valor).padStart(padding, '0')}`;
 }
 
-async function isAdmin(username) {
-  if (!username) return false;
-  const user = await queryOne(
-    `SELECT u.id FROM usuarios u JOIN roles r ON r.id = u.rol_id
-     WHERE u.username = ? AND r.nivel >= 3 AND u.activo = 1`,
-    [username]
-  );
-  return !!user;
-}
-
-async function findEmailByNombre(nombre) {
-  if (!nombre) return null;
-  const row = await queryOne(
-    `SELECT email FROM usuarios
-     WHERE LOWER(LTRIM(RTRIM(CONCAT(nombre,' ',ISNULL(apellido,''))))) = LOWER(?) AND activo = 1`,
-    [nombre]
-  );
-  return row?.email || null;
-}
-
 async function findUserByNombre(nombre) {
   if (!nombre || nombre === 'Sin asignar') return null;
   return await queryOne(
@@ -123,4 +103,4 @@ async function initDB() {
   }
 }
 
-module.exports = { pool, query, queryOne, exec, execOne, nextId, isAdmin, findUserByNombre, findEmailByNombre, initDB, bcrypt, ROUNDS };
+module.exports = { pool, query, queryOne, exec, execOne, nextId, findUserByNombre, initDB, bcrypt, ROUNDS };

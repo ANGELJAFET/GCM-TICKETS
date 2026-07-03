@@ -22,6 +22,10 @@ GO
 USE [gcm_tickets];
 GO
 
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+GO
+
 -- ============================================================
 -- 2.  Tablas (orden respeta dependencias FK)
 -- ============================================================
@@ -100,7 +104,6 @@ GO
 IF OBJECT_ID('dispositivos','U') IS NULL
 CREATE TABLE dispositivos (
   id             NVARCHAR(20)  PRIMARY KEY,
-  ticket_id      NVARCHAR(20),
   tipo           NVARCHAR(100) NOT NULL,
   marca          NVARCHAR(100) NOT NULL,
   modelo         NVARCHAR(100),
@@ -127,9 +130,10 @@ CREATE TABLE tickets (
   status          NVARCHAR(20)  NOT NULL DEFAULT 'abierto',
   prioridad       NVARCHAR(20)  NOT NULL DEFAULT 'Media',
   categoria       NVARCHAR(50)  NOT NULL DEFAULT 'Otro',
+  reporter_id     INT REFERENCES usuarios(id),
   reporter_nombre NVARCHAR(200),
   asignado_id     INT REFERENCES usuarios(id),
-  device_id       NVARCHAR(20),
+  device_id       NVARCHAR(20) REFERENCES dispositivos(id),
   created_at      DATETIME2     NOT NULL DEFAULT GETDATE(),
   updated_at      DATETIME2,
   closed_at       DATETIME2
@@ -143,6 +147,7 @@ IF OBJECT_ID('comentarios','U') IS NULL
 CREATE TABLE comentarios (
   id           INT IDENTITY(1,1) PRIMARY KEY,
   ticket_id    NVARCHAR(20)  NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
+  autor_id     INT REFERENCES usuarios(id),
   autor_nombre NVARCHAR(200),
   texto        NVARCHAR(MAX) NOT NULL,
   es_interno   BIT           NOT NULL DEFAULT 0,
@@ -157,6 +162,7 @@ IF OBJECT_ID('historial_tickets','U') IS NULL
 CREATE TABLE historial_tickets (
   id               INT IDENTITY(1,1) PRIMARY KEY,
   ticket_id        NVARCHAR(20)  NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
+  usuario_id       INT REFERENCES usuarios(id),
   usuario_nombre   NVARCHAR(200),
   accion           NVARCHAR(500),
   campo_modificado NVARCHAR(100),
@@ -485,6 +491,80 @@ GO
 IF EXISTS (SELECT 1 FROM sys.columns
            WHERE object_id = OBJECT_ID('usuarios') AND name = 'email_verify_deadline')
   ALTER TABLE usuarios DROP COLUMN email_verify_deadline;
+GO
+
+-- ============================================================
+-- 6.  Normalización: relación 1:1 dispositivos↔tickets
+--     Antes se guardaba en ambas tablas (dispositivos.ticket_id
+--     Y tickets.device_id) sin FK real en ninguna. Se deja una
+--     sola dirección (tickets.device_id) con FK real.
+-- ============================================================
+
+-- 6.1  Eliminar dispositivos.ticket_id (redundante, sin FK, no usado)
+IF EXISTS (SELECT 1 FROM sys.columns
+           WHERE object_id = OBJECT_ID('dispositivos') AND name = 'ticket_id')
+  ALTER TABLE dispositivos DROP COLUMN ticket_id;
+GO
+
+-- 6.2  Añadir FK real en tickets.device_id → dispositivos(id)
+IF NOT EXISTS (
+  SELECT 1 FROM sys.foreign_keys f
+  JOIN sys.foreign_key_columns fc ON f.object_id = fc.constraint_object_id
+  JOIN sys.columns c ON fc.parent_object_id = c.object_id
+                    AND fc.parent_column_id  = c.column_id
+  WHERE c.object_id = OBJECT_ID('tickets') AND c.name = 'device_id'
+)
+  ALTER TABLE tickets ADD CONSTRAINT FK_tickets_device_id
+    FOREIGN KEY (device_id) REFERENCES dispositivos(id);
+GO
+
+-- ============================================================
+-- 7.  Normalización: reporter_id / autor_id / usuario_id
+--     Login ahora es obligatorio, así que cada ticket/comentario/
+--     entrada de historial creado desde la app queda ligado a un
+--     usuarios.id real. Las columnas *_nombre se conservan como
+--     respaldo de solo lectura para filas históricas que no
+--     puedan resolverse a un usuario (ej. 'Sistema', nombres que
+--     ya no existen). El backend nunca vuelve a escribir en ellas.
+-- ============================================================
+
+-- 7.1  tickets.reporter_id
+IF NOT EXISTS (SELECT 1 FROM sys.columns
+               WHERE object_id = OBJECT_ID('tickets') AND name = 'reporter_id')
+  ALTER TABLE tickets ADD reporter_id INT NULL REFERENCES usuarios(id);
+GO
+
+UPDATE t SET t.reporter_id = u.id
+FROM tickets t
+JOIN usuarios u ON LTRIM(RTRIM(CONCAT(u.nombre,' ',ISNULL(u.apellido,'')))) = LTRIM(RTRIM(t.reporter_nombre))
+                 OR u.username = LTRIM(RTRIM(t.reporter_nombre))
+WHERE t.reporter_id IS NULL AND t.reporter_nombre IS NOT NULL;
+GO
+
+-- 7.2  comentarios.autor_id
+IF NOT EXISTS (SELECT 1 FROM sys.columns
+               WHERE object_id = OBJECT_ID('comentarios') AND name = 'autor_id')
+  ALTER TABLE comentarios ADD autor_id INT NULL REFERENCES usuarios(id);
+GO
+
+UPDATE c SET c.autor_id = u.id
+FROM comentarios c
+JOIN usuarios u ON LTRIM(RTRIM(CONCAT(u.nombre,' ',ISNULL(u.apellido,'')))) = LTRIM(RTRIM(c.autor_nombre))
+                 OR u.username = LTRIM(RTRIM(c.autor_nombre))
+WHERE c.autor_id IS NULL AND c.autor_nombre IS NOT NULL;
+GO
+
+-- 7.3  historial_tickets.usuario_id
+IF NOT EXISTS (SELECT 1 FROM sys.columns
+               WHERE object_id = OBJECT_ID('historial_tickets') AND name = 'usuario_id')
+  ALTER TABLE historial_tickets ADD usuario_id INT NULL REFERENCES usuarios(id);
+GO
+
+UPDATE h SET h.usuario_id = u.id
+FROM historial_tickets h
+JOIN usuarios u ON LTRIM(RTRIM(CONCAT(u.nombre,' ',ISNULL(u.apellido,'')))) = LTRIM(RTRIM(h.usuario_nombre))
+                 OR u.username = LTRIM(RTRIM(h.usuario_nombre))
+WHERE h.usuario_id IS NULL AND h.usuario_nombre IS NOT NULL;
 GO
 
 -- ============================================================

@@ -2,9 +2,10 @@ const express      = require('express');
 const router       = express.Router();
 const db           = require('../db');
 const { logAudit } = require('../helpers');
+const { requireRole } = require('../middleware/auth');
 
 // GET /api/usuarios
-router.get('/usuarios', async (req, res) => {
+router.get('/usuarios', ...requireRole(2), async (req, res) => {
   try {
     res.json(await db.exec('sp_GetUsuarios'));
   } catch (err) {
@@ -14,15 +15,15 @@ router.get('/usuarios', async (req, res) => {
 });
 
 // GET /api/usuarios/:id/tickets
-router.get('/usuarios/:id/tickets', async (req, res) => {
+router.get('/usuarios/:id/tickets', ...requireRole(2), async (req, res) => {
   try {
     const user = await db.queryOne('SELECT nombre, apellido FROM usuarios WHERE id = ?', [req.params.id]);
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
     const nombre  = `${user.nombre} ${user.apellido || ''}`.trim();
     const tickets = await db.query(
       `SELECT id, titulo, status, prioridad, categoria, created_at
-       FROM tickets WHERE reporter_nombre = ? ORDER BY created_at DESC`,
-      [nombre]
+       FROM tickets WHERE reporter_id = ? ORDER BY created_at DESC`,
+      [req.params.id]
     );
     res.json({ nombre, tickets });
   } catch (err) {
@@ -32,20 +33,18 @@ router.get('/usuarios/:id/tickets', async (req, res) => {
 });
 
 // DELETE /api/usuarios/:id
-router.delete('/usuarios/:id', async (req, res) => {
+router.delete('/usuarios/:id', ...requireRole(3), async (req, res) => {
   try {
-    const { requestedBy } = req.body;
-    if (!await db.isAdmin(requestedBy))
-      return res.status(403).json({ error: 'Solo un administrador puede eliminar usuarios' });
-
-    const self = await db.queryOne('SELECT id FROM usuarios WHERE username = ?', [requestedBy]);
-    if (self && String(self.id) === String(req.params.id))
+    if (String(req.user.id) === String(req.params.id))
       return res.status(400).json({ error: 'No puedes eliminar tu propia cuenta' });
 
     const target = await db.queryOne('SELECT id, username, nombre, apellido FROM usuarios WHERE id = ?', [req.params.id]);
     if (!target) return res.status(404).json({ error: 'Usuario no encontrado' });
 
     await db.query('UPDATE tickets      SET asignado_id       = NULL WHERE asignado_id      = ?', [req.params.id]);
+    await db.query('UPDATE tickets      SET reporter_id       = NULL WHERE reporter_id      = ?', [req.params.id]);
+    await db.query('UPDATE comentarios  SET autor_id          = NULL WHERE autor_id         = ?', [req.params.id]);
+    await db.query('UPDATE historial_tickets SET usuario_id   = NULL WHERE usuario_id       = ?', [req.params.id]);
     await db.query('UPDATE dispositivos SET tecnico_id        = NULL WHERE tecnico_id        = ?', [req.params.id]);
     await db.query('UPDATE inventario   SET responsable_id    = NULL WHERE responsable_id    = ?', [req.params.id]);
     await db.query('UPDATE prestamos    SET empleado_id       = NULL WHERE empleado_id       = ?', [req.params.id]);
@@ -58,7 +57,7 @@ router.delete('/usuarios/:id', async (req, res) => {
     );
     await db.query('DELETE FROM usuarios WHERE id = ?', [req.params.id]);
 
-    await logAudit(requestedBy, 'Eliminó usuario', 'usuario', req.params.id,
+    await logAudit(req.user.username, 'Eliminó usuario', 'usuario', req.params.id,
       `@${target.username}${target.nombre ? ' — ' + [target.nombre, target.apellido].filter(Boolean).join(' ') : ''}`);
     res.json({ ok: true });
   } catch (err) {
@@ -68,18 +67,16 @@ router.delete('/usuarios/:id', async (req, res) => {
 });
 
 // PATCH /api/usuarios/:id/password
-router.patch('/usuarios/:id/password', async (req, res) => {
+router.patch('/usuarios/:id/password', ...requireRole(3), async (req, res) => {
   try {
-    const { requestedBy, newPassword } = req.body;
-    if (!await db.isAdmin(requestedBy))
-      return res.status(403).json({ error: 'Solo un administrador puede cambiar contraseñas' });
+    const { newPassword } = req.body;
     if (!newPassword || newPassword.length < 6)
       return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
 
     const hash   = await db.bcrypt.hash(newPassword, db.ROUNDS);
     const target = await db.queryOne('SELECT username, nombre, apellido FROM usuarios WHERE id = ?', [req.params.id]);
     await db.query('UPDATE usuarios SET password_hash = ?, updated_at = NOW() WHERE id = ?', [hash, req.params.id]);
-    await logAudit(requestedBy, 'Cambió contraseña', 'usuario', req.params.id,
+    await logAudit(req.user.username, 'Cambió contraseña', 'usuario', req.params.id,
       `@${target?.username || req.params.id}${target?.nombre ? ' — ' + [target.nombre, target.apellido].filter(Boolean).join(' ') : ''}`);
     res.json({ ok: true });
   } catch (err) {
@@ -89,14 +86,10 @@ router.patch('/usuarios/:id/password', async (req, res) => {
 });
 
 // PATCH /api/usuarios/:id/activo
-router.patch('/usuarios/:id/activo', async (req, res) => {
+router.patch('/usuarios/:id/activo', ...requireRole(3), async (req, res) => {
   try {
-    const { requestedBy, activo } = req.body;
-    if (!await db.isAdmin(requestedBy))
-      return res.status(403).json({ error: 'Solo un administrador puede modificar usuarios' });
-
-    const self = await db.queryOne('SELECT id FROM usuarios WHERE username = ?', [requestedBy]);
-    if (self && String(self.id) === String(req.params.id))
+    const { activo } = req.body;
+    if (String(req.user.id) === String(req.params.id))
       return res.status(400).json({ error: 'No puedes desactivar tu propia cuenta' });
 
     const target = await db.queryOne('SELECT username, nombre, apellido FROM usuarios WHERE id = ?', [req.params.id]);
@@ -104,7 +97,7 @@ router.patch('/usuarios/:id/activo', async (req, res) => {
       'UPDATE usuarios SET activo = ?, updated_at = NOW() WHERE id = ?',
       [activo ? 1 : 0, req.params.id]
     );
-    await logAudit(requestedBy,
+    await logAudit(req.user.username,
       activo ? 'Activó usuario' : 'Desactivó usuario',
       'usuario', req.params.id,
       `@${target?.username || req.params.id}${target?.nombre ? ' — ' + [target.nombre, target.apellido].filter(Boolean).join(' ') : ''}`);
@@ -116,7 +109,7 @@ router.patch('/usuarios/:id/activo', async (req, res) => {
 });
 
 // GET /api/admins
-router.get('/admins', async (req, res) => {
+router.get('/admins', ...requireRole(2), async (req, res) => {
   try {
     const users = await db.exec('sp_GetAdmins');
     res.json(users.map(u => ({
@@ -132,12 +125,10 @@ router.get('/admins', async (req, res) => {
 });
 
 // POST /api/admins
-router.post('/admins', async (req, res) => {
+router.post('/admins', ...requireRole(3), async (req, res) => {
   try {
-    const { username, password, nombre, requestedBy } = req.body;
+    const { username, password, nombre } = req.body;
 
-    if (!await db.isAdmin(requestedBy))
-      return res.status(403).json({ error: 'Solo un administrador puede crear usuarios' });
     if (!username || !password || !nombre)
       return res.status(400).json({ error: 'Usuario, contraseña y nombre son requeridos' });
 
@@ -148,12 +139,11 @@ router.post('/admins', async (req, res) => {
     await db.query(
       `INSERT INTO usuarios (username, password_hash, nombre, rol_id, activo,
                              registro_aprobado, registro_aprobado_por, registro_aprobado_en)
-       SELECT ?, ?, ?, (SELECT id FROM roles WHERE nombre = 'tecnico'), 1, 1, id, GETDATE()
-       FROM usuarios WHERE username = ?`,
-      [username.trim(), hash, nombre.trim(), requestedBy]
+       VALUES (?, ?, ?, (SELECT id FROM roles WHERE nombre = 'tecnico'), 1, 1, ?, GETDATE())`,
+      [username.trim(), hash, nombre.trim(), req.user.id]
     );
 
-    await logAudit(requestedBy, 'Creó usuario técnico', 'usuario', null, `@${username.trim()} — ${nombre.trim()}`);
+    await logAudit(req.user.username, 'Creó usuario técnico', 'usuario', null, `@${username.trim()} — ${nombre.trim()}`);
     res.status(201).json({ ok: true });
   } catch (err) {
     console.error(err);
@@ -162,11 +152,8 @@ router.post('/admins', async (req, res) => {
 });
 
 // DELETE /api/admins/:username
-router.delete('/admins/:username', async (req, res) => {
+router.delete('/admins/:username', ...requireRole(3), async (req, res) => {
   try {
-    if (!await db.isAdmin(req.body?.requestedBy))
-      return res.status(403).json({ error: 'Solo un administrador puede eliminar usuarios' });
-
     const admins = await db.query(
       `SELECT u.id FROM usuarios u JOIN roles r ON r.id = u.rol_id
        WHERE r.nivel >= 2 AND u.activo = 1`
@@ -175,7 +162,7 @@ router.delete('/admins/:username', async (req, res) => {
       return res.status(400).json({ error: 'No se puede eliminar el único administrador' });
 
     await db.query('UPDATE usuarios SET activo = 0 WHERE username = ?', [req.params.username]);
-    await logAudit(req.body?.requestedBy, 'Eliminó usuario técnico', 'usuario', null, `@${req.params.username}`);
+    await logAudit(req.user.username, 'Eliminó usuario técnico', 'usuario', null, `@${req.params.username}`);
     res.json({ ok: true });
   } catch (err) {
     console.error(err);
@@ -184,7 +171,7 @@ router.delete('/admins/:username', async (req, res) => {
 });
 
 // GET /api/solicitudes
-router.get('/solicitudes', async (req, res) => {
+router.get('/solicitudes', ...requireRole(3), async (req, res) => {
   try {
     res.json(await db.exec('sp_GetSolicitudes'));
   } catch (err) {
@@ -194,15 +181,11 @@ router.get('/solicitudes', async (req, res) => {
 });
 
 // POST /api/solicitudes/:id/aprobar
-router.post('/solicitudes/:id/aprobar', async (req, res) => {
+router.post('/solicitudes/:id/aprobar', ...requireRole(3), async (req, res) => {
   try {
-    const { requestedBy } = req.body;
-    if (!await db.isAdmin(requestedBy))
-      return res.status(403).json({ error: 'Solo un administrador puede aprobar solicitudes' });
-
     await db.exec('sp_AprobarSolicitud', {
       solicitud_id: parseInt(req.params.id),
-      requestedBy
+      requestedBy: req.user.username
     });
 
     res.json({ ok: true });
@@ -215,15 +198,12 @@ router.post('/solicitudes/:id/aprobar', async (req, res) => {
 });
 
 // POST /api/solicitudes/:id/rechazar
-router.post('/solicitudes/:id/rechazar', async (req, res) => {
+router.post('/solicitudes/:id/rechazar', ...requireRole(3), async (req, res) => {
   try {
-    const { requestedBy, motivo } = req.body;
-    if (!await db.isAdmin(requestedBy))
-      return res.status(403).json({ error: 'Solo un administrador puede rechazar solicitudes' });
-
+    const { motivo } = req.body;
     await db.exec('sp_RechazarSolicitud', {
       solicitud_id: parseInt(req.params.id),
-      requestedBy,
+      requestedBy: req.user.username,
       motivo: motivo || null
     });
 

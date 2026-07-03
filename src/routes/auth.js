@@ -1,7 +1,9 @@
 const express = require('express');
+const jwt     = require('jsonwebtoken');
 const router  = express.Router();
 const db      = require('../db');
 const mailer  = require('../mailer');
+const { SESSION_SECRET } = require('../config');
 
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
@@ -18,9 +20,18 @@ router.post('/login', async (req, res) => {
 
     await db.exec('sp_UpdateLastLogin', { username });
 
+    const nombre = `${user.nombre} ${user.apellido || ''}`.trim();
+    const token = jwt.sign(
+      { id: user.id, username: user.username, nombre, rol_nivel: user.rol_nivel },
+      SESSION_SECRET,
+      { expiresIn: '12h' }
+    );
+
     res.json({
       ok:        true,
-      nombre:    `${user.nombre} ${user.apellido || ''}`.trim(),
+      token,
+      id:        user.id,
+      nombre,
       rol:       user.rol,
       rol_nivel: user.rol_nivel
     });

@@ -1,6 +1,7 @@
 const SESSION_KEY   = 'soporte_admin_session';
 const NOMBRE_KEY    = 'soporte_admin_nombre';
 const USERNAME_KEY  = 'soporte_admin_username';
+const TOKEN_KEY      = 'soporte_admin_token';
 const DARK_KEY      = 'gcm_dark';
 
 function toggleDarkMode() {
@@ -69,6 +70,7 @@ async function doLogin() {
       sessionStorage.setItem(SESSION_KEY, '1');
       sessionStorage.setItem(NOMBRE_KEY, adminNombre);
       sessionStorage.setItem(USERNAME_KEY, u);
+      sessionStorage.setItem(TOKEN_KEY, data.token);
       document.getElementById('adminBadge').textContent = adminNombre.toUpperCase();
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('mainApp').classList.add('visible');
@@ -97,6 +99,7 @@ function logout() {
   sessionStorage.removeItem(SESSION_KEY);
   sessionStorage.removeItem(NOMBRE_KEY);
   sessionStorage.removeItem(USERNAME_KEY);
+  sessionStorage.removeItem(TOKEN_KEY);
   location.reload();
 }
 
@@ -200,10 +203,16 @@ function checkNewTickets(tickets) {
 }
 
 // ── API ───────────────────────────────────────────────────────────────────────
+function authHeaders() {
+  const token = sessionStorage.getItem(TOKEN_KEY);
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 async function api(url, method = 'GET', body = null) {
-  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  const opts = { method, headers: { 'Content-Type': 'application/json', ...authHeaders() } };
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(url, opts);
+  if (res.status === 401) { logout(); throw new Error('Sesión expirada'); }
   if (!res.ok) throw new Error(`Error ${res.status}`);
   return res.json();
 }
@@ -264,12 +273,11 @@ function avatarHtml(name) {
 }
 
 function commentHtml(c) {
-  const isUser = c.startsWith('[U]');
-  const text   = isUser ? c.slice(3).trim() : c;
+  const isUser = c.rolNivel < 2;
   const icon   = isUser
     ? '<i class="ti ti-user-circle" style="font-size:12px;color:var(--blue);vertical-align:-1px"></i>'
     : '<i class="ti ti-headset" style="font-size:12px;color:var(--gray);vertical-align:-1px"></i>';
-  return `<div class="comment-item ${isUser ? 'user-msg' : 'admin-msg'}">${icon} ${text}</div>`;
+  return `<div class="comment-item ${isUser ? 'user-msg' : 'admin-msg'}">${icon} <strong>${c.user || '—'}</strong> (${c.ts}): ${c.text}</div>`;
 }
 
 function nowHM() {
@@ -432,8 +440,8 @@ function toggleAuditoria() {
 async function loadUsersData() {
   try {
     const [usersRes, solsRes] = await Promise.all([
-      fetch('/api/usuarios'),
-      fetch('/api/solicitudes')
+      fetch('/api/usuarios', { headers: authHeaders() }),
+      fetch('/api/solicitudes', { headers: authHeaders() })
     ]);
     usuariosCache    = usersRes.ok  ? await usersRes.json()  : [];
     solicitudesCache = solsRes.ok   ? await solsRes.json()   : [];
@@ -637,7 +645,7 @@ function renderDetailTab(t) {
   const body = document.getElementById('detailBody');
 
   if (currentDetailTab === 'info') {
-    const userReplies = t.comments.filter(c => c.startsWith('[U]')).length;
+    const userReplies = t.comments.filter(c => c.rolNivel < 2).length;
     const attachHtml  = (t.attachments||[]).length
       ? (t.attachments||[]).map(attachmentHtml).join('')
       : '<p style="font-size:12px;color:var(--gray)">Sin archivos adjuntos.</p>';
@@ -753,7 +761,7 @@ function closeDetail() {
 // ── Acciones sobre tickets ────────────────────────────────────────────────────
 async function reassign(id, val) {
   try {
-    await api(`/api/tickets/${id}`, 'PATCH', { asignado: val, adminUser: adminNombre });
+    await api(`/api/tickets/${id}`, 'PATCH', { asignado: val });
     showToast('Asignado a ' + val);
     await refreshTickets();
     openDetail(id);
@@ -762,7 +770,7 @@ async function reassign(id, val) {
 
 async function changeStatus(id, status) {
   try {
-    await api(`/api/tickets/${id}`, 'PATCH', { status, adminUser: adminNombre });
+    await api(`/api/tickets/${id}`, 'PATCH', { status });
     showToast('Estado actualizado ✓');
     await refreshTickets();
     openDetail(id);
@@ -772,7 +780,7 @@ async function changeStatus(id, status) {
 async function deleteTicket(id) {
   if (!confirm('¿Eliminar este ticket permanentemente?')) return;
   try {
-    await api(`/api/tickets/${id}`, 'DELETE', { adminUser: adminNombre });
+    await api(`/api/tickets/${id}`, 'DELETE');
     closeDetail();
     showToast('Ticket eliminado');
     await refreshTickets();
@@ -783,10 +791,7 @@ async function addComment(id) {
   const txt = document.getElementById('newComment').value.trim();
   if (!txt) return;
   try {
-    await api(`/api/tickets/${id}/comments`, 'POST', {
-      text: `Soporte (${nowHM()}): ${txt}`,
-      adminUser: adminNombre
-    });
+    await api(`/api/tickets/${id}/comments`, 'POST', { text: txt });
     showToast('Respuesta enviada ✓');
     await refreshTickets();
     openDetail(id);
@@ -797,7 +802,7 @@ async function addNote(id) {
   const txt = document.getElementById('newNote').value.trim();
   if (!txt) return;
   try {
-    await api(`/api/tickets/${id}/notes`, 'POST', { text: txt, user: adminNombre });
+    await api(`/api/tickets/${id}/notes`, 'POST', { text: txt });
     showToast('Nota guardada ✓');
     await refreshTickets();
     openDetail(id);
@@ -819,7 +824,7 @@ function exportToExcel() {
     t.id, t.title, t.desc, statusMap[t.status]||t.status,
     t.prioridad, t.categoria, t.asignado||'Sin asignar', t.reporter||'—',
     t.fecha, t.comments.length, (t.notes||[]).length, (t.attachments||[]).length,
-    t.comments.length ? t.comments[t.comments.length-1].replace(/^\[U\]\s*/,'') : ''
+    t.comments.length ? t.comments[t.comments.length-1].text : ''
   ]);
   const ws1 = XLSX.utils.aoa_to_sheet([headers, ...rows]);
   ws1['!cols'] = [{wch:9},{wch:40},{wch:50},{wch:14},{wch:10},{wch:12},{wch:14},{wch:18},{wch:16},{wch:14},{wch:14},{wch:10},{wch:50}];
@@ -939,7 +944,7 @@ async function createAdmin() {
   }
 
   try {
-    await api('/api/admins', 'POST', { username: user, password: pass, nombre, requestedBy: loggedUser });
+    await api('/api/admins', 'POST', { username: user, password: pass, nombre });
     document.getElementById('am-nombre').value = '';
     document.getElementById('am-user').value   = '';
     document.getElementById('am-pass').value   = '';
@@ -958,8 +963,7 @@ async function deleteAdmin(username, nombre) {
   try {
     const res = await fetch(`/api/admins/${username}`, {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requestedBy: loggedUser })
+      headers: { 'Content-Type': 'application/json', ...authHeaders() }
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
@@ -1546,10 +1550,10 @@ async function saveInventoryItem() {
   btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2"></i> Guardando…';
   try {
     if (editingInvId) {
-      await api(`/api/inventory/${editingInvId}`, 'PATCH', { tipo, marca, modelo, serie, color, condicion, estado, ubicacion, responsable, notas, garantia, adminUser: adminNombre });
+      await api(`/api/inventory/${editingInvId}`, 'PATCH', { tipo, marca, modelo, serie, color, condicion, estado, ubicacion, responsable, notas, garantia });
       showToast('Equipo actualizado ✓');
     } else {
-      await api('/api/inventory', 'POST', { tipo, marca, modelo, serie, color, condicion, ubicacion, responsable, notas, garantia, adminUser: adminNombre });
+      await api('/api/inventory', 'POST', { tipo, marca, modelo, serie, color, condicion, ubicacion, responsable, notas, garantia });
       showToast('Equipo agregado al inventario ✓');
     }
     closeInventoryModal();
@@ -1566,7 +1570,7 @@ async function deleteInventoryItem(id) {
   const item = inventoryCache.find(i => i.id === id);
   if (!confirm(`¿Eliminar "${item?.marca} ${item?.modelo || ''}" (${id}) del inventario?\nEsta acción no se puede deshacer.`)) return;
   try {
-    await api(`/api/inventory/${id}`, 'DELETE', { adminUser: adminNombre });
+    await api(`/api/inventory/${id}`, 'DELETE');
     showToast('Equipo eliminado del inventario');
     await loadDevices();
     renderInventorySection();
@@ -1649,7 +1653,7 @@ async function saveLoan() {
   if (!inventoryId) return showErr('Selecciona un equipo.');
   if (!empleado)    return showErr('El nombre del empleado es requerido.');
   try {
-    await api('/api/loans', 'POST', { inventoryId, empleado, departamento, fechaDevolucion: fechaDev, autorizadoPor, notas, adminUser: adminNombre });
+    await api('/api/loans', 'POST', { inventoryId, empleado, departamento, fechaDevolucion: fechaDev, autorizadoPor, notas });
     showToast('Préstamo registrado ✓');
     closeLoanModal();
     await loadDevices();
@@ -1769,7 +1773,7 @@ ${String(loan.empleado || '').toUpperCase()}${loan.departamento ? `<br><span sty
 async function returnLoan(loanId) {
   if (!confirm('¿Registrar la devolución de este equipo?')) return;
   try {
-    await api(`/api/loans/${loanId}`, 'PATCH', { estado: 'devuelto', adminUser: adminNombre });
+    await api(`/api/loans/${loanId}`, 'PATCH', { estado: 'devuelto' });
     showToast('Devolución registrada ✓');
     await loadDevices();
     renderInventorySection();
@@ -1983,7 +1987,7 @@ async function loadUsrTickets(userId) {
   const content = document.getElementById('usdTabContent');
   content.innerHTML = '<div style="padding:28px;text-align:center;color:var(--text-sec)"><i class="ti ti-loader-2" style="font-size:24px"></i><br>Cargando tickets…</div>';
   try {
-    const res = await fetch(`/api/usuarios/${userId}/tickets`);
+    const res = await fetch(`/api/usuarios/${userId}/tickets`, { headers: authHeaders() });
     const { nombre, tickets } = await res.json();
 
     if (!tickets.length) {
@@ -2116,11 +2120,10 @@ async function changeUsrPassword(id) {
   const pass = document.getElementById('usdNewPass')?.value || '';
   const msg  = document.getElementById('usdPassMsg');
   if (pass.length < 6) { msg.style.color = '#dc2626'; msg.textContent = 'Mínimo 6 caracteres.'; return; }
-  const username = sessionStorage.getItem(USERNAME_KEY) || '';
   try {
     const res  = await fetch(`/api/usuarios/${id}/password`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requestedBy: username, newPassword: pass })
+      method: 'PATCH', headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ newPassword: pass })
     });
     const json = await res.json();
     if (res.ok) {
@@ -2136,11 +2139,9 @@ async function changeUsrPassword(id) {
 
 async function aprobarSolicitud(id) {
   if (!confirm('¿Aprobar esta solicitud y crear la cuenta de usuario?')) return;
-  const username = sessionStorage.getItem(USERNAME_KEY) || '';
   try {
     const res = await fetch(`/api/solicitudes/${id}/aprobar`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requestedBy: username })
+      method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() }
     });
     const json = await res.json();
     if (res.ok) { showToast('Solicitud aprobada y cuenta creada'); await loadUsersData(); }
@@ -2151,11 +2152,10 @@ async function aprobarSolicitud(id) {
 async function rechazarSolicitud(id) {
   const motivo = prompt('Motivo de rechazo (opcional):');
   if (motivo === null) return;
-  const username = sessionStorage.getItem(USERNAME_KEY) || '';
   try {
     const res = await fetch(`/api/solicitudes/${id}/rechazar`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requestedBy: username, motivo })
+      method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ motivo })
     });
     const json = await res.json();
     if (res.ok) { showToast('Solicitud rechazada'); await loadUsersData(); }
@@ -2165,11 +2165,9 @@ async function rechazarSolicitud(id) {
 
 async function deleteUser(id, nombre) {
   if (!confirm(`¿Eliminar permanentemente a "${nombre}"?\n\nEsta acción no se puede deshacer. Los tickets asignados quedarán sin asignar.`)) return;
-  const username = sessionStorage.getItem(USERNAME_KEY) || '';
   try {
     const res = await fetch(`/api/usuarios/${id}`, {
-      method: 'DELETE', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requestedBy: username })
+      method: 'DELETE', headers: { 'Content-Type': 'application/json', ...authHeaders() }
     });
     const json = await res.json();
     if (res.ok) { showToast('Usuario eliminado'); await loadUsersData(); }
@@ -2178,13 +2176,12 @@ async function deleteUser(id, nombre) {
 }
 
 async function toggleUserActivo(id, activo) {
-  const username = sessionStorage.getItem(USERNAME_KEY) || '';
   const label = activo ? 'activar' : 'desactivar';
   if (!confirm(`¿Deseas ${label} este usuario?`)) return;
   try {
     const res = await fetch(`/api/usuarios/${id}/activo`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requestedBy: username, activo })
+      method: 'PATCH', headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ activo })
     });
     const json = await res.json();
     if (res.ok) { showToast(`Usuario ${activo ? 'activado' : 'desactivado'}`); await loadUsersData(); }
@@ -2215,7 +2212,7 @@ async function loadAuditData() {
   if (hasta)   params.set('hasta',   hasta);
 
   try {
-    const res = await fetch(`/api/auditoria?${params}`);
+    const res = await fetch(`/api/auditoria?${params}`, { headers: authHeaders() });
     auditCache = res.ok ? await res.json() : [];
   } catch { auditCache = []; }
 
@@ -2335,7 +2332,7 @@ document.addEventListener('keydown', e => {
   }
 });
 
-if (sessionStorage.getItem(SESSION_KEY)) {
+if (sessionStorage.getItem(SESSION_KEY) && sessionStorage.getItem(TOKEN_KEY)) {
   adminNombre = sessionStorage.getItem(NOMBRE_KEY) || 'Admin';
   document.getElementById('adminBadge').textContent = adminNombre.toUpperCase();
   document.getElementById('loginScreen').style.display = 'none';

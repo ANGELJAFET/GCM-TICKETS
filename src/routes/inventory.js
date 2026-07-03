@@ -3,9 +3,10 @@ const router       = express.Router();
 const db           = require('../db');
 const { fmtDate, logAudit }  = require('../helpers');
 const { loadTicket }         = require('../ticketLoader');
+const { requireRole }        = require('../middleware/auth');
 
 // GET /api/devices
-router.get('/devices', async (req, res) => {
+router.get('/devices', ...requireRole(2), async (req, res) => {
   try {
     const devices = await db.exec('sp_GetDevices');
     res.json(devices.map(d => ({
@@ -14,8 +15,7 @@ router.get('/devices', async (req, res) => {
       fallaCliente: d.falla_cliente, accesorios: d.accesorios || [],
       clienteNombre: d.cliente_nombre, clienteTel: d.cliente_tel,
       tecnico: (d.tecnico_display || '').trim() || 'Sin asignar',
-      fecha: fmtDate(d.created_at), fechaTs: new Date(d.created_at).getTime(),
-      ticketId: d.ticket_id
+      fecha: fmtDate(d.created_at), fechaTs: new Date(d.created_at).getTime()
     })));
   } catch (err) {
     console.error(err);
@@ -24,7 +24,7 @@ router.get('/devices', async (req, res) => {
 });
 
 // POST /api/devices
-router.post('/devices', async (req, res) => {
+router.post('/devices', ...requireRole(2), async (req, res) => {
   try {
     const { tipo, marca, modelo, serie, estadoFisico, fallaCliente,
             accesorios, clienteNombre, clienteTel, tecnico } = req.body;
@@ -49,27 +49,15 @@ router.post('/devices', async (req, res) => {
     const telText      = clienteTel ? ` · Tel: ${clienteTel}` : '';
     const desc = `Equipo recibido para diagnóstico y reparación.\n\nDispositivo: ${tipo} ${marca} ${modelo || ''}${serieText}\nEstado físico: ${estadoNombre}\n\nFalla reportada por el cliente:\n"${fallaCliente}"${accText}`;
 
-    await db.query(
-      `INSERT INTO dispositivos (id, ticket_id, tipo, marca, modelo, numero_serie, estado_fisico,
-                                 falla_cliente, accesorios, cliente_nombre, cliente_tel, tecnico_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [devId, ticketId, tipo, marca, modelo || '', serie || '',
-       estadoFisico || 'bueno', fallaCliente, JSON.stringify(accArr),
-       clienteNombre, clienteTel || '', tecnicoId]
-    );
-
-    await db.query(
-      `INSERT INTO tickets (id, titulo, descripcion, status, prioridad, categoria,
-                            reporter_nombre, asignado_id, device_id)
-       VALUES (?, ?, ?, 'abierto', 'Media', 'Hardware', ?, ?, ?)`,
-      [ticketId, `Recepción: ${marca} ${modelo || tipo}`.trim(),
-       desc, `${clienteNombre}${telText}`, tecnicoId, devId]
-    );
-
-    await db.query(
-      'INSERT INTO historial_tickets (ticket_id, usuario_nombre, accion) VALUES (?, ?, ?)',
-      [ticketId, tecnicoDisplay, `Equipo recibido de ${clienteNombre}. ID dispositivo: ${devId}`]
-    );
+    await db.exec('sp_CrearDispositivoConTicket', {
+      dev_id: devId, ticket_id: ticketId, tipo, marca,
+      modelo: modelo || '', numero_serie: serie || '',
+      estado_fisico: estadoFisico || 'bueno', falla_cliente: fallaCliente,
+      accesorios: JSON.stringify(accArr), cliente_nombre: clienteNombre,
+      cliente_tel: clienteTel || '', tecnico_id: tecnicoId, tecnico_display: tecnicoDisplay,
+      titulo: `Recepción: ${marca} ${modelo || tipo}`.trim(), descripcion: desc,
+      reporter_nombre: `${clienteNombre}${telText}`
+    });
 
     res.status(201).json({
       device: (await db.queryOne('SELECT * FROM dispositivos WHERE id = ?', [devId])),
@@ -82,7 +70,7 @@ router.post('/devices', async (req, res) => {
 });
 
 // GET /api/inventory
-router.get('/inventory', async (req, res) => {
+router.get('/inventory', ...requireRole(2), async (req, res) => {
   try {
     const items = await db.exec('sp_GetInventory');
     res.json(items.map(i => ({
@@ -103,7 +91,7 @@ router.get('/inventory', async (req, res) => {
 });
 
 // POST /api/inventory
-router.post('/inventory', async (req, res) => {
+router.post('/inventory', ...requireRole(2), async (req, res) => {
   try {
     const { tipo, marca, modelo, serie, color, condicion, ubicacion, responsable, notas, garantia } = req.body;
     if (!tipo || !marca) return res.status(400).json({ error: 'Tipo y marca son requeridos' });
@@ -129,7 +117,7 @@ router.post('/inventory', async (req, res) => {
       'INSERT INTO historial_inventario (inventario_id, accion) VALUES (?, ?)',
       [id, 'Equipo registrado en inventario']
     );
-    await logAudit(req.body.adminUser || null, 'Agregó equipo al inventario', 'inventario', id,
+    await logAudit(req.user.nombre, 'Agregó equipo al inventario', 'inventario', id,
       `${id}: ${tipo} ${marca}${modelo ? ' ' + modelo : ''}`);
 
     res.status(201).json({ id, tipo, marca, modelo, serie, color, condicion,
@@ -141,7 +129,7 @@ router.post('/inventory', async (req, res) => {
 });
 
 // PATCH /api/inventory/:id
-router.patch('/inventory/:id', async (req, res) => {
+router.patch('/inventory/:id', ...requireRole(2), async (req, res) => {
   try {
     const id   = req.params.id;
     const item = await db.queryOne('SELECT * FROM inventario WHERE id = ?', [id]);
@@ -187,7 +175,7 @@ router.patch('/inventory/:id', async (req, res) => {
     if (sets.length) {
       vals.push(id);
       await db.query(`UPDATE inventario SET ${sets.join(', ')}, updated_at = NOW() WHERE id = ?`, vals);
-      await logAudit(req.body.adminUser || null, 'Editó equipo del inventario', 'inventario', id,
+      await logAudit(req.user.nombre, 'Editó equipo del inventario', 'inventario', id,
         `${id}: campos modificados — ${sets.map(s => s.split(' =')[0]).join(', ')}`);
     }
 
@@ -200,7 +188,7 @@ router.patch('/inventory/:id', async (req, res) => {
 });
 
 // DELETE /api/inventory/:id
-router.delete('/inventory/:id', async (req, res) => {
+router.delete('/inventory/:id', ...requireRole(2), async (req, res) => {
   try {
     const id = req.params.id;
 
@@ -216,7 +204,7 @@ router.delete('/inventory/:id', async (req, res) => {
     await db.query('DELETE FROM prestamos WHERE inventario_id = ?', [id]);
     await db.query('DELETE FROM inventario WHERE id = ?', [id]);
 
-    await logAudit(req.body?.adminUser || null, 'Eliminó equipo del inventario', 'inventario', id,
+    await logAudit(req.user.nombre, 'Eliminó equipo del inventario', 'inventario', id,
       inv ? `${id}: ${inv.tipo} ${inv.marca} ${inv.modelo || ''}`.trim() : id);
     res.json({ ok: true });
   } catch (err) {
@@ -226,7 +214,7 @@ router.delete('/inventory/:id', async (req, res) => {
 });
 
 // GET /api/loans
-router.get('/loans', async (req, res) => {
+router.get('/loans', ...requireRole(2), async (req, res) => {
   try {
     const loans = await db.exec('sp_GetLoans');
     res.json(loans.map(l => ({
@@ -250,7 +238,7 @@ router.get('/loans', async (req, res) => {
 });
 
 // POST /api/loans
-router.post('/loans', async (req, res) => {
+router.post('/loans', ...requireRole(2), async (req, res) => {
   try {
     const { inventoryId, empleado, departamento, fechaDevolucion, autorizadoPor, notas } = req.body;
     if (!inventoryId || !empleado)
@@ -292,7 +280,7 @@ router.post('/loans', async (req, res) => {
 
     const loan = await db.queryOne('SELECT * FROM prestamos WHERE id = ?', [id]);
     const inv  = await db.queryOne('SELECT * FROM inventario WHERE id = ?', [inventoryId]);
-    await logAudit(req.body.adminUser || autorizadoPor || null,
+    await logAudit(req.user.nombre,
       'Registró préstamo', 'prestamo', id,
       `${id}: ${inventoryId} → ${empleado}${departamento ? ' (' + departamento + ')' : ''}`);
     res.status(201).json({ loan, item: inv });
@@ -303,7 +291,7 @@ router.post('/loans', async (req, res) => {
 });
 
 // PATCH /api/loans/:id
-router.patch('/loans/:id', async (req, res) => {
+router.patch('/loans/:id', ...requireRole(2), async (req, res) => {
   try {
     const id   = req.params.id;
     const loan = await db.queryOne('SELECT * FROM prestamos WHERE id = ?', [id]);
@@ -321,7 +309,7 @@ router.patch('/loans/:id', async (req, res) => {
         'INSERT INTO historial_inventario (inventario_id, accion) VALUES (?, ?)',
         [loan.inventario_id, `Devolución de ${loan.empleado_nombre} (${id})`]
       );
-      await logAudit(req.body?.adminUser || null,
+      await logAudit(req.user.nombre,
         'Registró devolución de préstamo', 'prestamo', id,
         `${id}: ${loan.inventario_id} devuelto por ${loan.empleado_nombre}`);
     }
@@ -337,7 +325,7 @@ router.patch('/loans/:id', async (req, res) => {
 });
 
 // GET /api/auditoria
-router.get('/auditoria', async (req, res) => {
+router.get('/auditoria', ...requireRole(2), async (req, res) => {
   try {
     const { actor, entidad, desde, hasta } = req.query;
     const limit = Math.min(parseInt(req.query.limit) || 200, 500);

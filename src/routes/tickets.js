@@ -9,9 +9,10 @@ const { loadTicket, loadAllTickets } = require('../ticketLoader');
 const { upload }       = require('../middleware/upload');
 const { mobileSessions } = require('../mobileSessions');
 const { UPLOADS }      = require('../config');
+const { requireAuth }  = require('../middleware/auth');
 
 // GET /api/tickets
-router.get('/', async (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   try {
     res.json(await loadAllTickets());
   } catch (err) {
@@ -21,8 +22,8 @@ router.get('/', async (req, res) => {
 });
 
 // POST /api/tickets
-router.post('/', async (req, res) => {
-  const { title, desc, status, prioridad, categoria, asignado, reporter } = req.body;
+router.post('/', requireAuth, async (req, res) => {
+  const { title, desc, status, prioridad, categoria, asignado } = req.body;
   if (!title) return res.status(400).json({ error: 'El título es requerido' });
 
   let ticketId = null;
@@ -37,15 +38,15 @@ router.post('/', async (req, res) => {
 
     await db.query(
       `INSERT INTO tickets (id, titulo, descripcion, status, prioridad, categoria,
-                            reporter_nombre, asignado_id)
+                            reporter_id, asignado_id)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [ticketId, title, desc || 'Sin descripción.', status || 'abierto',
-       prioridad || 'Media', categoria || 'Otro', reporter || '', asignadoId]
+       prioridad || 'Media', categoria || 'Otro', req.user.id, asignadoId]
     );
 
     await db.query(
-      'INSERT INTO historial_tickets (ticket_id, usuario_nombre, accion) VALUES (?, ?, ?)',
-      [ticketId, 'Sistema', `Ticket creado por ${reporter || 'Usuario'}`]
+      'INSERT INTO historial_tickets (ticket_id, usuario_id, accion) VALUES (?, ?, ?)',
+      [ticketId, req.user.id, `Ticket creado por ${req.user.nombre}`]
     );
 
     res.status(201).json(await loadTicket(ticketId));
@@ -59,7 +60,7 @@ router.post('/', async (req, res) => {
     if (!ticketId) return;
     const adminEmail = process.env.SMTP_USER;
     if (!adminEmail) return;
-    const tpl = mailer.emailTicketNuevo({ folio: ticketId, titulo: title, prioridad: prioridad || 'Media', nombre: reporter || '', departamento: null });
+    const tpl = mailer.emailTicketNuevo({ folio: ticketId, titulo: title, prioridad: prioridad || 'Media', nombre: req.user.nombre, departamento: null });
     mailer.send({ to: adminEmail, ...tpl });
   } catch (emailErr) {
     console.error('[mailer] Error notificando ticket nuevo:', emailErr.message);
@@ -67,7 +68,7 @@ router.post('/', async (req, res) => {
 });
 
 // GET /api/tickets/:id
-router.get('/:id', async (req, res) => {
+router.get('/:id', requireAuth, async (req, res) => {
   try {
     const ticket = await loadTicket(req.params.id);
     if (!ticket) return res.status(404).json({ error: 'Ticket no encontrado' });
@@ -79,14 +80,14 @@ router.get('/:id', async (req, res) => {
 });
 
 // PATCH /api/tickets/:id
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', requireAuth, async (req, res) => {
   const id  = req.params.id;
   let row = null;
   try {
     row = await db.queryOne('SELECT * FROM tickets WHERE id = ?', [id]);
     if (!row) return res.status(404).json({ error: 'Ticket no encontrado' });
 
-    const adminUser = req.body.adminUser || 'Admin';
+    const adminUser = req.user.nombre;
     const labels    = { status: 'Estado', asignado: 'Asignado a', prioridad: 'Prioridad',
                         categoria: 'Categoría', title: 'Título', desc: 'Descripción' };
 
@@ -109,8 +110,8 @@ router.patch('/:id', async (req, res) => {
         if (asignadoName !== prev) {
           await db.query('UPDATE tickets SET asignado_id = ?, updated_at = NOW() WHERE id = ?', [asignadoId, id]);
           await db.query(
-            'INSERT INTO historial_tickets (ticket_id, usuario_nombre, accion, campo_modificado, valor_anterior, valor_nuevo) VALUES (?,?,?,?,?,?)',
-            [id, adminUser, `${label} cambiado a "${asignadoName}"`, 'asignado_id', prev, asignadoName]
+            'INSERT INTO historial_tickets (ticket_id, usuario_id, accion, campo_modificado, valor_anterior, valor_nuevo) VALUES (?,?,?,?,?,?)',
+            [id, req.user.id, `${label} cambiado a "${asignadoName}"`, 'asignado_id', prev, asignadoName]
           );
         }
       } else {
@@ -122,8 +123,8 @@ router.patch('/:id', async (req, res) => {
           const extra = campo === 'status' && val === 'cerrado' ? ', closed_at = NOW()' : '';
           await db.query(`UPDATE tickets SET ${col} = ?, updated_at = NOW()${extra} WHERE id = ?`, [val, id]);
           await db.query(
-            'INSERT INTO historial_tickets (ticket_id, usuario_nombre, accion, campo_modificado, valor_anterior, valor_nuevo) VALUES (?,?,?,?,?,?)',
-            [id, adminUser, `${label} cambiado a "${val}"`, col, prev, val]
+            'INSERT INTO historial_tickets (ticket_id, usuario_id, accion, campo_modificado, valor_anterior, valor_nuevo) VALUES (?,?,?,?,?,?)',
+            [id, req.user.id, `${label} cambiado a "${val}"`, col, prev, val]
           );
         }
       }
@@ -140,26 +141,28 @@ router.patch('/:id', async (req, res) => {
     const nuevoStatus = req.body.status;
     if (!nuevoStatus || nuevoStatus === row.status) return;
     const adminEmail = process.env.SMTP_USER;
+    const reporter = row.reporter_id
+      ? await db.queryOne('SELECT nombre, apellido, email FROM usuarios WHERE id = ?', [row.reporter_id])
+      : null;
     const tpl = mailer.emailCambioEstado({
       folio:          id,
       titulo:         row.titulo,
       estadoAnterior: row.status,
       estadoNuevo:    nuevoStatus,
-      nombre:         row.reporter_nombre,
+      nombre:         reporter ? `${reporter.nombre} ${reporter.apellido || ''}`.trim() : row.reporter_nombre,
       comentario:     req.body.comentario || null,
     });
     // Notificar al admin siempre
     if (adminEmail) mailer.send({ to: adminEmail, ...tpl });
     // Notificar al reporter si tiene email y es diferente al admin
-    const reporterEmail = await db.findEmailByNombre(row.reporter_nombre);
-    if (reporterEmail && reporterEmail !== adminEmail) mailer.send({ to: reporterEmail, ...tpl });
+    if (reporter?.email && reporter.email !== adminEmail) mailer.send({ to: reporter.email, ...tpl });
   } catch (emailErr) {
     console.error('[mailer] Error notificando cambio de estado:', emailErr.message);
   }
 });
 
 // DELETE /api/tickets/:id
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAuth, async (req, res) => {
   try {
     const id   = req.params.id;
     const atts = await db.query('SELECT nombre_archivo FROM adjuntos WHERE ticket_id = ?', [id]);
@@ -169,8 +172,8 @@ router.delete('/:id', async (req, res) => {
     });
     const tkt = await db.queryOne('SELECT titulo, reporter_nombre FROM tickets WHERE id = ?', [id]);
     await db.query('DELETE FROM tickets WHERE id = ?', [id]);
-    await logAudit(req.body?.adminUser || null, 'Eliminó ticket', 'ticket', id,
-      tkt ? `${id}: "${tkt.titulo}" · ${tkt.reporter_nombre}` : id);
+    await logAudit(req.user.nombre, 'Eliminó ticket', 'ticket', id,
+      tkt ? `${id}: "${tkt.titulo}"` : id);
     res.json({ ok: true });
   } catch (err) {
     console.error(err);
@@ -179,7 +182,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 // POST /api/tickets/:id/comments
-router.post('/:id/comments', async (req, res) => {
+router.post('/:id/comments', requireAuth, async (req, res) => {
   try {
     const id = req.params.id;
     if (!await db.queryOne('SELECT id FROM tickets WHERE id = ?', [id]))
@@ -187,14 +190,13 @@ router.post('/:id/comments', async (req, res) => {
     if (!req.body.text)
       return res.status(400).json({ error: 'El texto es requerido' });
 
-    const autor = req.body.adminUser || 'Soporte';
     await db.query(
-      'INSERT INTO comentarios (ticket_id, autor_nombre, texto, es_interno) VALUES (?, ?, ?, FALSE)',
-      [id, autor, req.body.text]
+      'INSERT INTO comentarios (ticket_id, autor_id, texto, es_interno) VALUES (?, ?, ?, FALSE)',
+      [id, req.user.id, req.body.text]
     );
     await db.query(
-      'INSERT INTO historial_tickets (ticket_id, usuario_nombre, accion) VALUES (?, ?, ?)',
-      [id, autor, 'Comentario enviado al usuario']
+      'INSERT INTO historial_tickets (ticket_id, usuario_id, accion) VALUES (?, ?, ?)',
+      [id, req.user.id, 'Comentario enviado al usuario']
     );
     await db.query('UPDATE tickets SET updated_at = NOW() WHERE id = ?', [id]);
 
@@ -206,7 +208,7 @@ router.post('/:id/comments', async (req, res) => {
 });
 
 // POST /api/tickets/:id/notes
-router.post('/:id/notes', async (req, res) => {
+router.post('/:id/notes', requireAuth, async (req, res) => {
   try {
     const id = req.params.id;
     if (!await db.queryOne('SELECT id FROM tickets WHERE id = ?', [id]))
@@ -215,8 +217,8 @@ router.post('/:id/notes', async (req, res) => {
       return res.status(400).json({ error: 'El texto es requerido' });
 
     await db.query(
-      'INSERT INTO comentarios (ticket_id, autor_nombre, texto, es_interno) VALUES (?, ?, ?, TRUE)',
-      [id, req.body.user || 'Admin', req.body.text]
+      'INSERT INTO comentarios (ticket_id, autor_id, texto, es_interno) VALUES (?, ?, ?, TRUE)',
+      [id, req.user.id, req.body.text]
     );
     await db.query('UPDATE tickets SET updated_at = NOW() WHERE id = ?', [id]);
 
@@ -228,7 +230,7 @@ router.post('/:id/notes', async (req, res) => {
 });
 
 // POST /api/tickets/:id/attachments
-router.post('/:id/attachments', upload.single('file'), async (req, res) => {
+router.post('/:id/attachments', requireAuth, upload.single('file'), async (req, res) => {
   try {
     const id = req.params.id;
     if (!await db.queryOne('SELECT id FROM tickets WHERE id = ?', [id]))
@@ -243,8 +245,8 @@ router.post('/:id/attachments', upload.single('file'), async (req, res) => {
        `/uploads/${req.file.filename}`, req.file.mimetype, req.file.size]
     );
     await db.query(
-      'INSERT INTO historial_tickets (ticket_id, usuario_nombre, accion) VALUES (?, ?, ?)',
-      [id, req.body.uploader || 'Usuario', `Archivo adjuntado: ${req.file.originalname}`]
+      'INSERT INTO historial_tickets (ticket_id, usuario_id, accion) VALUES (?, ?, ?)',
+      [id, req.user.id, `Archivo adjuntado: ${req.file.originalname}`]
     );
     await db.query('UPDATE tickets SET updated_at = NOW() WHERE id = ?', [id]);
 
@@ -256,9 +258,9 @@ router.post('/:id/attachments', upload.single('file'), async (req, res) => {
 });
 
 // POST /api/tickets/:id/attachments/from-mobile
-router.post('/:id/attachments/from-mobile', async (req, res) => {
+router.post('/:id/attachments/from-mobile', requireAuth, async (req, res) => {
   try {
-    const { token, uploader } = req.body;
+    const { token } = req.body;
     const s = mobileSessions.get(token);
     if (!s || s.status !== 'ready') return res.status(400).json({ error: 'Sesión no válida o archivo no recibido' });
 
@@ -275,8 +277,8 @@ router.post('/:id/attachments/from-mobile', async (req, res) => {
       [id, s.file.name, filename, s.file.path, mime, s.file.size]
     );
     await db.query(
-      'INSERT INTO historial_tickets (ticket_id, usuario_nombre, accion) VALUES (?, ?, ?)',
-      [id, uploader || 'Usuario', `Archivo adjuntado (celular): ${s.file.name}`]
+      'INSERT INTO historial_tickets (ticket_id, usuario_id, accion) VALUES (?, ?, ?)',
+      [id, req.user.id, `Archivo adjuntado (celular): ${s.file.name}`]
     );
     await db.query('UPDATE tickets SET updated_at = NOW() WHERE id = ?', [id]);
 
