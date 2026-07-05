@@ -50,6 +50,9 @@ async function refreshTickets() {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+function escapeHtml(str) {
+  return String(str ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
 function statusLabel(s) {
   return { abierto:'Abierto', en_progreso:'En progreso', cerrado:'Cerrado' }[s] || s;
 }
@@ -61,29 +64,31 @@ function commentHtml(c) {
   const icon   = isUser
     ? '<i class="ti ti-user-circle" style="font-size:12px;color:var(--blue);vertical-align:-1px" aria-hidden="true"></i>'
     : '<i class="ti ti-headset" style="font-size:12px;color:var(--gray);vertical-align:-1px" aria-hidden="true"></i>';
-  return `<div class="comment-item ${isUser ? 'user-msg' : 'admin-msg'}">${icon} <strong>${c.user || '—'}</strong> (${c.ts}): ${c.text}</div>`;
+  return `<div class="comment-item ${isUser ? 'user-msg' : 'admin-msg'}">${icon} <strong>${escapeHtml(c.user || '—')}</strong> (${escapeHtml(c.ts)}): ${escapeHtml(c.text)}</div>`;
 }
 
 // ── Adjuntos ──────────────────────────────────────────────────────────────────
 function tcAttachmentHtml(a) {
+  const name  = escapeHtml(a.name);
+  const path  = escapeHtml(a.path);
   const isImg   = /\.(jpg|jpeg|png|gif|webp)$/i.test(a.name);
   const isVideo = /\.(mp4|mov|avi|webm|3gp)$/i.test(a.name);
 
   if (isImg) {
     return `
-      <a class="tc-attach-img-wrap" href="${a.path}" target="_blank" title="${a.name}">
-        <img src="${a.path}" alt="${a.name}" class="tc-attach-img">
-        <span class="tc-attach-img-name"><i class="ti ti-photo" style="font-size:10px"></i> ${a.name}</span>
+      <a class="tc-attach-img-wrap" href="${path}" target="_blank" title="${name}">
+        <img src="${path}" alt="${name}" class="tc-attach-img">
+        <span class="tc-attach-img-name"><i class="ti ti-photo" style="font-size:10px"></i> ${name}</span>
       </a>`;
   }
   if (isVideo) {
     return `
       <div class="tc-attach-img-wrap" style="max-width:220px">
-        <video class="tc-attach-img" src="${a.path}" controls preload="metadata" style="max-height:140px;background:#000"></video>
-        <span class="tc-attach-img-name"><i class="ti ti-video" style="font-size:10px"></i> ${a.name}</span>
+        <video class="tc-attach-img" src="${path}" controls preload="metadata" style="max-height:140px;background:#000"></video>
+        <span class="tc-attach-img-name"><i class="ti ti-video" style="font-size:10px"></i> ${name}</span>
       </div>`;
   }
-  return `<a class="tc-attachment-chip" href="${a.path}" target="_blank"><i class="ti ti-paperclip" style="font-size:11px"></i>${a.name}</a>`;
+  return `<a class="tc-attachment-chip" href="${path}" target="_blank"><i class="ti ti-paperclip" style="font-size:11px"></i>${name}</a>`;
 }
 
 // ── Filtros de estado ─────────────────────────────────────────────────────────
@@ -159,25 +164,25 @@ function renderMyTickets() {
       <div class="ticket-card">
         <div class="tc-top">
           <div>
-            <div class="tc-id">${t.id} · ${t.categoria}</div>
-            <div class="tc-title">${t.title}</div>
+            <div class="tc-id">${escapeHtml(t.id)} · ${escapeHtml(t.categoria)}</div>
+            <div class="tc-title">${escapeHtml(t.title)}</div>
           </div>
-          <span class="badge s-${t.status}">
+          <span class="badge s-${escapeHtml(t.status)}">
             <i class="ti ${statusIcon(t.status)}" style="font-size:11px" aria-hidden="true"></i>
             ${statusLabel(t.status)}
           </span>
         </div>
-        <div class="tc-desc">${t.desc||''}</div>
+        <div class="tc-desc">${escapeHtml(t.desc||'')}</div>
         ${(t.attachments||[]).length ? `
         <div class="tc-attachments">
           ${t.attachments.map(tcAttachmentHtml).join('')}
         </div>` : ''}
         <div class="tc-footer">
           <div class="tc-meta">
-            <span class="badge p-${t.prioridad}" style="font-size:10px">${t.prioridad}</span>
+            <span class="badge p-${escapeHtml(t.prioridad)}" style="font-size:10px">${escapeHtml(t.prioridad)}</span>
             ${assigneeHtml}
           </div>
-          <span class="tc-date"><i class="ti ti-calendar" aria-hidden="true"></i> ${t.fecha}</span>
+          <span class="tc-date"><i class="ti ti-calendar" aria-hidden="true"></i> ${escapeHtml(t.fecha)}</span>
         </div>
         <div class="progress-wrap">
           <div class="progress-label"><span>Progreso</span><span>${progressLabel}</span></div>
@@ -244,7 +249,7 @@ function updateFileLabel() {
   const zone  = document.getElementById('fileDropZone');
   if (selectedFile) {
     const kb = (selectedFile.size / 1024).toFixed(0);
-    label.innerHTML = `<i class="ti ti-file-check" style="color:var(--green)"></i> ${selectedFile.name} (${kb} KB) <span class="file-remove" onclick="removeFile(event)">✕ Quitar</span>`;
+    label.innerHTML = `<i class="ti ti-file-check" style="color:var(--green)"></i> ${escapeHtml(selectedFile.name)} (${kb} KB) <span class="file-remove" onclick="removeFile(event)">✕ Quitar</span>`;
     zone.classList.add('has-file');
   } else {
     label.innerHTML = 'Haz clic o arrastra un archivo aquí';
@@ -387,10 +392,10 @@ function confirmMobileFile() {
   if (icon) icon.style.display = 'none';
 
   label.innerHTML = `
-    ${isImg ? `<img src="${mobileFile.path}" class="mobile-preview-thumb" onclick="event.stopPropagation()">` : ''}
+    ${isImg ? `<img src="${escapeHtml(mobileFile.path)}" class="mobile-preview-thumb" onclick="event.stopPropagation()">` : ''}
     <span class="mobile-file-info">
       <i class="ti ti-device-mobile" style="color:var(--blue)"></i>
-      <strong>${mobileFile.name}</strong>
+      <strong>${escapeHtml(mobileFile.name)}</strong>
       <span style="color:var(--gray);font-weight:400">${kb} KB · desde celular</span>
       <span class="file-remove" onclick="removeMobileFile(event)">✕ Quitar</span>
     </span>`;

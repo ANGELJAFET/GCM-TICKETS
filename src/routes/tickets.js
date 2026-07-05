@@ -11,6 +11,10 @@ const { mobileSessions } = require('../mobileSessions');
 const { UPLOADS }      = require('../config');
 const { requireAuth }  = require('../middleware/auth');
 
+const PRIORIDADES = ['Baja', 'Media', 'Alta', 'Crítica'];
+const CATEGORIAS  = ['Hardware', 'Software', 'Red', 'Acceso', 'Otro'];
+const ESTADOS     = ['abierto', 'en_progreso', 'cerrado'];
+
 // GET /api/tickets
 router.get('/', requireAuth, async (req, res) => {
   try {
@@ -25,6 +29,9 @@ router.get('/', requireAuth, async (req, res) => {
 router.post('/', requireAuth, async (req, res) => {
   const { title, desc, status, prioridad, categoria, asignado } = req.body;
   if (!title) return res.status(400).json({ error: 'El título es requerido' });
+  if (status && !ESTADOS.includes(status)) return res.status(400).json({ error: 'Estado inválido' });
+  if (prioridad && !PRIORIDADES.includes(prioridad)) return res.status(400).json({ error: 'Prioridad inválida' });
+  if (categoria && !CATEGORIAS.includes(categoria)) return res.status(400).json({ error: 'Categoría inválida' });
 
   let ticketId = null;
   try {
@@ -94,6 +101,13 @@ router.patch('/:id', requireAuth, async (req, res) => {
     for (const [campo, label] of Object.entries(labels)) {
       const val = req.body[campo];
       if (val === undefined) continue;
+
+      if (campo === 'status' && !ESTADOS.includes(val))
+        return res.status(400).json({ error: 'Estado inválido' });
+      if (campo === 'prioridad' && !PRIORIDADES.includes(val))
+        return res.status(400).json({ error: 'Prioridad inválida' });
+      if (campo === 'categoria' && !CATEGORIAS.includes(val))
+        return res.status(400).json({ error: 'Categoría inválida' });
 
       if (campo === 'asignado') {
         let asignadoId   = null;

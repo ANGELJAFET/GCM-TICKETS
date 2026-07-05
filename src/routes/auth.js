@@ -5,6 +5,15 @@ const db      = require('../db');
 const mailer  = require('../mailer');
 const { SESSION_SECRET } = require('../config');
 
+const USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
+const EMAIL_RE    = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const FINCAS = [
+  'FINCA CORML', 'FINCA EMAR', 'FINCA NOVAHONDURAS 7', 'FINCA LA ESPERANZA',
+  'FINCA CORML 1', 'FINCA CORML 2', 'FINCA CADEMA', 'FINCA EL CONCHAL',
+  'No aplica'
+];
+
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
   try {
@@ -28,12 +37,16 @@ router.post('/login', async (req, res) => {
     );
 
     res.json({
-      ok:        true,
+      ok:                 true,
       token,
-      id:        user.id,
+      id:                 user.id,
       nombre,
-      rol:       user.rol,
-      rol_nivel: user.rol_nivel
+      rol:                user.rol,
+      rol_nivel:          user.rol_nivel,
+      acceso_inventario:  !!user.acceso_inventario,
+      acceso_prestamos:   !!user.acceso_prestamos,
+      acceso_bitacora:    !!user.acceso_bitacora,
+      acceso_solicitudes: !!user.acceso_solicitudes
     });
   } catch (err) {
     console.error(err);
@@ -44,23 +57,31 @@ router.post('/login', async (req, res) => {
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
   try {
-    const { username, email, password, nombre, apellido, telefono, departamento, mensaje } = req.body;
+    const { username, email, password, nombre, apellido, telefono, departamento, finca, area, mensaje } = req.body;
 
-    if (!username || !password || !nombre)
-      return res.status(400).json({ error: 'Usuario, contraseña y nombre son requeridos.' });
+    if (!username || !password || !nombre || !email)
+      return res.status(400).json({ error: 'Usuario, correo, contraseña y nombre son requeridos.' });
+    if (!USERNAME_RE.test(username.trim()))
+      return res.status(400).json({ error: 'El usuario debe tener 3-20 caracteres: letras, números o guión bajo.' });
     if (password.length < 6)
       return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres.' });
+    if (!EMAIL_RE.test(email.trim()))
+      return res.status(400).json({ error: 'El correo electrónico no tiene un formato válido.' });
+    if (!finca || !FINCAS.includes(finca))
+      return res.status(400).json({ error: 'Selecciona una finca válida.' });
 
     const hash = await db.bcrypt.hash(password, db.ROUNDS);
 
     await db.exec('sp_InsertSolicitudRegistro', {
       nombre:              nombre.trim(),
       apellido:            apellido?.trim()     || null,
-      email:               email?.trim()        || null,
+      email:               email.trim(),
       username:            username.trim(),
       password_hash:       hash,
       telefono:            telefono?.trim()     || null,
       departamento_nombre: departamento?.trim() || null,
+      finca,
+      area:                area?.trim()         || null,
       mensaje:             mensaje?.trim()      || null
     });
 
@@ -73,6 +94,8 @@ router.post('/register', async (req, res) => {
         nombre:       `${nombre.trim()} ${(apellido || '').trim()}`.trim(),
         username:     username.trim(),
         departamento: departamento || null,
+        finca,
+        area:         area || null,
       });
       mailer.send({ to: adminEmail, ...tpl });
     }

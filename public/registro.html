@@ -342,8 +342,8 @@
       </div>
 
       <div class="reg-group">
-        <label>Correo electrónico</label>
-        <input type="email" name="email" placeholder="correo empresarial">
+        <label>Correo electrónico *</label>
+        <input type="email" name="email" required placeholder="correo empresarial">
       </div>
 
       <div class="reg-row2">
@@ -354,6 +354,28 @@
         <div class="reg-group">
           <label>Departamento</label>
           <input type="text" name="departamento" placeholder="Ej: Contabilidad">
+        </div>
+      </div>
+
+      <div class="reg-row2">
+        <div class="reg-group">
+          <label>Finca *</label>
+          <select name="finca" required>
+            <option value="" disabled selected>Selecciona una opción</option>
+            <option value="FINCA CORML">FINCA CORML</option>
+            <option value="FINCA EMAR">FINCA EMAR</option>
+            <option value="FINCA NOVAHONDURAS 7">FINCA NOVAHONDURAS 7</option>
+            <option value="FINCA LA ESPERANZA">FINCA LA ESPERANZA</option>
+            <option value="FINCA CORML 1">FINCA CORML 1</option>
+            <option value="FINCA CORML 2">FINCA CORML 2</option>
+            <option value="FINCA CADEMA">FINCA CADEMA</option>
+            <option value="FINCA EL CONCHAL">FINCA EL CONCHAL</option>
+            <option value="No aplica">No aplica (no soy de finca)</option>
+          </select>
+        </div>
+        <div class="reg-group">
+          <label>Área</label>
+          <input type="text" name="area" placeholder="Ej: Producción">
         </div>
       </div>
 
@@ -429,12 +451,14 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username:     data.username.trim(),
-          email:        data.email?.trim()        || undefined,
+          email:        data.email.trim(),
           password:     data.password,
           nombre:       data.nombre.trim(),
           apellido:     data.apellido?.trim()     || undefined,
           telefono:     data.telefono?.trim()     || undefined,
           departamento: data.departamento?.trim() || undefined,
+          finca:        data.finca,
+          area:         data.area?.trim()         || undefined,
           mensaje:      data.mensaje?.trim()      || undefined
         })
       });

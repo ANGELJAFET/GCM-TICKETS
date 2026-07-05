@@ -568,6 +568,85 @@ WHERE h.usuario_id IS NULL AND h.usuario_nombre IS NOT NULL;
 GO
 
 -- ============================================================
+-- 8. Acceso avanzado por módulo (inventario, préstamos, bitácora,
+--    solicitudes). Por defecto solo el rol superadmin (nivel 4)
+--    puede usar estas secciones. Un admin/técnico (nivel < 4) solo
+--    obtiene acceso al módulo si el superadmin se lo otorga.
+-- ============================================================
+
+-- Columna previa (interruptor único para los 4 módulos juntos) —
+-- reemplazada por permisos independientes por módulo.
+IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('usuarios') AND name = 'acceso_avanzado')
+BEGIN
+  DECLARE @defAcc NVARCHAR(200) = (
+    SELECT dc.name FROM sys.default_constraints dc
+    JOIN sys.columns c ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
+    WHERE dc.parent_object_id = OBJECT_ID('usuarios') AND c.name = 'acceso_avanzado'
+  );
+  IF @defAcc IS NOT NULL EXEC('ALTER TABLE usuarios DROP CONSTRAINT ' + @defAcc);
+  ALTER TABLE usuarios DROP COLUMN acceso_avanzado;
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('usuarios') AND name = 'acceso_inventario')
+  ALTER TABLE usuarios ADD acceso_inventario BIT NOT NULL DEFAULT 0;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('usuarios') AND name = 'acceso_prestamos')
+  ALTER TABLE usuarios ADD acceso_prestamos BIT NOT NULL DEFAULT 0;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('usuarios') AND name = 'acceso_bitacora')
+  ALTER TABLE usuarios ADD acceso_bitacora BIT NOT NULL DEFAULT 0;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('usuarios') AND name = 'acceso_solicitudes')
+  ALTER TABLE usuarios ADD acceso_solicitudes BIT NOT NULL DEFAULT 0;
+GO
+
+-- ============================================================
+-- 9. Finca y área (registro de empleados)
+--    'finca' es una de las 8 fincas fijas de la empresa o el valor
+--    'No aplica' para quien no trabaja en una finca (validado en la
+--    app, ver FINCAS en src/routes/auth.js). 'area' es texto libre.
+-- ============================================================
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('solicitudes_registro') AND name = 'finca')
+  ALTER TABLE solicitudes_registro ADD finca NVARCHAR(50) NULL;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('solicitudes_registro') AND name = 'area')
+  ALTER TABLE solicitudes_registro ADD area NVARCHAR(255) NULL;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('usuarios') AND name = 'finca')
+  ALTER TABLE usuarios ADD finca NVARCHAR(50) NULL;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('usuarios') AND name = 'area')
+  ALTER TABLE usuarios ADD area NVARCHAR(255) NULL;
+GO
+
+-- ============================================================
+-- 10. Inventario por cantidad (lotes: cables, mouse, etc.)
+--     inventario.tipo_manejo: 'unidad' (default, número de serie
+--     obligatorio, 1 fila = 1 unidad física) | 'cantidad' (lote sin
+--     serie individual, cantidad_total unidades). La disponibilidad
+--     de un ítem 'cantidad' se calcula como
+--     cantidad_total - SUM(prestamos.cantidad - prestamos.cantidad_devuelta)
+--     de sus préstamos activos — no se guarda como columna aparte
+--     para evitar desincronización.
+--     prestamos.cantidad/cantidad_devuelta permiten devolución
+--     parcial; para equipos 'unidad' siempre es 1/0 o 1/1 (igual
+--     que el comportamiento anterior, sin cambios).
+-- ============================================================
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('inventario') AND name = 'tipo_manejo')
+  ALTER TABLE inventario ADD tipo_manejo NVARCHAR(20) NOT NULL DEFAULT 'unidad';
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('inventario') AND name = 'cantidad_total')
+  ALTER TABLE inventario ADD cantidad_total INT NULL;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('prestamos') AND name = 'cantidad')
+  ALTER TABLE prestamos ADD cantidad INT NOT NULL DEFAULT 1;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('prestamos') AND name = 'cantidad_devuelta')
+  ALTER TABLE prestamos ADD cantidad_devuelta INT NOT NULL DEFAULT 0;
+GO
+
+-- ============================================================
 -- Fin del script
 -- Siguiente paso: ejecutar procedimientos.sql y luego node server.js
 -- ============================================================

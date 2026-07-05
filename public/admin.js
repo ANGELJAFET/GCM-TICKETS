@@ -2,7 +2,38 @@ const SESSION_KEY   = 'soporte_admin_session';
 const NOMBRE_KEY    = 'soporte_admin_nombre';
 const USERNAME_KEY  = 'soporte_admin_username';
 const TOKEN_KEY      = 'soporte_admin_token';
+const ROL_NIVEL_KEY = 'soporte_admin_rol_nivel';
 const DARK_KEY      = 'gcm_dark';
+
+// Permisos otorgables por módulo (independientes entre sí). La clave coincide
+// con el nombre de módulo usado en el backend (src/middleware/auth.js).
+const PERMISO_KEYS = {
+  inventario:  'soporte_admin_acc_inventario',
+  prestamos:   'soporte_admin_acc_prestamos',
+  bitacora:    'soporte_admin_acc_bitacora',
+  solicitudes: 'soporte_admin_acc_solicitudes'
+};
+
+function isSuperAdmin() {
+  return parseInt(sessionStorage.getItem(ROL_NIVEL_KEY) || '0', 10) >= 4;
+}
+
+function hasPermiso(modulo) {
+  return isSuperAdmin() || sessionStorage.getItem(PERMISO_KEYS[modulo]) === '1';
+}
+
+function applyPermissionUI() {
+  const invBtn = document.getElementById('inventarioHeaderBtn');
+  const audBtn = document.getElementById('auditoriaHeaderBtn');
+  if (invBtn) invBtn.style.display = (hasPermiso('inventario') || hasPermiso('prestamos')) ? '' : 'none';
+  if (audBtn) audBtn.style.display = hasPermiso('bitacora') ? '' : 'none';
+  if (currentTab === 'inventario' && !hasPermiso('inventario') && !hasPermiso('prestamos')) {
+    setTab('todos', document.querySelector('.tab-btn'));
+  }
+  if (currentTab === 'auditoria' && !hasPermiso('bitacora')) {
+    setTab('todos', document.querySelector('.tab-btn'));
+  }
+}
 
 function toggleDarkMode() {
   const dark = document.documentElement.getAttribute('data-theme') !== 'dark';
@@ -71,9 +102,15 @@ async function doLogin() {
       sessionStorage.setItem(NOMBRE_KEY, adminNombre);
       sessionStorage.setItem(USERNAME_KEY, u);
       sessionStorage.setItem(TOKEN_KEY, data.token);
+      sessionStorage.setItem(ROL_NIVEL_KEY, String(data.rol_nivel || 0));
+      sessionStorage.setItem(PERMISO_KEYS.inventario,  data.acceso_inventario  ? '1' : '0');
+      sessionStorage.setItem(PERMISO_KEYS.prestamos,   data.acceso_prestamos   ? '1' : '0');
+      sessionStorage.setItem(PERMISO_KEYS.bitacora,    data.acceso_bitacora    ? '1' : '0');
+      sessionStorage.setItem(PERMISO_KEYS.solicitudes, data.acceso_solicitudes ? '1' : '0');
       document.getElementById('adminBadge').textContent = adminNombre.toUpperCase();
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('mainApp').classList.add('visible');
+      applyPermissionUI();
       await initNotifications();
       await loadAdmins();
       await refreshTickets();
@@ -100,6 +137,8 @@ function logout() {
   sessionStorage.removeItem(NOMBRE_KEY);
   sessionStorage.removeItem(USERNAME_KEY);
   sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(ROL_NIVEL_KEY);
+  Object.values(PERMISO_KEYS).forEach(k => sessionStorage.removeItem(k));
   location.reload();
 }
 
@@ -162,9 +201,9 @@ function renderNotifPanel() {
     <i class="ti ${n.icon}"></i>
   </div>
   <div class="np-content">
-    <div class="np-title">${n.title}</div>
-    <div class="np-body-text">${n.body}</div>
-    <div class="np-time">${n.time}</div>
+    <div class="np-title">${escapeHtml(n.title)}</div>
+    <div class="np-body-text">${escapeHtml(n.body)}</div>
+    <div class="np-time">${escapeHtml(n.time)}</div>
   </div>
 </div>`).join('');
 }
@@ -217,6 +256,10 @@ async function api(url, method = 'GET', body = null) {
   return res.json();
 }
 
+function escapeHtml(str) {
+  return String(str ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+
 async function loadAdmins() {
   try {
     adminsCache = await api('/api/admins');
@@ -224,7 +267,7 @@ async function loadAdmins() {
   const sel = document.getElementById('filterAsignado');
   if (sel) {
     sel.innerHTML = '<option value="">Técnico</option>'
-      + adminsCache.map(a => `<option value="${a.nombre}">${a.nombre}</option>`).join('')
+      + adminsCache.map(a => `<option value="${escapeHtml(a.nombre)}">${escapeHtml(a.nombre)}</option>`).join('')
       + '<option value="Sin asignar">Sin asignar</option>';
   }
 }
@@ -263,13 +306,13 @@ function statusBadge(s) {
 function prioBadge(p) {
   const cls  = { 'Crítica':'badge-critical','Alta':'badge-high','Media':'badge-medium','Baja':'badge-low' };
   const icon = { 'Crítica':'ti-alert-triangle','Alta':'ti-arrow-up','Media':'ti-minus','Baja':'ti-arrow-down' };
-  return `<span class="badge ${cls[p]||'badge-low'}"><i class="ti ${icon[p]||'ti-minus'}" style="font-size:11px"></i> ${p}</span>`;
+  return `<span class="badge ${cls[p]||'badge-low'}"><i class="ti ${icon[p]||'ti-minus'}" style="font-size:11px"></i> ${escapeHtml(p)}</span>`;
 }
 
 function avatarHtml(name) {
   const cls = name === 'Sin asignar' ? 'av-gray' : 'av-blue';
   const initials = name === 'Sin asignar' ? '?' : (name||'?').substring(0,2).toUpperCase();
-  return `<span class="avatar ${cls}">${initials}</span>`;
+  return `<span class="avatar ${cls}">${escapeHtml(initials)}</span>`;
 }
 
 function commentHtml(c) {
@@ -277,7 +320,7 @@ function commentHtml(c) {
   const icon   = isUser
     ? '<i class="ti ti-user-circle" style="font-size:12px;color:var(--blue);vertical-align:-1px"></i>'
     : '<i class="ti ti-headset" style="font-size:12px;color:var(--gray);vertical-align:-1px"></i>';
-  return `<div class="comment-item ${isUser ? 'user-msg' : 'admin-msg'}">${icon} <strong>${c.user || '—'}</strong> (${c.ts}): ${c.text}</div>`;
+  return `<div class="comment-item ${isUser ? 'user-msg' : 'admin-msg'}">${icon} <strong>${escapeHtml(c.user || '—')}</strong> (${escapeHtml(c.ts)}): ${escapeHtml(c.text)}</div>`;
 }
 
 function nowHM() {
@@ -299,26 +342,29 @@ function isVideo(filePath) {
 }
 
 function attachmentHtml(a) {
+  const path = escapeHtml(a.path);
+  const name = escapeHtml(a.name);
+  const ts   = escapeHtml(a.ts);
   if (isImage(a.path)) {
     return `
       <div class="attachment-item attachment-image-item">
-        <a href="${a.path}" target="_blank" class="attachment-img-link">
-          <img src="${a.path}" alt="${a.name}" class="attachment-preview">
+        <a href="${path}" target="_blank" class="attachment-img-link">
+          <img src="${path}" alt="${name}" class="attachment-preview">
           <div class="attachment-img-overlay"><i class="ti ti-zoom-in"></i></div>
         </a>
         <div class="attachment-img-info">
-          <span class="attachment-img-name"><i class="ti ti-photo" style="font-size:12px"></i> ${a.name}</span>
-          <span class="attachment-size">${fmtSize(a.size)} · ${a.ts}</span>
+          <span class="attachment-img-name"><i class="ti ti-photo" style="font-size:12px"></i> ${name}</span>
+          <span class="attachment-size">${fmtSize(a.size)} · ${ts}</span>
         </div>
       </div>`;
   }
   if (isVideo(a.path)) {
     return `
       <div class="attachment-item attachment-video-item">
-        <video class="attachment-video" src="${a.path}" controls playsinline preload="metadata"></video>
+        <video class="attachment-video" src="${path}" controls playsinline preload="metadata"></video>
         <div class="attachment-img-info">
-          <span class="attachment-img-name"><i class="ti ti-video" style="font-size:12px"></i> ${a.name}</span>
-          <span class="attachment-size">${fmtSize(a.size)} · ${a.ts}</span>
+          <span class="attachment-img-name"><i class="ti ti-video" style="font-size:12px"></i> ${name}</span>
+          <span class="attachment-size">${fmtSize(a.size)} · ${ts}</span>
         </div>
       </div>`;
   }
@@ -328,7 +374,7 @@ function attachmentHtml(a) {
   return `
     <div class="attachment-item">
       <i class="ti ${icon}" style="color:var(--blue);font-size:18px"></i>
-      <a href="${a.path}" target="_blank">${a.name}</a>
+      <a href="${escapeHtml(a.path)}" target="_blank">${escapeHtml(a.name)}</a>
       <span class="attachment-size">${fmtSize(a.size)}</span>
     </div>`;
 }
@@ -345,19 +391,20 @@ function clearFilters() {
 }
 
 function ticketCardHtml(t) {
+  const desc = escapeHtml(t.desc || '');
   return `
-    <div class="ticket-card${t.id === selectedId ? ' selected' : ''} prio-${t.prioridad}" onclick="openDetail('${t.id}')">
+    <div class="ticket-card${t.id === selectedId ? ' selected' : ''} prio-${escapeHtml(t.prioridad)}" onclick="openDetail('${t.id}')">
       <div class="ticket-top">
         <div>
-          <div class="ticket-id">${t.id} · ${t.categoria} · <i class="ti ti-user" style="font-size:11px;vertical-align:-1px"></i> ${t.reporter||'—'}</div>
-          <div class="ticket-title">${t.title}</div>
+          <div class="ticket-id">${escapeHtml(t.id)} · ${escapeHtml(t.categoria)} · <i class="ti ti-user" style="font-size:11px;vertical-align:-1px"></i> ${escapeHtml(t.reporter||'—')}</div>
+          <div class="ticket-title">${escapeHtml(t.title)}</div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
           ${prioBadge(t.prioridad)}
           ${slaHtml(t)}
         </div>
       </div>
-      <div class="ticket-desc">${(t.desc||'').length > 100 ? (t.desc||'').substring(0,100) + '...' : (t.desc||'')}</div>
+      <div class="ticket-desc">${desc.length > 100 ? desc.substring(0,100) + '...' : desc}</div>
       <div class="ticket-meta">
         ${statusBadge(t.status)}
         <span style="font-size:11px;color:var(--gray)"><i class="ti ti-message" style="font-size:12px;vertical-align:-1px"></i> ${t.comments.length}</span>
@@ -365,8 +412,8 @@ function ticketCardHtml(t) {
         ${t.asignado === 'Sin asignar' ? '<span style="font-size:11px;color:var(--red);font-weight:600"><i class="ti ti-alert-circle" style="font-size:11px"></i> Sin asignar</span>' : ''}
       </div>
       <div class="ticket-footer">
-        <div class="assignee">${avatarHtml(t.asignado)}<span>${t.asignado}</span></div>
-        <span class="ticket-date"><i class="ti ti-calendar" style="font-size:12px"></i> ${t.fecha}</span>
+        <div class="assignee">${avatarHtml(t.asignado)}<span>${escapeHtml(t.asignado)}</span></div>
+        <span class="ticket-date"><i class="ti ti-calendar" style="font-size:12px"></i> ${escapeHtml(t.fecha)}</span>
       </div>
     </div>`;
 }
@@ -441,10 +488,10 @@ async function loadUsersData() {
   try {
     const [usersRes, solsRes] = await Promise.all([
       fetch('/api/usuarios', { headers: authHeaders() }),
-      fetch('/api/solicitudes', { headers: authHeaders() })
+      hasPermiso('solicitudes') ? fetch('/api/solicitudes', { headers: authHeaders() }) : Promise.resolve(null)
     ]);
     usuariosCache    = usersRes.ok  ? await usersRes.json()  : [];
-    solicitudesCache = solsRes.ok   ? await solsRes.json()   : [];
+    solicitudesCache = (solsRes && solsRes.ok) ? await solsRes.json() : [];
     const pendientes = solicitudesCache.filter(s => s.estado === 'pendiente').length;
     const el = document.getElementById('cnt-usuarios');
     if (el) el.textContent = pendientes || '';
@@ -653,22 +700,22 @@ function renderDetailTab(t) {
     body.innerHTML = `
       <div class="detail-section">
         <h3>Descripción</h3>
-        <div class="detail-desc">${t.desc||'Sin descripción.'}</div>
+        <div class="detail-desc">${escapeHtml(t.desc||'Sin descripción.')}</div>
       </div>
       <div class="detail-section">
         <h3>Información</h3>
         <div class="detail-row"><span class="key">Estado</span>   <span class="val">${statusBadge(t.status)}</span></div>
         <div class="detail-row"><span class="key">Prioridad</span><span class="val">${prioBadge(t.prioridad)}</span></div>
-        <div class="detail-row"><span class="key">Categoría</span><span class="val">${t.categoria}</span></div>
-        <div class="detail-row"><span class="key">Reportado por</span><span class="val">${t.reporter||'—'}</span></div>
-        <div class="detail-row"><span class="key">Fecha</span>    <span class="val">${t.fecha}</span></div>
+        <div class="detail-row"><span class="key">Categoría</span><span class="val">${escapeHtml(t.categoria)}</span></div>
+        <div class="detail-row"><span class="key">Reportado por</span><span class="val">${escapeHtml(t.reporter||'—')}</span></div>
+        <div class="detail-row"><span class="key">Fecha</span>    <span class="val">${escapeHtml(t.fecha)}</span></div>
         ${slaHtml(t) ? `<div class="detail-row"><span class="key">SLA</span><span class="val">${slaHtml(t)}</span></div>` : ''}
       </div>
       <div class="detail-section">
         <h3>Asignar a</h3>
         <select class="assign-select" onchange="reassign('${t.id}',this.value)">
           <option value="Sin asignar" ${!t.asignado||t.asignado==='Sin asignar'?'selected':''}>Sin asignar</option>
-          ${adminsCache.map(a => `<option value="${a.nombre}" ${t.asignado===a.nombre?'selected':''}>${a.nombre}</option>`).join('')}
+          ${adminsCache.map(a => `<option value="${escapeHtml(a.nombre)}" ${t.asignado===a.nombre?'selected':''}>${escapeHtml(a.nombre)}</option>`).join('')}
         </select>
       </div>
       <div class="detail-section">
@@ -712,8 +759,8 @@ function renderDetailTab(t) {
         ${notes.length
           ? notes.map(n => `
               <div class="note-item">
-                <div class="note-meta"><i class="ti ti-lock" style="font-size:10px"></i> ${n.user} · ${n.ts}</div>
-                ${n.text}
+                <div class="note-meta"><i class="ti ti-lock" style="font-size:10px"></i> ${escapeHtml(n.user)} · ${escapeHtml(n.ts)}</div>
+                ${escapeHtml(n.text)}
               </div>`).join('')
           : '<p style="font-size:12px;color:var(--gray);margin-bottom:12px">Sin notas internas.</p>'}
         <textarea class="comment-box" id="newNote" rows="2" placeholder="Agregar nota interna (no visible al usuario)..."></textarea>
@@ -732,8 +779,8 @@ function renderDetailTab(t) {
               <div class="history-item">
                 <div class="history-dot"></div>
                 <div class="history-info">
-                  <div><strong>${h.user}</strong> — ${h.accion}</div>
-                  <div class="history-ts"><i class="ti ti-clock" style="font-size:10px"></i> ${h.ts}</div>
+                  <div><strong>${escapeHtml(h.user)}</strong> — ${escapeHtml(h.accion)}</div>
+                  <div class="history-ts"><i class="ti ti-clock" style="font-size:10px"></i> ${escapeHtml(h.ts)}</div>
                 </div>
               </div>`).join('')
           : '<p style="font-size:12px;color:var(--gray)">Sin historial.</p>'}
@@ -860,9 +907,6 @@ function exportToExcel() {
 
 // ── Gestión de usuarios admin ─────────────────────────────────────────────────
 async function openAdminManager() {
-  const loggedUser = sessionStorage.getItem(USERNAME_KEY) || '';
-  const isSuperAdmin = loggedUser === 'admin';
-
   document.getElementById('adminManagerBackdrop').classList.add('open');
   document.getElementById('amError').classList.remove('show');
   document.getElementById('am-nombre').value = '';
@@ -870,9 +914,9 @@ async function openAdminManager() {
   document.getElementById('am-pass').value   = '';
 
   const createSection = document.getElementById('amCreateSection');
-  if (createSection) createSection.style.display = isSuperAdmin ? '' : 'none';
+  if (createSection) createSection.style.display = isSuperAdmin() ? '' : 'none';
   const createBtn = document.getElementById('amCreateBtn');
-  if (createBtn) createBtn.style.display = isSuperAdmin ? '' : 'none';
+  if (createBtn) createBtn.style.display = isSuperAdmin() ? '' : 'none';
 
   await loadAdminList();
 }
@@ -881,51 +925,83 @@ function closeAdminManager() {
   document.getElementById('adminManagerBackdrop').classList.remove('open');
 }
 
+const PERMISO_CHIPS = [
+  { modulo: 'inventario',  icon: 'ti-package',        label: 'Equipos' },
+  { modulo: 'prestamos',   icon: 'ti-exchange',       label: 'Préstamos' },
+  { modulo: 'bitacora',    icon: 'ti-history',        label: 'Bitácora' },
+  { modulo: 'solicitudes', icon: 'ti-clipboard-list', label: 'Solicitudes' }
+];
+
+const ROL_COLORS = { superadmin: '#7c3aed', admin: '#2563eb', tecnico: '#059669', empleado: '#64748b' };
+
 async function loadAdminList() {
   try {
     const admins = await api('/api/admins');
     const list        = document.getElementById('adminList');
     if (!admins.length) { list.innerHTML = '<p style="font-size:13px;color:var(--gray)">Sin usuarios.</p>'; return; }
 
-    const loggedUser  = sessionStorage.getItem(USERNAME_KEY) || '';
-    const isOnly      = admins.length === 1;
-    const isSuperAdmin = loggedUser === 'admin';
+    const loggedUser = sessionStorage.getItem(USERNAME_KEY) || '';
+    const isOnly     = admins.length === 1;
+    const superAdmin  = isSuperAdmin();
 
-    const ROL_COLORS = { superadmin: '#7c3aed', admin: '#2563eb', tecnico: '#059669', empleado: '#64748b' };
     list.innerHTML = admins.map(a => {
       const isMe      = a.username === loggedUser;
       const initials  = a.nombre.split(' ').map(w => w[0]).join('').substring(0,2).toUpperCase();
-      const canDelete = isSuperAdmin && !isMe && !isOnly;
+      const canDelete = superAdmin && !isMe && !isOnly;
       const rolColor  = ROL_COLORS[a.rol] || '#64748b';
+
+      const permisosRow = (superAdmin && a.nivel < 4) ? `
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px 48px">
+          ${PERMISO_CHIPS.map(({ modulo, icon, label }) => {
+            const activo = !!a[`acceso_${modulo}`];
+            return `
+            <button class="usr-btn ${activo ? 'usr-btn-activate' : 'usr-btn-deactivate'}"
+              style="font-size:11px;padding:4px 10px" onclick="togglePermiso(${a.id}, '${modulo}', ${activo ? 'false' : 'true'})"
+              title="${activo ? 'Quitar' : 'Otorgar'} acceso a ${label.toLowerCase()}">
+              <i class="ti ${icon}"></i> ${label}
+            </button>`;
+          }).join('')}
+        </div>` : '';
+
       return `
         <div class="admin-row">
-          <div class="admin-row-avatar ${isMe ? 'is-me' : ''}">${initials}</div>
+          <div class="admin-row-avatar ${isMe ? 'is-me' : ''}">${escapeHtml(initials)}</div>
           <div class="admin-row-info">
-            <div class="admin-row-nombre">${a.nombre}</div>
+            <div class="admin-row-nombre">${escapeHtml(a.nombre)}</div>
             <div class="admin-row-user" style="display:flex;align-items:center;gap:6px">
-              @${a.username}
+              @${escapeHtml(a.username)}
               <span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px;
                            background:${rolColor}22;color:${rolColor};letter-spacing:0.3px">
-                ${a.rol}
+                ${escapeHtml(a.rol)}
               </span>
             </div>
           </div>
           ${isMe ? '<span class="admin-row-me">Tú</span>' : ''}
-          <button class="btn-del-admin" onclick="deleteAdmin('${a.username}','${a.nombre}')"
-            title="${isMe ? 'No puedes eliminarte a ti mismo' : !isSuperAdmin ? 'Solo el administrador principal puede eliminar usuarios' : isOnly ? 'Debe haber al menos un administrador' : 'Eliminar usuario'}"
+          <button class="btn-del-admin" onclick="deleteAdmin('${a.username}')"
+            title="${isMe ? 'No puedes eliminarte a ti mismo' : !superAdmin ? 'Solo el administrador principal puede eliminar usuarios' : isOnly ? 'Debe haber al menos un administrador' : 'Eliminar usuario'}"
             ${canDelete ? '' : 'disabled'}>
             <i class="ti ti-trash"></i>
           </button>
-        </div>`;
+        </div>
+        ${permisosRow}`;
     }).join('');
   } catch {
     document.getElementById('adminList').innerHTML = '<p style="font-size:13px;color:var(--red)">Error al cargar usuarios.</p>';
   }
 }
 
+async function togglePermiso(id, modulo, next) {
+  try {
+    await api(`/api/usuarios/${id}/permisos`, 'PATCH', { [modulo]: next });
+    showToast(next ? 'Acceso otorgado ✓' : 'Acceso revocado');
+    await loadAdminList();
+  } catch {
+    showToast('Error al actualizar el permiso');
+  }
+}
+
 async function createAdmin() {
-  const loggedUser = sessionStorage.getItem(USERNAME_KEY) || '';
-  if (loggedUser !== 'admin') { showToast('Solo el administrador principal puede crear usuarios'); return; }
+  if (!isSuperAdmin()) { showToast('Solo el administrador principal puede crear usuarios'); return; }
 
   const nombre = document.getElementById('am-nombre').value.trim();
   const user   = document.getElementById('am-user').value.trim().toLowerCase().replace(/\s+/g,'');
@@ -956,10 +1032,9 @@ async function createAdmin() {
   }
 }
 
-async function deleteAdmin(username, nombre) {
-  const loggedUser = sessionStorage.getItem(USERNAME_KEY) || '';
-  if (loggedUser !== 'admin') { showToast('Solo el administrador principal puede eliminar usuarios'); return; }
-  if (!confirm(`¿Eliminar al usuario "${nombre}" (@${username})?\nEsta acción no se puede deshacer.`)) return;
+async function deleteAdmin(username) {
+  if (!isSuperAdmin()) { showToast('Solo el administrador principal puede eliminar usuarios'); return; }
+  if (!confirm(`¿Eliminar al usuario @${username}?\nEsta acción no se puede deshacer.`)) return;
   try {
     const res = await fetch(`/api/admins/${username}`, {
       method: 'DELETE',
@@ -996,13 +1071,13 @@ function estadoLabel(e) { return ESTADO_MAP[e] || e; }
 
 async function loadDevices() {
   try {
-    [inventoryCache, loansCache] = await Promise.all([
-      api('/api/inventory'),
-      api('/api/loans')
-    ]);
-    const el = document.getElementById('cnt-inventario');
-    if (el) el.textContent = inventoryCache.length;
-  } catch { inventoryCache = []; loansCache = []; }
+    inventoryCache = hasPermiso('inventario') ? await api('/api/inventory') : [];
+  } catch { inventoryCache = []; }
+  try {
+    loansCache = hasPermiso('prestamos') ? await api('/api/loans') : [];
+  } catch { loansCache = []; }
+  const el = document.getElementById('cnt-inventario');
+  if (el) el.textContent = inventoryCache.length;
 }
 
 function destroyInvCharts() {
@@ -1011,6 +1086,8 @@ function destroyInvCharts() {
 }
 
 function switchInvView(view) {
+  if (view === 'equipos' && !hasPermiso('inventario')) return;
+  if (view === 'prestamos' && !hasPermiso('prestamos')) return;
   if (view !== 'dashboard') destroyInvCharts();
   currentInvView = view;
   renderInventorySection();
@@ -1019,6 +1096,9 @@ function switchInvView(view) {
 function renderInventorySection() {
   const section = document.getElementById('receptionSection');
   if (!section) return;
+
+  if (currentInvView === 'equipos' && !hasPermiso('inventario')) currentInvView = 'dashboard';
+  if (currentInvView === 'prestamos' && !hasPermiso('prestamos')) currentInvView = 'dashboard';
 
   const total      = inventoryCache.length;
   const disponibles = inventoryCache.filter(i => i.estado === 'disponible').length;
@@ -1067,18 +1147,20 @@ function renderInventorySection() {
       <button class="inv-subtab${currentInvView==='dashboard'?' active':''}" onclick="switchInvView('dashboard')">
         <i class="ti ti-chart-bar"></i> Dashboard
       </button>
+      ${hasPermiso('inventario') ? `
       <button class="inv-subtab${currentInvView==='equipos'?' active':''}" onclick="switchInvView('equipos')">
         <i class="ti ti-package"></i> Equipos
-      </button>
+      </button>` : ''}
+      ${hasPermiso('prestamos') ? `
       <button class="inv-subtab${currentInvView==='prestamos'?' active':''}" onclick="switchInvView('prestamos')">
         <i class="ti ti-exchange"></i> Préstamos
         ${activos > 0 ? `<span class="inv-badge">${activos}</span>` : ''}
-      </button>
+      </button>` : ''}
     </div>
-    ${currentInvView === 'equipos' ? `
+    ${currentInvView === 'equipos' && hasPermiso('inventario') ? `
     <button class="inv-add-btn" onclick="openInventoryModal()">
       <i class="ti ti-plus"></i> Nuevo equipo
-    </button>` : currentInvView === 'prestamos' ? `
+    </button>` : currentInvView === 'prestamos' && hasPermiso('prestamos') ? `
     <button class="inv-add-btn" onclick="openLoanModal(null)">
       <i class="ti ti-exchange"></i> Nuevo préstamo
     </button>` : ''}
@@ -1097,10 +1179,11 @@ function renderDashboardHtml() {
   if (!inventoryCache.length) return `
 <div class="inv-empty">
   <i class="ti ti-chart-bar-off"></i>
-  <p>No hay equipos registrados aún. Agrega el primer equipo para ver estadísticas.</p>
+  <p>No hay equipos registrados aún.${hasPermiso('inventario') ? ' Agrega el primer equipo para ver estadísticas.' : ''}</p>
+  ${hasPermiso('inventario') ? `
   <button class="inv-add-btn" onclick="switchInvView('equipos');openInventoryModal()">
     <i class="ti ti-plus"></i> Agregar primer equipo
-  </button>
+  </button>` : ''}
 </div>`;
 
   const recent = [...inventoryCache]
@@ -1109,12 +1192,12 @@ function renderDashboardHtml() {
 
   const recentHtml = recent.map(i => {
     const estCls = INV_ESTADO_CLS[i.estado] || 'inv-est-gray';
-    const estLbl = INV_ESTADO_LABEL[i.estado] || i.estado;
+    const estLbl = escapeHtml(INV_ESTADO_LABEL[i.estado] || i.estado);
     return `<div class="inv-dash-recent-row">
   <div class="inv-dash-recent-icon"><i class="ti ti-package"></i></div>
   <div class="inv-dash-recent-info">
-    <div class="inv-dash-recent-name">${i.marca} ${i.modelo||''}</div>
-    <div class="inv-dash-recent-sub">${i.id} · ${i.fechaIngreso||''}</div>
+    <div class="inv-dash-recent-name">${escapeHtml(i.marca)} ${escapeHtml(i.modelo||'')}</div>
+    <div class="inv-dash-recent-sub">${escapeHtml(i.id)} · ${escapeHtml(i.fechaIngreso||'')}</div>
   </div>
   <span class="inv-estado-badge ${estCls}">${estLbl}</span>
 </div>`;
@@ -1263,13 +1346,13 @@ function refreshInvContent() {
 function garantiaBadgeHtml(garantia) {
   if (!garantia) return '';
   if (!garantia.vence) {
-    const prov = garantia.proveedor ? ` · ${garantia.proveedor}` : '';
+    const prov = garantia.proveedor ? ` · ${escapeHtml(garantia.proveedor)}` : '';
     return `<div class="inv-detail-row"><i class="ti ti-shield"></i><span><span class="gnt-badge gnt-gray">Con garantía</span>${prov}</span></div>`;
   }
   const today = new Date(); today.setHours(0,0,0,0);
   const vence = new Date(garantia.vence);
   const dias  = Math.round((vence - today) / 86400000);
-  const prov  = garantia.proveedor ? ` · ${garantia.proveedor}` : '';
+  const prov  = garantia.proveedor ? ` · ${escapeHtml(garantia.proveedor)}` : '';
   if (dias < 0) {
     return `<div class="inv-detail-row"><i class="ti ti-shield-off"></i><span><span class="gnt-badge gnt-red">Garantía vencida</span>${prov}</span></div>`;
   }
@@ -1280,11 +1363,16 @@ function garantiaBadgeHtml(garantia) {
 }
 
 function invCardHtml(item) {
-  const tipLbl  = item.tipo;
-  const estLbl  = INV_ESTADO_LABEL[item.estado] || item.estado;
-  const estCls  = INV_ESTADO_CLS[item.estado]   || 'inv-est-gray';
+  const tipLbl    = escapeHtml(item.tipo);
+  const isCant    = item.tipoManejo === 'cantidad';
+  const disponible = isCant ? Math.max((item.cantidadTotal || 0) - (item.cantidadPrestada || 0), 0) : null;
+  const estLbl    = escapeHtml(INV_ESTADO_LABEL[item.estado] || item.estado);
+  const estCls    = INV_ESTADO_CLS[item.estado] || 'inv-est-gray';
+  const showCantBadge = isCant && item.estado === 'disponible';
+  const cantBadgeCls  = disponible > 0 ? 'inv-est-green' : 'inv-est-red';
   const condCls = { excelente:'cond-green', bueno:'cond-blue', regular:'cond-amber', danado:'cond-red' }[item.condicion] || '';
-  const condLbl = { excelente:'Excelente', bueno:'Bueno', regular:'Regular', danado:'Dañado' }[item.condicion] || item.condicion;
+  const condLbl = escapeHtml({ excelente:'Excelente', bueno:'Bueno', regular:'Regular', danado:'Dañado' }[item.condicion] || item.condicion);
+  const puedePrestar = isCant ? (item.estado === 'disponible' && disponible > 0) : item.estado === 'disponible';
   return `
 <div class="inv-card">
   <div class="inv-card-head">
@@ -1292,28 +1380,31 @@ function invCardHtml(item) {
       <i class="ti ti-package"></i>
     </div>
     <div class="inv-card-meta">
-      <div class="inv-card-name">${item.marca}${item.modelo ? ' ' + item.modelo : ''}</div>
-      <div class="inv-card-sub">${item.id} · ${tipLbl}${item.color ? ' · ' + item.color : ''}</div>
+      <div class="inv-card-name">${escapeHtml(item.marca)}${item.modelo ? ' ' + escapeHtml(item.modelo) : ''}</div>
+      <div class="inv-card-sub">${escapeHtml(item.id)} · ${tipLbl}${item.color ? ' · ' + escapeHtml(item.color) : ''}</div>
     </div>
-    <span class="inv-estado-badge ${estCls}">${estLbl}</span>
+    ${showCantBadge
+      ? `<span class="inv-estado-badge ${cantBadgeCls}">${disponible}/${item.cantidadTotal} disponibles</span>`
+      : `<span class="inv-estado-badge ${estCls}">${estLbl}</span>`}
   </div>
   <div class="inv-card-details">
-    ${item.serie       ? `<div class="inv-detail-row"><i class="ti ti-barcode"></i><span>Serie: <strong>${item.serie}</strong></span></div>` : ''}
-    ${item.ubicacion   ? `<div class="inv-detail-row"><i class="ti ti-map-pin"></i><span>Ubicación: ${item.ubicacion}</span></div>` : ''}
-    ${item.responsable ? `<div class="inv-detail-row"><i class="ti ti-user"></i><span>Responsable: ${item.responsable}</span></div>` : ''}
+    ${item.serie       ? `<div class="inv-detail-row"><i class="ti ti-barcode"></i><span>Serie: <strong>${escapeHtml(item.serie)}</strong></span></div>` : ''}
+    ${isCant           ? `<div class="inv-detail-row"><i class="ti ti-stack"></i><span>Lote: <strong>${item.cantidadTotal} unidades</strong> (${disponible} disponibles, ${item.cantidadPrestada || 0} prestadas)</span></div>` : ''}
+    ${item.ubicacion   ? `<div class="inv-detail-row"><i class="ti ti-map-pin"></i><span>Ubicación: ${escapeHtml(item.ubicacion)}</span></div>` : ''}
+    ${item.responsable ? `<div class="inv-detail-row"><i class="ti ti-user"></i><span>Responsable: ${escapeHtml(item.responsable)}</span></div>` : ''}
     <div class="inv-detail-row">
       <i class="ti ti-sparkles"></i>
       <span>Condición: <span class="cond-tag ${condCls}">${condLbl}</span></span>
     </div>
-    <div class="inv-detail-row muted"><i class="ti ti-calendar-plus"></i><span>Ingreso: ${item.fechaIngreso}</span></div>
+    <div class="inv-detail-row muted"><i class="ti ti-calendar-plus"></i><span>Ingreso: ${escapeHtml(item.fechaIngreso)}</span></div>
     ${garantiaBadgeHtml(item.garantia)}
-    ${item.notas ? `<div class="inv-card-notes">${item.notas}</div>` : ''}
+    ${item.notas ? `<div class="inv-card-notes">${escapeHtml(item.notas)}</div>` : ''}
   </div>
   <div class="inv-card-actions">
-    ${item.estado === 'disponible' ? `
+    ${puedePrestar ? `
     <button class="inv-btn inv-btn-primary" onclick="openLoanModal('${item.id}')">
       <i class="ti ti-exchange"></i> Prestar
-    </button>` : item.estado === 'en_prestamo' ? `
+    </button>` : (!isCant && item.estado === 'en_prestamo') ? `
     <button class="inv-btn inv-btn-green" onclick="returnLoanByItem('${item.id}')">
       <i class="ti ti-check"></i> Devolver
     </button>` : ''}
@@ -1347,23 +1438,24 @@ function renderPrestamosHtml() {
 <div class="loan-row${vencido ? ' loan-vencido' : ''}">
   <div class="loan-device-icon"><i class="ti ti-package"></i></div>
   <div class="loan-device-info">
-    <div class="loan-device-name">${loan.equipoDesc || loan.inventoryId}</div>
-    <div class="loan-device-id">${loan.inventoryId} · <span class="loan-id-badge">${loan.id}</span></div>
+    <div class="loan-device-name">${escapeHtml(loan.equipoDesc || loan.inventoryId)}</div>
+    <div class="loan-device-id">${escapeHtml(loan.inventoryId)} · <span class="loan-id-badge">${escapeHtml(loan.id)}</span></div>
+    ${loan.cantidad > 1 ? `<div class="loan-device-id">Cantidad: ${loan.cantidad} · Devuelto: ${loan.cantidadDevuelta}${loan.estado === 'activo' ? ` · Pendiente: ${loan.cantidad - loan.cantidadDevuelta}` : ''}</div>` : ''}
   </div>
   <div class="loan-person-col">
-    <div class="loan-person-name"><i class="ti ti-user" style="font-size:11px"></i> ${loan.empleado}</div>
-    ${loan.departamento ? `<div class="loan-dept">${loan.departamento}</div>` : ''}
-    ${loan.autorizadoPor ? `<div class="loan-dept">Auth: ${loan.autorizadoPor}</div>` : ''}
+    <div class="loan-person-name"><i class="ti ti-user" style="font-size:11px"></i> ${escapeHtml(loan.empleado)}</div>
+    ${loan.departamento ? `<div class="loan-dept">${escapeHtml(loan.departamento)}</div>` : ''}
+    ${loan.autorizadoPor ? `<div class="loan-dept">Auth: ${escapeHtml(loan.autorizadoPor)}</div>` : ''}
   </div>
   <div class="loan-dates-col">
-    <div class="loan-date-row"><i class="ti ti-calendar-plus"></i> ${loan.fechaPrestamo}</div>
+    <div class="loan-date-row"><i class="ti ti-calendar-plus"></i> ${escapeHtml(loan.fechaPrestamo)}</div>
     ${loan.fechaDevolucionEstimada ? `
     <div class="loan-date-row${vencido?' loan-date-red':''}">
-      <i class="ti ti-calendar-minus"></i> Est. ${loan.fechaDevolucionEstimada}
+      <i class="ti ti-calendar-minus"></i> Est. ${escapeHtml(loan.fechaDevolucionEstimada)}
     </div>` : ''}
     ${loan.fechaDevolucionReal ? `
     <div class="loan-date-row loan-date-green">
-      <i class="ti ti-check"></i> Devuelto: ${loan.fechaDevolucionReal}
+      <i class="ti ti-check"></i> Devuelto: ${escapeHtml(loan.fechaDevolucionReal)}
     </div>` : ''}
   </div>
   <div class="loan-status-col">
@@ -1372,10 +1464,13 @@ function renderPrestamosHtml() {
       `<span class="inv-estado-badge inv-est-green">Devuelto</span>`}
   </div>
   <div style="display:flex;flex-direction:column;gap:6px">
-    ${loan.estado === 'activo' ? `
+    ${loan.estado === 'activo' ? (loan.cantidad > 1 ? `
+    <button class="inv-btn inv-btn-green" onclick="returnLoanPartial('${loan.id}')">
+      <i class="ti ti-check"></i> Devolver (${loan.cantidad - loan.cantidadDevuelta} pend.)
+    </button>` : `
     <button class="inv-btn inv-btn-green" onclick="returnLoan('${loan.id}')">
       <i class="ti ti-check"></i> Retornado
-    </button>` : ''}
+    </button>`) : ''}
     <button class="inv-btn inv-btn-outline" onclick="generateLoanWord('${loan.id}')" title="Generar comprobante Word">
       <i class="ti ti-file-type-doc"></i> Comprobante
     </button>
@@ -1413,16 +1508,35 @@ function openEditInventoryModal(id) {
   const item = inventoryCache.find(i => i.id === id);
   if (!item) return;
   editingInvId = id;
-  document.getElementById('invModalTitle').innerHTML = `<i class="ti ti-edit"></i> Editar — ${item.id}`;
+  document.getElementById('invModalTitle').innerHTML = `<i class="ti ti-edit"></i> Editar — ${escapeHtml(item.id)}`;
   document.getElementById('invModalSaveBtn').innerHTML = '<i class="ti ti-device-floppy"></i> Guardar cambios';
   renderInventoryModalBody(item);
   document.getElementById('inventoryModalBackdrop').classList.add('open');
 }
 
 function renderInventoryModalBody(item) {
-  const v = f => item ? (item[f] || '') : '';
+  const v = f => item ? escapeHtml(item[f] || '') : '';
+  const modo       = item?.tipoManejo || 'unidad';
+  const isCantidad = modo === 'cantidad';
+  const modoLocked = !!item;
   document.getElementById('inventoryModalBody').innerHTML = `
 <div style="display:flex;flex-direction:column;gap:14px">
+  <div class="rform-group">
+    <label class="rform-label">Modo de manejo *</label>
+    <div style="display:flex;gap:20px;flex-wrap:wrap">
+      <label class="accesorio-check" style="width:fit-content">
+        <input type="radio" name="inv-modo" value="unidad" ${!isCantidad ? 'checked' : ''} ${modoLocked ? 'disabled' : ''} onchange="invSwitchModo('unidad')">
+        <span class="check-box"></span>
+        <span class="check-label">Por unidad (con N° de serie)</span>
+      </label>
+      <label class="accesorio-check" style="width:fit-content">
+        <input type="radio" name="inv-modo" value="cantidad" ${isCantidad ? 'checked' : ''} ${modoLocked ? 'disabled' : ''} onchange="invSwitchModo('cantidad')">
+        <span class="check-box"></span>
+        <span class="check-label">Por cantidad (lote: cables, mouse…)</span>
+      </label>
+    </div>
+    ${modoLocked ? `<div style="font-size:11px;color:var(--gray);margin-top:4px">El modo no se puede cambiar después de creado.</div>` : ''}
+  </div>
   <div class="rform-group">
     <label class="rform-label">Tipo de equipo *</label>
     <input id="inv-tipo" type="text" value="${v('tipo')}" placeholder="Laptop, Impresora, Router, UPS…" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-family:var(--font);background:var(--light);color:var(--text);outline:none">
@@ -1438,9 +1552,13 @@ function renderInventoryModalBody(item) {
     </div>
   </div>
   <div class="field-row">
-    <div class="field-group">
-      <label>N° de serie</label>
+    <div class="field-group" id="inv-field-serie" style="display:${isCantidad ? 'none' : ''}">
+      <label>N° de serie *</label>
       <input id="inv-serie" type="text" value="${v('serie')}" placeholder="SN123456">
+    </div>
+    <div class="field-group" id="inv-field-cantidad" style="display:${isCantidad ? '' : 'none'}">
+      <label>Cantidad total *</label>
+      <input id="inv-cantidad-total" type="number" min="1" step="1" value="${item?.cantidadTotal ?? ''}" placeholder="Ej: 20">
     </div>
     <div class="field-group">
       <label>Color</label>
@@ -1495,16 +1613,16 @@ function renderInventoryModalBody(item) {
     <div class="field-row">
       <div class="field-group">
         <label>Fecha de inicio</label>
-        <input id="inv-garantia-inicio" type="date" value="${item?.garantia?.inicio || ''}">
+        <input id="inv-garantia-inicio" type="date" value="${escapeHtml(item?.garantia?.inicio || '')}">
       </div>
       <div class="field-group">
         <label>Fecha de vencimiento *</label>
-        <input id="inv-garantia-vence" type="date" value="${item?.garantia?.vence || ''}">
+        <input id="inv-garantia-vence" type="date" value="${escapeHtml(item?.garantia?.vence || '')}">
       </div>
     </div>
     <div class="field-group">
       <label>Proveedor / N° de garantía</label>
-      <input id="inv-garantia-proveedor" type="text" value="${item?.garantia?.proveedor || ''}"
+      <input id="inv-garantia-proveedor" type="text" value="${escapeHtml(item?.garantia?.proveedor || '')}"
              placeholder="HP Inc., caso #12345…">
     </div>
   </div>
@@ -1524,11 +1642,20 @@ function invToggleGarantia() {
   if (fields) fields.style.display = checked ? 'flex' : 'none';
 }
 
+function invSwitchModo(modo) {
+  const serieField = document.getElementById('inv-field-serie');
+  const cantField  = document.getElementById('inv-field-cantidad');
+  if (serieField) serieField.style.display = modo === 'cantidad' ? 'none' : '';
+  if (cantField)  cantField.style.display  = modo === 'cantidad' ? '' : 'none';
+}
+
 async function saveInventoryItem() {
+  const tipoManejo = document.querySelector('input[name="inv-modo"]:checked')?.value || 'unidad';
   const tipo       = document.getElementById('inv-tipo')?.value.trim() || '';
   const marca      = document.getElementById('inv-marca')?.value.trim()      || '';
   const modelo     = document.getElementById('inv-modelo')?.value.trim()     || '';
   const serie      = document.getElementById('inv-serie')?.value.trim()      || '';
+  const cantidadTotal = document.getElementById('inv-cantidad-total')?.value || '';
   const color      = document.getElementById('inv-color')?.value.trim()      || '';
   const condicion  = document.getElementById('inv-condicion')?.value         || 'bueno';
   const estado     = document.getElementById('inv-estado')?.value            || 'disponible';
@@ -1546,14 +1673,25 @@ async function saveInventoryItem() {
   errEl.style.display = 'none';
   if (!tipo)  return showErr('El tipo de equipo es requerido.');
   if (!marca) return showErr('La marca es requerida.');
+  if (tipoManejo === 'cantidad') {
+    if (!cantidadTotal || parseInt(cantidadTotal, 10) < 1) return showErr('La cantidad total debe ser un número entero mayor o igual a 1.');
+  } else if (!serie) {
+    return showErr('El número de serie es requerido.');
+  }
   const btn = document.getElementById('invModalSaveBtn');
   btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2"></i> Guardando…';
   try {
     if (editingInvId) {
-      await api(`/api/inventory/${editingInvId}`, 'PATCH', { tipo, marca, modelo, serie, color, condicion, estado, ubicacion, responsable, notas, garantia });
+      const body = { tipo, marca, modelo, color, condicion, estado, ubicacion, responsable, notas, garantia };
+      if (tipoManejo === 'cantidad') body.cantidadTotal = parseInt(cantidadTotal, 10);
+      else body.serie = serie;
+      await api(`/api/inventory/${editingInvId}`, 'PATCH', body);
       showToast('Equipo actualizado ✓');
     } else {
-      await api('/api/inventory', 'POST', { tipo, marca, modelo, serie, color, condicion, ubicacion, responsable, notas, garantia });
+      await api('/api/inventory', 'POST', {
+        tipo, marca, modelo, serie, color, condicion, ubicacion, responsable, notas, garantia,
+        tipoManejo, cantidadTotal: tipoManejo === 'cantidad' ? parseInt(cantidadTotal, 10) : undefined
+      });
       showToast('Equipo agregado al inventario ✓');
     }
     closeInventoryModal();
@@ -1580,15 +1718,19 @@ async function deleteInventoryItem(id) {
 // ── Loan modal ────────────────────────────────────────────────────────────────
 let loanForItemId = null;
 
+function invDisponible(i) {
+  return i.tipoManejo === 'cantidad' ? Math.max((i.cantidadTotal || 0) - (i.cantidadPrestada || 0), 0) : 1;
+}
+
 async function openLoanModal(itemId) {
   loanForItemId = itemId;
-  const availableItems = inventoryCache.filter(i => i.estado === 'disponible');
+  const availableItems = inventoryCache.filter(i => i.estado === 'disponible' && invDisponible(i) > 0);
 
   let adminOptions = '<option value="">Sin especificar</option>';
   try {
     const admins = await api('/api/admins');
     adminOptions += admins.map(a =>
-      `<option value="${a.nombre}">${a.nombre} (${a.rol})</option>`
+      `<option value="${escapeHtml(a.nombre)}">${escapeHtml(a.nombre)} (${escapeHtml(a.rol)})</option>`
     ).join('');
   } catch {}
 
@@ -1596,13 +1738,17 @@ async function openLoanModal(itemId) {
 <div style="display:flex;flex-direction:column;gap:14px">
   <div class="field-group">
     <label>Equipo a prestar *</label>
-    <select id="loan-item">
+    <select id="loan-item" onchange="loanItemChanged()">
       <option value="">— Seleccionar equipo —</option>
       ${availableItems.map(i => `
-        <option value="${i.id}" ${i.id === itemId ? 'selected' : ''}>
-          ${i.id} — ${i.marca} ${i.modelo || i.tipo}
+        <option value="${escapeHtml(i.id)}" ${i.id === itemId ? 'selected' : ''}>
+          ${escapeHtml(i.id)} — ${escapeHtml(i.marca)} ${escapeHtml(i.modelo || i.tipo)}${i.tipoManejo === 'cantidad' ? ` (${invDisponible(i)} disponibles)` : ''}
         </option>`).join('')}
     </select>
+  </div>
+  <div class="field-group" id="loan-field-cantidad" style="display:none">
+    <label>Cantidad a prestar *</label>
+    <input id="loan-cantidad" type="number" min="1" step="1" value="1">
   </div>
   <div class="field-row">
     <div class="field-group">
@@ -1633,6 +1779,22 @@ async function openLoanModal(itemId) {
   <div id="loan-modal-err" class="rec-error" style="display:none"></div>
 </div>`;
   document.getElementById('loanModalBackdrop').classList.add('open');
+  loanItemChanged();
+}
+
+function loanItemChanged() {
+  const itemId = document.getElementById('loan-item')?.value || '';
+  const item   = inventoryCache.find(i => i.id === itemId);
+  const field  = document.getElementById('loan-field-cantidad');
+  const input  = document.getElementById('loan-cantidad');
+  if (!field || !input) return;
+  if (item?.tipoManejo === 'cantidad') {
+    field.style.display = '';
+    input.max = String(invDisponible(item));
+    if (parseInt(input.value, 10) > invDisponible(item)) input.value = '1';
+  } else {
+    field.style.display = 'none';
+  }
 }
 
 function closeLoanModal() {
@@ -1652,14 +1814,23 @@ async function saveLoan() {
   errEl.style.display = 'none';
   if (!inventoryId) return showErr('Selecciona un equipo.');
   if (!empleado)    return showErr('El nombre del empleado es requerido.');
+
+  const item = inventoryCache.find(i => i.id === inventoryId);
+  let cantidad = 1;
+  if (item?.tipoManejo === 'cantidad') {
+    cantidad = parseInt(document.getElementById('loan-cantidad')?.value, 10);
+    if (!Number.isInteger(cantidad) || cantidad < 1) return showErr('Indica una cantidad válida.');
+    if (cantidad > invDisponible(item)) return showErr(`Solo hay ${invDisponible(item)} unidades disponibles.`);
+  }
+
   try {
-    await api('/api/loans', 'POST', { inventoryId, empleado, departamento, fechaDevolucion: fechaDev, autorizadoPor, notas });
+    await api('/api/loans', 'POST', { inventoryId, empleado, departamento, fechaDevolucion: fechaDev, autorizadoPor, notas, cantidad });
     showToast('Préstamo registrado ✓');
     closeLoanModal();
     await loadDevices();
     renderInventorySection();
   } catch (e) {
-    showErr(e.message.includes('409') ? 'El equipo ya está prestado.' : 'Error al registrar préstamo.');
+    showErr(e.message.includes('409') ? 'No hay suficiente disponibilidad de este equipo.' : 'Error al registrar préstamo.');
   }
 }
 
@@ -1686,14 +1857,17 @@ function generateLoanWord(loanId) {
 <html>
 <head>
 <meta charset="utf-8">
+<meta name="color-scheme" content="light only">
 <title>Prestamo ${loan.id}</title>
 <style>
-body{${S}margin:1.5cm 2cm;line-height:1.3;}
-table{${S}border-collapse:collapse;}
-p{margin:0 0 7px;padding:0;}
+html{color-scheme:light only;}
+body{${S}margin:1.5cm 2cm;line-height:1.3;background:#ffffff !important;}
+table{${S}border-collapse:collapse;background:#ffffff !important;}
+td{background:#ffffff !important;}
+p{margin:0 0 7px;padding:0;color:#000 !important;}
 </style>
 </head>
-<body>
+<body style="background:#ffffff !important;color:#000 !important">
 
 <table border="0" width="100%" cellspacing="0" cellpadding="0" style="height:70px;">
 <tr style="height:70px;">
@@ -1715,26 +1889,26 @@ GRUPO CAMARONERO MILCIEN S.A. de C.V.
 
 <p style="text-align:justify;line-height:1.5;margin-bottom:8px;">
 POR ESTE MEDIO HACEMOS CONSTAR, QUE SE ENTREGO EN CALIDAD DE PRESTAMO
-LA CANTIDAD DE: __1__ ${tipoDesc.toUpperCase()} CON LAS SIGUIENTES CARACTERISTICAS:
+LA CANTIDAD DE: __${loan.cantidad || 1}__ ${escapeHtml(tipoDesc.toUpperCase())} CON LAS SIGUIENTES CARACTERISTICAS:
 </p>
 
 <table border="0" cellpadding="2" cellspacing="0" style="margin-left:18px;margin-bottom:10px;line-height:1.5;">
-<tr><td style="${SB}">MARCA:</td><td style="${S}">&nbsp;${(item.marca || '').toUpperCase()}${item.modelo ? ' ' + item.modelo.toUpperCase() : ''}</td></tr>
-${item.serie     ? `<tr><td style="${SB}">S/N:</td><td style="${S}">&nbsp;${item.serie.toUpperCase()}</td></tr>` : ''}
-${item.color     ? `<tr><td style="${SB}">COLOR:</td><td style="${S}">&nbsp;${item.color.toUpperCase()}</td></tr>` : ''}
-${condicion      ? `<tr><td style="${SB}">CONDICION:</td><td style="${S}">&nbsp;${condicion.toUpperCase()}</td></tr>` : ''}
-${item.ubicacion ? `<tr><td style="${SB}">UBICACION HABITUAL:</td><td style="${S}">&nbsp;${item.ubicacion.toUpperCase()}</td></tr>` : ''}
+<tr><td style="${SB}">MARCA:</td><td style="${S}">&nbsp;${escapeHtml((item.marca || '').toUpperCase())}${item.modelo ? ' ' + escapeHtml(item.modelo.toUpperCase()) : ''}</td></tr>
+${item.serie     ? `<tr><td style="${SB}">S/N:</td><td style="${S}">&nbsp;${escapeHtml(item.serie.toUpperCase())}</td></tr>` : ''}
+${item.color     ? `<tr><td style="${SB}">COLOR:</td><td style="${S}">&nbsp;${escapeHtml(item.color.toUpperCase())}</td></tr>` : ''}
+${condicion      ? `<tr><td style="${SB}">CONDICION:</td><td style="${S}">&nbsp;${escapeHtml(condicion.toUpperCase())}</td></tr>` : ''}
+${item.ubicacion ? `<tr><td style="${SB}">UBICACION HABITUAL:</td><td style="${S}">&nbsp;${escapeHtml(item.ubicacion.toUpperCase())}</td></tr>` : ''}
 </table>
 
-<p><b>FECHA DE DEVOLUCION ESTIMADA:</b>&nbsp;${loan.fechaDevolucionEstimada ? loan.fechaDevolucionEstimada : '__________________________'}</p>
+<p><b>FECHA DE DEVOLUCION ESTIMADA:</b>&nbsp;${loan.fechaDevolucionEstimada ? escapeHtml(loan.fechaDevolucionEstimada) : '__________________________'}</p>
 
-${loan.notas ? `<p><b>NOTA:</b>&nbsp;${String(loan.notas).toUpperCase()}</p>` : ''}
+${loan.notas ? `<p><b>NOTA:</b>&nbsp;${escapeHtml(String(loan.notas).toUpperCase())}</p>` : ''}
 
 <table border="0" width="100%" cellspacing="0" cellpadding="0" style="margin-top:28px;">
 <tr>
 <td width="20%">&nbsp;</td>
 <td width="60%" align="center" style="${S}font-weight:bold;border-top:1px solid #000;padding-top:6px;">
-${String(loan.empleado || '').toUpperCase()}${loan.departamento ? `<br><span style="${S}font-weight:normal;">${String(loan.departamento).toUpperCase()}</span>` : ''}
+${escapeHtml(String(loan.empleado || '').toUpperCase())}${loan.departamento ? `<br><span style="${S}font-weight:normal;">${escapeHtml(String(loan.departamento).toUpperCase())}</span>` : ''}
 </td>
 <td width="20%">&nbsp;</td>
 </tr>
@@ -1743,10 +1917,10 @@ ${String(loan.empleado || '').toUpperCase()}${loan.departamento ? `<br><span sty
 <table border="0" width="100%" cellspacing="0" cellpadding="3" style="margin-top:28px;">
 <tr>
 <td width="50%" valign="top" style="${S}border-top:2px solid #000;padding-top:6px;">
-<b>Entregado por:</b><br>${String(adminNombre || 'Depto. Sistemas / TI').toUpperCase()}
+<b>Entregado por:</b><br>${escapeHtml(String(adminNombre || 'Depto. Sistemas / TI').toUpperCase())}
 </td>
 <td width="50%" align="right" valign="top" style="${S}border-top:2px solid #000;padding-top:6px;">
-<b>Recibi Conforme:</b><br>${String(loan.empleado || '').toUpperCase()}
+<b>Recibi Conforme:</b><br>${escapeHtml(String(loan.empleado || '').toUpperCase())}
 </td>
 </tr>
 </table>
@@ -1786,6 +1960,24 @@ async function returnLoanByItem(itemId) {
   await returnLoan(loan.id);
 }
 
+async function returnLoanPartial(loanId) {
+  const loan = loansCache.find(l => l.id === loanId);
+  if (!loan) return;
+  const restante = loan.cantidad - loan.cantidadDevuelta;
+  const input = prompt(`¿Cuántas unidades se devuelven ahora? (pendiente: ${restante})`, String(restante));
+  if (input === null) return;
+  const cantidadDevuelta = parseInt(input, 10);
+  if (!Number.isInteger(cantidadDevuelta) || cantidadDevuelta < 1 || cantidadDevuelta > restante) {
+    return showToast('Cantidad inválida');
+  }
+  try {
+    await api(`/api/loans/${loanId}`, 'PATCH', { cantidadDevuelta });
+    showToast('Devolución registrada ✓');
+    await loadDevices();
+    renderInventorySection();
+  } catch { showToast('Error al registrar devolución'); }
+}
+
 // ── Gestión de usuarios ───────────────────────────────────────────────────────
 function usrInitials(nombre, apellido) {
   const n = (nombre || '').trim();
@@ -1800,7 +1992,7 @@ function usrAvatarCls(nivel) {
 
 function usrRolBadge(rol) {
   const cls = { empleado: 'gray', tecnico: 'blue', admin: 'green', superadmin: 'amber' }[rol] || 'gray';
-  return `<span class="usr-badge usr-badge-${cls}">${rol || 'empleado'}</span>`;
+  return `<span class="usr-badge usr-badge-${cls}">${escapeHtml(rol || 'empleado')}</span>`;
 }
 
 function fmtDate(iso) {
@@ -1834,15 +2026,9 @@ function renderUsersSection() {
       </div>
     </div>`;
 
-  const solsHtml = renderSolicitudesHtml();
   const usrsHtml = renderUsrListHtml();
 
-  document.getElementById('receptionSection').innerHTML = `
-    <div class="usr-section">
-      <div class="inv-section-header">
-        <h2 class="inv-section-title"><i class="ti ti-users" style="color:#6366f1"></i> Gestión de usuarios</h2>
-      </div>
-      ${statsHtml}
+  const solicitudesCardHtml = hasPermiso('solicitudes') ? `
       <div class="usr-card">
         <div class="usr-card-header">
           <span class="usr-card-title"><i class="ti ti-clipboard-list"></i> Solicitudes de acceso</span>
@@ -1852,13 +2038,27 @@ function renderUsersSection() {
             <button class="usr-ftab${usrSolFilter==='rechazado'?' active':''}" onclick="setUsrSolFilter('rechazado')">Rechazadas</button>
           </div>
         </div>
-        <div id="solsList">${solsHtml}</div>
+        <div id="solsList">${renderSolicitudesHtml()}</div>
+      </div>` : `
+      <div class="usr-card">
+        <div class="usr-card-header">
+          <span class="usr-card-title"><i class="ti ti-clipboard-list"></i> Solicitudes de acceso</span>
+        </div>
+        <div class="usr-empty"><i class="ti ti-lock"></i><br>Solo el superadministrador o un usuario con el permiso "Solicitudes de registro" otorgado puede ver y gestionar solicitudes de registro.</div>
+      </div>`;
+
+  document.getElementById('receptionSection').innerHTML = `
+    <div class="usr-section">
+      <div class="inv-section-header">
+        <h2 class="inv-section-title"><i class="ti ti-users" style="color:#6366f1"></i> Gestión de usuarios</h2>
       </div>
+      ${statsHtml}
+      ${solicitudesCardHtml}
       <div class="usr-card">
         <div class="usr-card-header">
           <span class="usr-card-title"><i class="ti ti-address-book"></i> Usuarios registrados</span>
           <input class="usr-search" id="usrSearchInput" type="search" placeholder="Buscar por nombre, usuario o correo…"
-                 value="${usrSearch}" oninput="usrSearch=this.value;document.getElementById('usrList').innerHTML=renderUsrListHtml()">
+                 value="${escapeHtml(usrSearch)}" oninput="usrSearch=this.value;document.getElementById('usrList').innerHTML=renderUsrListHtml()">
         </div>
         <div id="usrList">${usrsHtml}</div>
       </div>
@@ -1885,17 +2085,19 @@ function renderSolicitudesHtml() {
       <button class="usr-btn usr-btn-approve" onclick="aprobarSolicitud(${s.id})"><i class="ti ti-check"></i> Aprobar</button>
       <button class="usr-btn usr-btn-reject"  onclick="rechazarSolicitud(${s.id})"><i class="ti ti-x"></i> Rechazar</button>` : '';
     const meta = [
-      s.email        ? `<i class="ti ti-mail"></i> ${s.email}` : '',
-      s.departamento ? `<i class="ti ti-building"></i> ${s.departamento}` : '',
-      `<i class="ti ti-calendar"></i> ${fmtDate(s.created_at)}`
+      s.email        ? `<i class="ti ti-mail"></i> ${escapeHtml(s.email)}` : '',
+      s.departamento ? `<i class="ti ti-building"></i> ${escapeHtml(s.departamento)}` : '',
+      s.finca        ? `<i class="ti ti-map-pin"></i> ${escapeHtml(s.finca)}` : '',
+      s.area         ? `<i class="ti ti-map-2"></i> ${escapeHtml(s.area)}` : '',
+      `<i class="ti ti-calendar"></i> ${escapeHtml(fmtDate(s.created_at))}`
     ].filter(Boolean).join(' &nbsp;·&nbsp; ');
     return `
       <div class="usr-sol-row">
-        <div class="usr-sol-avatar ${usrAvatarCls(1)}">${usrInitials(s.nombre, s.apellido)}</div>
+        <div class="usr-sol-avatar ${usrAvatarCls(1)}">${escapeHtml(usrInitials(s.nombre, s.apellido))}</div>
         <div class="usr-sol-info">
-          <div class="usr-sol-name">${s.nombre || ''} ${s.apellido || ''} <span class="usr-sol-username">@${s.username}</span></div>
+          <div class="usr-sol-name">${escapeHtml(s.nombre || '')} ${escapeHtml(s.apellido || '')} <span class="usr-sol-username">@${escapeHtml(s.username)}</span></div>
           <div class="usr-sol-meta">${meta}</div>
-          ${s.mensaje ? `<div class="usr-sol-msg">"${s.mensaje}"</div>` : ''}
+          ${s.mensaje ? `<div class="usr-sol-msg">"${escapeHtml(s.mensaje)}"</div>` : ''}
           <div class="usr-sol-badges">${estadoBadge}</div>
         </div>
         <div class="usr-sol-actions">${actions}</div>
@@ -1926,17 +2128,17 @@ function renderUsrListHtml() {
     const toggleBtn = isSelf ? '' : u.activo
       ? `<button class="usr-btn usr-btn-deactivate" onclick="toggleUserActivo(${u.id},false)"><i class="ti ti-user-off"></i> Desactivar</button>`
       : `<button class="usr-btn usr-btn-activate"   onclick="toggleUserActivo(${u.id},true)"><i class="ti ti-user-check"></i> Activar</button>`;
-    const deleteBtn = isSelf ? '' : `<button class="usr-btn usr-btn-delete" onclick="deleteUser(${u.id},'${(u.nombre+' '+(u.apellido||'')).trim().replace(/'/g,"\\'")}')"><i class="ti ti-trash"></i> Eliminar</button>`;
+    const deleteBtn = isSelf ? '' : `<button class="usr-btn usr-btn-delete" onclick="deleteUser(${u.id})"><i class="ti ti-trash"></i> Eliminar</button>`;
     const meta = [
-      u.email        ? `<i class="ti ti-mail"></i> ${u.email}` : '',
-      u.departamento ? `<i class="ti ti-building"></i> ${u.departamento}` : '',
-      u.ultimo_login ? `<i class="ti ti-login"></i> ${fmtDate(u.ultimo_login)}` : '<i class="ti ti-login"></i> Nunca'
+      u.email        ? `<i class="ti ti-mail"></i> ${escapeHtml(u.email)}` : '',
+      u.departamento ? `<i class="ti ti-building"></i> ${escapeHtml(u.departamento)}` : '',
+      u.ultimo_login ? `<i class="ti ti-login"></i> ${escapeHtml(fmtDate(u.ultimo_login))}` : '<i class="ti ti-login"></i> Nunca'
     ].filter(Boolean).join(' &nbsp;·&nbsp; ');
     return `
       <div class="usr-row${u.activo ? '' : ' usr-row-inactive'}">
-        <div class="usr-avatar ${usrAvatarCls(u.nivel)}">${usrInitials(u.nombre, u.apellido)}</div>
+        <div class="usr-avatar ${usrAvatarCls(u.nivel)}">${escapeHtml(usrInitials(u.nombre, u.apellido))}</div>
         <div class="usr-info">
-          <div class="usr-name">${u.nombre || ''} ${u.apellido || ''} <span class="usr-username">@${u.username}</span>${isSelf ? ' <span class="usr-badge usr-badge-blue">Tú</span>' : ''}</div>
+          <div class="usr-name">${escapeHtml(u.nombre || '')} ${escapeHtml(u.apellido || '')} <span class="usr-username">@${escapeHtml(u.username)}</span>${isSelf ? ' <span class="usr-badge usr-badge-blue">Tú</span>' : ''}</div>
           <div class="usr-meta">${meta}</div>
           <div class="usr-row-badges">${usrRolBadge(u.rol)} ${actBadge}</div>
         </div>
@@ -1962,7 +2164,7 @@ function renderUsrListHtml() {
 function openUsrDetail(id) {
   const u = usuariosCache.find(x => x.id === id);
   if (!u) return;
-  document.getElementById('usrDetailTitle').innerHTML = `<i class="ti ti-user-circle"></i> ${u.nombre} ${u.apellido || ''}`;
+  document.getElementById('usrDetailTitle').innerHTML = `<i class="ti ti-user-circle"></i> ${escapeHtml(u.nombre)} ${escapeHtml(u.apellido || '')}`;
   document.getElementById('usrDetailBody').innerHTML = `
 <div class="usd-tabs">
   <button class="usd-tab active" id="usdTabPerfil"  onclick="switchUsrTab('perfil',${u.id})"><i class="ti ti-user"></i> Perfil</button>
@@ -1993,7 +2195,7 @@ async function loadUsrTickets(userId) {
     if (!tickets.length) {
       content.innerHTML = `<div style="padding:36px;text-align:center;color:var(--text-sec)">
         <i class="ti ti-ticket" style="font-size:36px;opacity:.3"></i><br>
-        <span style="font-size:13px;margin-top:8px;display:block">${nombre} no tiene tickets registrados</span>
+        <span style="font-size:13px;margin-top:8px;display:block">${escapeHtml(nombre)} no tiene tickets registrados</span>
       </div>`;
       return;
     }
@@ -2019,13 +2221,13 @@ async function loadUsrTickets(userId) {
     ${tickets.map(t => `
     <div class="usd-tkt-row" onclick="openDetailFromUser('${t.id}')" title="Ver ticket">
       <div class="usd-tkt-main">
-        <span class="usd-tkt-id">${t.id}</span>
-        <span class="usd-tkt-title">${t.titulo}</span>
+        <span class="usd-tkt-id">${escapeHtml(t.id)}</span>
+        <span class="usd-tkt-title">${escapeHtml(t.titulo)}</span>
       </div>
       <div class="usd-tkt-meta">
-        <span class="usd-tkt-badge" style="background:${stColor[t.status]}20;color:${stColor[t.status]}">${stLabel[t.status] || t.status}</span>
-        <span class="usd-tkt-badge" style="background:${prioColor[t.prioridad]}20;color:${prioColor[t.prioridad]}">${t.prioridad}</span>
-        <span style="font-size:11px;color:var(--text-sec)">${fmtDate(t.created_at)}</span>
+        <span class="usd-tkt-badge" style="background:${stColor[t.status]}20;color:${stColor[t.status]}">${escapeHtml(stLabel[t.status] || t.status)}</span>
+        <span class="usd-tkt-badge" style="background:${prioColor[t.prioridad]}20;color:${prioColor[t.prioridad]}">${escapeHtml(t.prioridad)}</span>
+        <span style="font-size:11px;color:var(--text-sec)">${escapeHtml(fmtDate(t.created_at))}</span>
       </div>
     </div>`).join('')}
   </div>
@@ -2064,19 +2266,19 @@ function copyUsdVal(el) {
 
 function renderUsrDetailHtml(u) {
   const row = (icon, label, val) => val
-    ? `<div class="usd-row"><span class="usd-label"><i class="ti ${icon}"></i> ${label}</span><span class="usd-val">${val}</span></div>`
+    ? `<div class="usd-row"><span class="usd-label"><i class="ti ${icon}"></i> ${label}</span><span class="usd-val">${escapeHtml(val)}</span></div>`
     : '';
   const rolCls = { empleado:'gray', tecnico:'blue', admin:'green', superadmin:'amber' }[u.rol] || 'gray';
 
   return `
 <div style="display:flex;flex-direction:column;gap:0">
   <div class="usd-avatar-row">
-    <div class="usr-avatar ${usrAvatarCls(u.nivel)} usd-avatar">${usrInitials(u.nombre, u.apellido)}</div>
+    <div class="usr-avatar ${usrAvatarCls(u.nivel)} usd-avatar">${escapeHtml(usrInitials(u.nombre, u.apellido))}</div>
     <div>
-      <div class="usd-name">${u.nombre} ${u.apellido || ''}</div>
-      <div class="usd-username">@${u.username}</div>
+      <div class="usd-name">${escapeHtml(u.nombre)} ${escapeHtml(u.apellido || '')}</div>
+      <div class="usd-username">@${escapeHtml(u.username)}</div>
       <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
-        <span class="usr-badge usr-badge-${rolCls}">${u.rol || 'empleado'}</span>
+        <span class="usr-badge usr-badge-${rolCls}">${escapeHtml(u.rol || 'empleado')}</span>
         ${u.activo ? '<span class="usr-badge usr-badge-green"><i class="ti ti-circle-check"></i> Activo</span>' : '<span class="usr-badge usr-badge-gray"><i class="ti ti-circle-minus"></i> Inactivo</span>'}
       </div>
     </div>
@@ -2086,12 +2288,14 @@ function renderUsrDetailHtml(u) {
     <div class="usd-row">
       <span class="usd-label"><i class="ti ti-user"></i> Usuario</span>
       <span class="usd-val usd-copyable" onclick="copyUsdVal(this)" title="Clic para copiar">
-        ${u.username} <i class="ti ti-copy" style="font-size:.75rem;opacity:.5"></i>
+        ${escapeHtml(u.username)} <i class="ti ti-copy" style="font-size:.75rem;opacity:.5"></i>
       </span>
     </div>
     ${row('ti-mail',     'Correo',       u.email)}
     ${row('ti-phone',    'Teléfono',     u.telefono)}
     ${row('ti-building', 'Departamento', u.departamento)}
+    ${row('ti-map-pin',  'Finca',        u.finca)}
+    ${row('ti-map-2',    'Área',         u.area)}
     ${row('ti-login',    'Último acceso',u.ultimo_login ? fmtDate(u.ultimo_login) : 'Nunca')}
     ${row('ti-calendar', 'Registrado',   fmtDate(u.created_at))}
   </div>
@@ -2163,7 +2367,9 @@ async function rechazarSolicitud(id) {
   } catch { showToast('Error de conexión'); }
 }
 
-async function deleteUser(id, nombre) {
+async function deleteUser(id) {
+  const u = usuariosCache.find(x => x.id === id);
+  const nombre = u ? `${u.nombre} ${u.apellido || ''}`.trim() : `#${id}`;
   if (!confirm(`¿Eliminar permanentemente a "${nombre}"?\n\nEsta acción no se puede deshacer. Los tickets asignados quedarán sin asignar.`)) return;
   try {
     const res = await fetch(`/api/usuarios/${id}`, {
@@ -2247,9 +2453,9 @@ function renderAuditSection() {
     <div class="audit-filters">
       <input class="audit-input" id="audit-filter-actor" type="text"
              placeholder="Filtrar por usuario…" list="audit-actors-list"
-             value="${auditFilters.actor}"
+             value="${escapeHtml(auditFilters.actor)}"
              onchange="loadAuditData()" oninput="if(!this.value)loadAuditData()">
-      <datalist id="audit-actors-list">${actores.map(a => `<option value="${a}">`).join('')}</datalist>
+      <datalist id="audit-actors-list">${actores.map(a => `<option value="${escapeHtml(a)}">`).join('')}</datalist>
       <select class="audit-sel" id="audit-filter-entidad" onchange="loadAuditData()">
         <option value="">Todas las áreas</option>
         <option value="ticket"     ${auditFilters.entidad==='ticket'     ?'selected':''}>Tickets</option>
@@ -2259,10 +2465,10 @@ function renderAuditSection() {
         <option value="solicitud"  ${auditFilters.entidad==='solicitud'  ?'selected':''}>Solicitudes</option>
       </select>
       <input class="audit-input" id="audit-filter-desde" type="date"
-             value="${auditFilters.desde}"
+             value="${escapeHtml(auditFilters.desde)}"
              onchange="loadAuditData()">
       <input class="audit-input" id="audit-filter-hasta" type="date"
-             value="${auditFilters.hasta}"
+             value="${escapeHtml(auditFilters.hasta)}"
              onchange="loadAuditData()">
       <button class="audit-clear-btn" onclick="clearAuditFilters()" title="Limpiar filtros">
         <i class="ti ti-x"></i> Limpiar
@@ -2293,11 +2499,11 @@ function renderAuditSection() {
               const horaStr  = fecha.toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' });
               return `<tr class="audit-row">
                 <td class="audit-fecha"><span>${fechaStr}</span><span class="audit-hora">${horaStr}</span></td>
-                <td class="audit-actor">${r.actor ? `<i class="ti ti-user-circle" style="color:var(--text-sec)"></i> ${r.actor}` : '<span style="color:var(--text-sec)">—</span>'}</td>
-                <td><span class="audit-badge" style="background:${color}20;color:${color}"><i class="ti ${icon}"></i> ${r.entidad || '—'}</span></td>
+                <td class="audit-actor">${r.actor ? `<i class="ti ti-user-circle" style="color:var(--text-sec)"></i> ${escapeHtml(r.actor)}` : '<span style="color:var(--text-sec)">—</span>'}</td>
+                <td><span class="audit-badge" style="background:${color}20;color:${color}"><i class="ti ${icon}"></i> ${escapeHtml(r.entidad || '—')}</span></td>
                 <td class="audit-accion">
-                  <span class="audit-accion-text">${r.accion}</span>
-                  ${r.detalle ? `<span class="audit-detalle">${r.detalle}</span>` : ''}
+                  <span class="audit-accion-text">${escapeHtml(r.accion)}</span>
+                  ${r.detalle ? `<span class="audit-detalle">${escapeHtml(r.detalle)}</span>` : ''}
                 </td>
               </tr>`;
             }).join('')}
@@ -2337,6 +2543,7 @@ if (sessionStorage.getItem(SESSION_KEY) && sessionStorage.getItem(TOKEN_KEY)) {
   document.getElementById('adminBadge').textContent = adminNombre.toUpperCase();
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('mainApp').classList.add('visible');
+  applyPermissionUI();
   initNotifications();
   loadAdmins();
   refreshTickets();

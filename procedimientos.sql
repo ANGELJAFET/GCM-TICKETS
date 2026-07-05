@@ -24,7 +24,8 @@ BEGIN
   SET NOCOUNT ON;
   SELECT u.id, u.username, u.password_hash, u.nombre, u.apellido,
          r.nombre AS rol,
-         r.nivel  AS rol_nivel
+         r.nivel  AS rol_nivel,
+         u.acceso_inventario, u.acceso_prestamos, u.acceso_bitacora, u.acceso_solicitudes
   FROM usuarios u
   JOIN roles r ON r.id = u.rol_id
   WHERE u.username = @username
@@ -61,6 +62,8 @@ CREATE PROCEDURE sp_InsertSolicitudRegistro
   @password_hash       NVARCHAR(255),
   @telefono            NVARCHAR(20)  = NULL,
   @departamento_nombre NVARCHAR(255) = NULL,
+  @finca               NVARCHAR(50)  = NULL,
+  @area                NVARCHAR(255) = NULL,
   @mensaje             NVARCHAR(MAX) = NULL
 AS
 BEGIN
@@ -71,9 +74,9 @@ BEGIN
     THROW 50409, 'Ya tienes una solicitud pendiente con ese usuario.', 1;
 
   INSERT INTO solicitudes_registro
-    (nombre, apellido, email, username, password_hash, telefono, departamento_nombre, mensaje)
+    (nombre, apellido, email, username, password_hash, telefono, departamento_nombre, finca, area, mensaje)
   VALUES
-    (@nombre, @apellido, @email, @username, @password_hash, @telefono, @departamento_nombre, @mensaje);
+    (@nombre, @apellido, @email, @username, @password_hash, @telefono, @departamento_nombre, @finca, @area, @mensaje);
 END;
 GO
 
@@ -90,6 +93,7 @@ BEGIN
          sr.telefono, sr.mensaje, sr.estado, sr.motivo_rechazo,
          sr.created_at, sr.revisado_en,
          sr.departamento_nombre AS departamento,
+         sr.finca, sr.area,
          LTRIM(RTRIM(CONCAT(u.nombre, ' ', ISNULL(u.apellido, '')))) AS revisado_por_nombre
   FROM solicitudes_registro sr
   LEFT JOIN usuarios u ON u.id = sr.revisado_por
@@ -124,7 +128,9 @@ BEGIN
             @nombre              NVARCHAR(100),
             @apellido            NVARCHAR(100),
             @telefono            NVARCHAR(20),
-            @departamento_nombre NVARCHAR(255);
+            @departamento_nombre NVARCHAR(255),
+            @finca               NVARCHAR(50),
+            @area                NVARCHAR(255);
 
     SELECT @estado              = estado,
            @username            = username,
@@ -133,7 +139,9 @@ BEGIN
            @nombre              = nombre,
            @apellido            = apellido,
            @telefono            = telefono,
-           @departamento_nombre = departamento_nombre
+           @departamento_nombre = departamento_nombre,
+           @finca               = finca,
+           @area                = area
     FROM solicitudes_registro WHERE id = @solicitud_id;
 
     IF @estado IS NULL
@@ -163,10 +171,10 @@ BEGIN
     DECLARE @rolId TINYINT = (SELECT id FROM roles WHERE nombre = 'empleado');
     INSERT INTO usuarios
       (username, email, password_hash, nombre, apellido, telefono,
-       departamento_id, rol_id, activo, registro_aprobado)
+       departamento_id, finca, area, rol_id, activo, registro_aprobado)
     VALUES
       (@username, @email, @password_hash, @nombre, @apellido, @telefono,
-       @deptId, @rolId, 1, 1);
+       @deptId, @finca, @area, @rolId, 1, 1);
 
     -- Marcar solicitud como aprobada
     DECLARE @adminId INT = (SELECT id FROM usuarios WHERE username = @requestedBy);
@@ -251,8 +259,10 @@ BEGIN
   SET NOCOUNT ON;
   SELECT u.id, u.username, u.email, u.nombre, u.apellido, u.telefono,
          d.nombre AS departamento,
+         u.finca, u.area,
          r.nombre AS rol, r.nivel,
-         u.activo, u.ultimo_login, u.created_at
+         u.activo, u.ultimo_login, u.created_at,
+         u.acceso_inventario, u.acceso_prestamos, u.acceso_bitacora, u.acceso_solicitudes
   FROM usuarios u
   JOIN roles r ON r.id = u.rol_id
   LEFT JOIN departamentos d ON d.id = u.departamento_id
@@ -269,10 +279,12 @@ CREATE PROCEDURE sp_GetAdmins
 AS
 BEGIN
   SET NOCOUNT ON;
-  SELECT u.username,
+  SELECT u.id,
+         u.username,
          LTRIM(RTRIM(CONCAT(u.nombre, ' ', ISNULL(u.apellido, '')))) AS nombre,
          r.nombre AS rol,
-         r.nivel
+         r.nivel,
+         u.acceso_inventario, u.acceso_prestamos, u.acceso_bitacora, u.acceso_solicitudes
   FROM usuarios u
   JOIN roles r ON r.id = u.rol_id
   WHERE r.nivel >= 2 AND u.activo = 1
@@ -555,3 +567,6 @@ GO
 -- ============================================================
 -- Fin del script — procedimientos creados: 20
 -- ============================================================
+
+
+select * from usuarios;

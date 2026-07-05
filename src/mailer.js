@@ -103,7 +103,7 @@ function baseHtml(contenido) {
 
 // ── Plantillas ────────────────────────────────────────────────────
 
-function emailNuevoRegistro({ nombre, username, departamento }) {
+function emailNuevoRegistro({ nombre, username, departamento, finca, area }) {
   return {
     subject: '📋 Nueva solicitud de registro — GCM Tickets',
     html: baseHtml(`
@@ -113,6 +113,8 @@ function emailNuevoRegistro({ nombre, username, departamento }) {
         <tr style="background:#f1f5f9;"><td style="color:#64748b;font-size:13px;width:140px;"><b>Nombre</b></td><td style="color:#1e293b;font-size:13px;">${nombre}</td></tr>
         <tr><td style="color:#64748b;font-size:13px;"><b>Usuario</b></td><td style="color:#1e293b;font-size:13px;">${username}</td></tr>
         <tr style="background:#f1f5f9;"><td style="color:#64748b;font-size:13px;"><b>Departamento</b></td><td style="color:#1e293b;font-size:13px;">${departamento || 'No especificado'}</td></tr>
+        <tr><td style="color:#64748b;font-size:13px;"><b>Finca</b></td><td style="color:#1e293b;font-size:13px;">${finca || 'No especificado'}</td></tr>
+        <tr style="background:#f1f5f9;"><td style="color:#64748b;font-size:13px;"><b>Área</b></td><td style="color:#1e293b;font-size:13px;">${area || 'No especificado'}</td></tr>
       </table>
       <a href="${APP_URL}/admin.html" style="display:inline-block;background:#2563eb;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:bold;">Revisar en el panel admin</a>
     `),
