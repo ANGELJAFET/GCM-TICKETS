@@ -311,6 +311,34 @@
 </div>
 
 
+<!-- ── Modal: Devolución parcial ── -->
+<div class="modal-backdrop" id="partialReturnBackdrop">
+  <div class="modal" style="width:400px">
+    <div class="modal-header">
+      <h2><i class="ti ti-arrow-back-up" aria-hidden="true"></i> Registrar devolución</h2>
+      <button class="icon-btn" onclick="closePartialReturnModal()" aria-label="Cerrar">
+        <i class="ti ti-x" aria-hidden="true"></i>
+      </button>
+    </div>
+    <div class="modal-body" style="gap:14px">
+      <div id="partialReturnInfo" style="font-size:13px;color:var(--gray)"></div>
+      <div class="field-group">
+        <label style="font-size:13px;font-weight:600;color:var(--text)">Unidades a devolver</label>
+        <input id="partialReturnQty" type="number" min="1" step="1"
+               style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:15px;font-family:var(--font);background:var(--light);color:var(--text);outline:none"
+               onkeydown="if(event.key==='Enter')confirmPartialReturn()">
+      </div>
+      <div id="partialReturnErr" class="rec-error" style="display:none"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-action btn-cancel" onclick="closePartialReturnModal()">Cancelar</button>
+      <button class="btn-action btn-primary" id="partialReturnSaveBtn" onclick="confirmPartialReturn()">
+        <i class="ti ti-check"></i> Registrar devolución
+      </button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>

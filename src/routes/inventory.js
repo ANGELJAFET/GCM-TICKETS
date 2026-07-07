@@ -119,10 +119,11 @@ router.get('/inventory', ...requireSuperadminOrAcceso('inventario'), async (req,
 // POST /api/inventory
 router.post('/inventory', ...requireSuperadminOrAcceso('inventario'), async (req, res) => {
   try {
-    const { tipo, marca, modelo, serie, color, condicion, ubicacion, responsable, notas, garantia,
+    const { tipo, marca, modelo, serie, color, condicion, estado, ubicacion, responsable, notas, garantia,
             tipoManejo, cantidadTotal } = req.body;
     if (!tipo || !marca) return res.status(400).json({ error: 'Tipo y marca son requeridos' });
     if (condicion && !CONDICIONES.includes(condicion)) return res.status(400).json({ error: 'Condición inválida' });
+    const estadoInicial = (estado && ESTADOS_INV.includes(estado) && estado !== 'en_prestamo') ? estado : 'disponible';
 
     const modo = tipoManejo || 'unidad';
     if (!TIPOS_MANEJO.includes(modo)) return res.status(400).json({ error: 'Tipo de manejo inválido' });
@@ -148,9 +149,9 @@ router.post('/inventory', ...requireSuperadminOrAcceso('inventario'), async (req
       `INSERT INTO inventario (id, tipo, marca, modelo, numero_serie, color, condicion,
                                estado, ubicacion, responsable_id, notas, garantia, fecha_ingreso,
                                tipo_manejo, cantidad_total)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'disponible', ?, ?, ?, ?, CURDATE(), ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), ?, ?)`,
       [id, tipo, marca, modelo || '', modo === 'unidad' ? serie : '', color || '',
-       condicion || 'bueno', ubicacion || '', responsableId,
+       condicion || 'bueno', estadoInicial, ubicacion || '', responsableId,
        notas || '', garantia ? JSON.stringify(garantia) : null, modo, cantTotal]
     );
 
@@ -162,7 +163,7 @@ router.post('/inventory', ...requireSuperadminOrAcceso('inventario'), async (req
       `${id}: ${tipo} ${marca}${modelo ? ' ' + modelo : ''}`);
 
     res.status(201).json({ id, tipo, marca, modelo, serie: modo === 'unidad' ? serie : '', color, condicion,
-      estado: 'disponible', tipoManejo: modo, cantidadTotal: cantTotal, cantidadPrestada: 0,
+      estado: estadoInicial, tipoManejo: modo, cantidadTotal: cantTotal, cantidadPrestada: 0,
       ubicacion, responsable, notas, garantia, historial: [] });
   } catch (err) {
     console.error(err);

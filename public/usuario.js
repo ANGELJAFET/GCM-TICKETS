@@ -64,7 +64,8 @@ function commentHtml(c) {
   const icon   = isUser
     ? '<i class="ti ti-user-circle" style="font-size:12px;color:var(--blue);vertical-align:-1px" aria-hidden="true"></i>'
     : '<i class="ti ti-headset" style="font-size:12px;color:var(--gray);vertical-align:-1px" aria-hidden="true"></i>';
-  return `<div class="comment-item ${isUser ? 'user-msg' : 'admin-msg'}">${icon} <strong>${escapeHtml(c.user || '—')}</strong> (${escapeHtml(c.ts)}): ${escapeHtml(c.text)}</div>`;
+  const autor = isUser ? escapeHtml(c.user || '—') : 'Soporte Técnico';
+  return `<div class="comment-item ${isUser ? 'user-msg' : 'admin-msg'}">${icon} <strong>${autor}</strong> (${escapeHtml(c.ts)}): ${escapeHtml(c.text)}</div>`;
 }
 
 // ── Adjuntos ──────────────────────────────────────────────────────────────────

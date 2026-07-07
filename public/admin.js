@@ -1689,7 +1689,7 @@ async function saveInventoryItem() {
       showToast('Equipo actualizado ✓');
     } else {
       await api('/api/inventory', 'POST', {
-        tipo, marca, modelo, serie, color, condicion, ubicacion, responsable, notas, garantia,
+        tipo, marca, modelo, serie, color, condicion, estado, ubicacion, responsable, notas, garantia,
         tipoManejo, cantidadTotal: tipoManejo === 'cantidad' ? parseInt(cantidadTotal, 10) : undefined
       });
       showToast('Equipo agregado al inventario ✓');
@@ -1960,22 +1960,62 @@ async function returnLoanByItem(itemId) {
   await returnLoan(loan.id);
 }
 
-async function returnLoanPartial(loanId) {
+let _partialReturnLoanId = null;
+
+function returnLoanPartial(loanId) {
   const loan = loansCache.find(l => l.id === loanId);
   if (!loan) return;
+  _partialReturnLoanId = loanId;
   const restante = loan.cantidad - loan.cantidadDevuelta;
-  const input = prompt(`¿Cuántas unidades se devuelven ahora? (pendiente: ${restante})`, String(restante));
-  if (input === null) return;
-  const cantidadDevuelta = parseInt(input, 10);
+  const item = inventoryCache.find(i => i.id === loan.inventoryId);
+  const desc = item ? `${escapeHtml(item.marca)}${item.modelo ? ' ' + escapeHtml(item.modelo) : ''} — ${escapeHtml(item.tipo)}` : escapeHtml(loan.inventoryId);
+  document.getElementById('partialReturnInfo').innerHTML =
+    `<div style="margin-bottom:4px">${desc}</div>` +
+    `<div>Prestadas: <strong>${loan.cantidad}</strong> · Devueltas: <strong>${loan.cantidadDevuelta}</strong> · <span style="color:var(--primary)">Pendientes: <strong>${restante}</strong></span></div>`;
+  const qtyEl = document.getElementById('partialReturnQty');
+  qtyEl.max = restante;
+  qtyEl.value = restante;
+  document.getElementById('partialReturnErr').style.display = 'none';
+  document.getElementById('partialReturnSaveBtn').disabled = false;
+  document.getElementById('partialReturnSaveBtn').innerHTML = '<i class="ti ti-check"></i> Registrar devolución';
+  document.getElementById('partialReturnBackdrop').classList.add('open');
+  setTimeout(() => qtyEl.focus(), 80);
+}
+
+function closePartialReturnModal() {
+  document.getElementById('partialReturnBackdrop').classList.remove('open');
+  _partialReturnLoanId = null;
+}
+
+async function confirmPartialReturn() {
+  const loanId = _partialReturnLoanId;
+  if (!loanId) return;
+  const loan = loansCache.find(l => l.id === loanId);
+  if (!loan) return closePartialReturnModal();
+  const restante = loan.cantidad - loan.cantidadDevuelta;
+  const cantidadDevuelta = parseInt(document.getElementById('partialReturnQty')?.value, 10);
+  const errEl = document.getElementById('partialReturnErr');
   if (!Number.isInteger(cantidadDevuelta) || cantidadDevuelta < 1 || cantidadDevuelta > restante) {
-    return showToast('Cantidad inválida');
+    errEl.textContent = `Ingresa un número entre 1 y ${restante}.`;
+    errEl.style.display = '';
+    return;
   }
+  errEl.style.display = 'none';
+  const btn = document.getElementById('partialReturnSaveBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader-2"></i> Guardando…';
   try {
     await api(`/api/loans/${loanId}`, 'PATCH', { cantidadDevuelta });
     showToast('Devolución registrada ✓');
+    closePartialReturnModal();
     await loadDevices();
     renderInventorySection();
-  } catch { showToast('Error al registrar devolución'); }
+  } catch {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-check"></i> Registrar devolución';
+    errEl.textContent = 'Error al registrar. Verifica la conexión.';
+    errEl.style.display = '';
+  }
 }
 
 // ── Gestión de usuarios ───────────────────────────────────────────────────────
