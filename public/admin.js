@@ -1102,8 +1102,16 @@ function renderInventorySection() {
   if (currentInvView === 'prestamos' && !hasPermiso('prestamos')) currentInvView = 'dashboard';
 
   const total      = inventoryCache.length;
-  const disponibles = inventoryCache.filter(i => i.estado === 'disponible').length;
-  const prestados  = inventoryCache.filter(i => i.estado === 'en_prestamo').length;
+  // Los equipos "por cantidad" (lotes) mantienen estado 'disponible' aunque
+  // parte de sus unidades estén prestadas — por eso se evalúa cantidadPrestada
+  // en vez de solo el estado, para que sí aparezcan en "Prestados".
+  const disponibles = inventoryCache.filter(i =>
+    i.tipoManejo === 'cantidad' ? (i.estado === 'disponible' && (i.cantidadTotal - i.cantidadPrestada) > 0)
+                                 : i.estado === 'disponible'
+  ).length;
+  const prestados  = inventoryCache.filter(i =>
+    i.tipoManejo === 'cantidad' ? (i.cantidadPrestada || 0) > 0 : i.estado === 'en_prestamo'
+  ).length;
   const reparacion = inventoryCache.filter(i => i.estado === 'en_reparacion').length;
   const baja       = inventoryCache.filter(i => i.estado === 'de_baja').length;
   const activos    = loansCache.filter(l => l.estado === 'activo').length;
@@ -1239,7 +1247,10 @@ function renderInvCharts() {
   const byTipo   = {};
   const byCond   = { nuevo:0, excelente:0, bueno:0, regular:0, danado:0 };
   inventoryCache.forEach(i => {
-    if (i.estado   in byEstado) byEstado[i.estado]++;
+    // Igual que en las tarjetas de arriba: un lote "por cantidad" sigue
+    // marcado como 'disponible' aunque tenga unidades prestadas.
+    const estadoEfectivo = (i.tipoManejo === 'cantidad' && (i.cantidadPrestada || 0) > 0) ? 'en_prestamo' : i.estado;
+    if (estadoEfectivo in byEstado) byEstado[estadoEfectivo]++;
     byTipo[i.tipo] = (byTipo[i.tipo] || 0) + 1;
     if (i.condicion in byCond) byCond[i.condicion]++;
   });
