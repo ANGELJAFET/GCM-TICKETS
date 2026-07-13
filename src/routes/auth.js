@@ -17,7 +17,7 @@ const FINCAS = [
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { username, password, portal } = req.body;
     if (!username || !password)
       return res.status(400).json({ error: 'Usuario y contraseña son requeridos' });
 
@@ -26,6 +26,14 @@ router.post('/login', async (req, res) => {
 
     const ok = await db.bcrypt.compare(password, user.password_hash);
     if (!ok) return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
+
+    // El portal (empleado vs. panel admin) que no corresponde al nivel de la
+    // cuenta se rechaza con el mismo mensaje genérico que una contraseña
+    // incorrecta, para no revelarle a quien no tiene la contraseña correcta
+    // si el usuario que probó existe y a qué nivel pertenece.
+    const esPortalAdmin = portal === 'admin';
+    if (esPortalAdmin  && user.rol_nivel < 2) return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
+    if (!esPortalAdmin && user.rol_nivel >= 2) return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
 
     await db.exec('sp_UpdateLastLogin', { username });
 
@@ -46,7 +54,8 @@ router.post('/login', async (req, res) => {
       acceso_inventario:  !!user.acceso_inventario,
       acceso_prestamos:   !!user.acceso_prestamos,
       acceso_bitacora:    !!user.acceso_bitacora,
-      acceso_solicitudes: !!user.acceso_solicitudes
+      acceso_solicitudes: !!user.acceso_solicitudes,
+      acceso_usuarios:    !!user.acceso_usuarios
     });
   } catch (err) {
     console.error(err);

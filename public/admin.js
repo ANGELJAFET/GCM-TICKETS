@@ -11,7 +11,8 @@ const PERMISO_KEYS = {
   inventario:  'soporte_admin_acc_inventario',
   prestamos:   'soporte_admin_acc_prestamos',
   bitacora:    'soporte_admin_acc_bitacora',
-  solicitudes: 'soporte_admin_acc_solicitudes'
+  solicitudes: 'soporte_admin_acc_solicitudes',
+  usuarios:    'soporte_admin_acc_usuarios'
 };
 
 function isSuperAdmin() {
@@ -24,10 +25,15 @@ function hasPermiso(modulo) {
 
 function applyPermissionUI() {
   const invBtn = document.getElementById('inventarioHeaderBtn');
+  const usrBtn = document.getElementById('usuariosHeaderBtn');
   const audBtn = document.getElementById('auditoriaHeaderBtn');
   if (invBtn) invBtn.style.display = (hasPermiso('inventario') || hasPermiso('prestamos')) ? '' : 'none';
+  if (usrBtn) usrBtn.style.display = hasPermiso('usuarios') ? '' : 'none';
   if (audBtn) audBtn.style.display = hasPermiso('bitacora') ? '' : 'none';
   if (currentTab === 'inventario' && !hasPermiso('inventario') && !hasPermiso('prestamos')) {
+    setTab('todos', document.querySelector('.tab-btn'));
+  }
+  if (currentTab === 'usuarios' && !hasPermiso('usuarios')) {
     setTab('todos', document.querySelector('.tab-btn'));
   }
   if (currentTab === 'auditoria' && !hasPermiso('bitacora')) {
@@ -86,17 +92,10 @@ async function doLogin() {
   try {
     const res = await fetch('/api/auth/login', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: u, password: p })
+      body: JSON.stringify({ username: u, password: p, portal: 'admin' })
     });
     if (res.ok) {
       const data = await res.json();
-      if (data.rol_nivel < 2) {
-        const el = document.getElementById('loginError');
-        el.innerHTML = '<i class="ti ti-ban"></i> Sin permisos para acceder al panel administrativo';
-        el.classList.add('show');
-        document.getElementById('loginPass').value = '';
-        return;
-      }
       adminNombre = data.nombre || u;
       sessionStorage.setItem(SESSION_KEY, '1');
       sessionStorage.setItem(NOMBRE_KEY, adminNombre);
@@ -107,6 +106,7 @@ async function doLogin() {
       sessionStorage.setItem(PERMISO_KEYS.prestamos,   data.acceso_prestamos   ? '1' : '0');
       sessionStorage.setItem(PERMISO_KEYS.bitacora,    data.acceso_bitacora    ? '1' : '0');
       sessionStorage.setItem(PERMISO_KEYS.solicitudes, data.acceso_solicitudes ? '1' : '0');
+      sessionStorage.setItem(PERMISO_KEYS.usuarios,    data.acceso_usuarios    ? '1' : '0');
       document.getElementById('adminBadge').textContent = adminNombre.toUpperCase();
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('mainApp').classList.add('visible');
@@ -929,7 +929,8 @@ const PERMISO_CHIPS = [
   { modulo: 'inventario',  icon: 'ti-package',        label: 'Equipos' },
   { modulo: 'prestamos',   icon: 'ti-exchange',       label: 'Préstamos' },
   { modulo: 'bitacora',    icon: 'ti-history',        label: 'Bitácora' },
-  { modulo: 'solicitudes', icon: 'ti-clipboard-list', label: 'Solicitudes' }
+  { modulo: 'solicitudes', icon: 'ti-clipboard-list', label: 'Solicitudes' },
+  { modulo: 'usuarios',    icon: 'ti-users',          label: 'Usuarios' }
 ];
 
 const ROL_COLORS = { superadmin: '#7c3aed', admin: '#2563eb', tecnico: '#059669', empleado: '#64748b' };
@@ -1101,8 +1102,16 @@ function renderInventorySection() {
   if (currentInvView === 'prestamos' && !hasPermiso('prestamos')) currentInvView = 'dashboard';
 
   const total      = inventoryCache.length;
-  const disponibles = inventoryCache.filter(i => i.estado === 'disponible').length;
-  const prestados  = inventoryCache.filter(i => i.estado === 'en_prestamo').length;
+  // Los equipos "por cantidad" (lotes) mantienen estado 'disponible' aunque
+  // parte de sus unidades estén prestadas — por eso se evalúa cantidadPrestada
+  // en vez de solo el estado, para que sí aparezcan en "Prestados".
+  const disponibles = inventoryCache.filter(i =>
+    i.tipoManejo === 'cantidad' ? (i.estado === 'disponible' && (i.cantidadTotal - i.cantidadPrestada) > 0)
+                                 : i.estado === 'disponible'
+  ).length;
+  const prestados  = inventoryCache.filter(i =>
+    i.tipoManejo === 'cantidad' ? (i.cantidadPrestada || 0) > 0 : i.estado === 'en_prestamo'
+  ).length;
   const reparacion = inventoryCache.filter(i => i.estado === 'en_reparacion').length;
   const baja       = inventoryCache.filter(i => i.estado === 'de_baja').length;
   const activos    = loansCache.filter(l => l.estado === 'activo').length;
@@ -1236,9 +1245,12 @@ function renderInvCharts() {
 
   const byEstado = { disponible:0, en_uso:0, en_prestamo:0, en_reparacion:0, de_baja:0 };
   const byTipo   = {};
-  const byCond   = { excelente:0, bueno:0, regular:0, danado:0 };
+  const byCond   = { nuevo:0, excelente:0, bueno:0, regular:0, danado:0 };
   inventoryCache.forEach(i => {
-    if (i.estado   in byEstado) byEstado[i.estado]++;
+    // Igual que en las tarjetas de arriba: un lote "por cantidad" sigue
+    // marcado como 'disponible' aunque tenga unidades prestadas.
+    const estadoEfectivo = (i.tipoManejo === 'cantidad' && (i.cantidadPrestada || 0) > 0) ? 'en_prestamo' : i.estado;
+    if (estadoEfectivo in byEstado) byEstado[estadoEfectivo]++;
     byTipo[i.tipo] = (byTipo[i.tipo] || 0) + 1;
     if (i.condicion in byCond) byCond[i.condicion]++;
   });
@@ -1288,9 +1300,9 @@ function renderInvCharts() {
   if (ctxC) invCharts.cond = new Chart(ctxC, {
     type: 'doughnut',
     data: {
-      labels: ['Excelente','Bueno','Regular','Dañado'],
+      labels: ['Nuevo','Excelente','Bueno','Regular','Dañado'],
       datasets: [{ data: Object.values(byCond),
-        backgroundColor: ['#22c55e','#3b82f6','#f59e0b','#ef4444'],
+        backgroundColor: ['#8b5cf6','#22c55e','#3b82f6','#f59e0b','#ef4444'],
         borderWidth: 2, borderColor: '#fff', hoverOffset: 8 }]
     },
     options: { ...chartDefaults, cutout: '68%' }
@@ -1337,6 +1349,29 @@ function filteredInventory() {
   });
 }
 
+// Clave para detectar equipos "iguales" (mismo tipo+marca+modelo) sin importar el N° de serie.
+function invGroupKey(item) {
+  return [item.tipo, item.marca, item.modelo].map(v => (v || '').trim().toLowerCase()).join('|');
+}
+
+// Al hacer click en un equipo, muestra todos los equipos similares (misma tipo+marca+modelo).
+function openSimilarEquiposModal(id) {
+  const item = inventoryCache.find(i => i.id === id);
+  if (!item) return;
+  const key = invGroupKey(item);
+  const similares = inventoryCache.filter(i => invGroupKey(i) === key);
+  const nombre = `${item.marca}${item.modelo ? ' ' + item.modelo : ''}`;
+  document.getElementById('similarEquiposTitle').innerHTML =
+    `<i class="ti ti-devices"></i> ${escapeHtml(nombre)} <span style="font-weight:400;color:var(--text-sec)">(${similares.length} equipo${similares.length === 1 ? '' : 's'})</span>`;
+  document.getElementById('similarEquiposBody').innerHTML =
+    `<div class="inv-grid">${similares.map(invCardHtml).join('')}</div>`;
+  document.getElementById('similarEquiposBackdrop').classList.add('open');
+}
+
+function closeSimilarEquiposModal() {
+  document.getElementById('similarEquiposBackdrop').classList.remove('open');
+}
+
 function refreshInvContent() {
   const el = document.getElementById('invContent');
   if (!el) return;
@@ -1370,12 +1405,12 @@ function invCardHtml(item) {
   const estCls    = INV_ESTADO_CLS[item.estado] || 'inv-est-gray';
   const showCantBadge = isCant && item.estado === 'disponible';
   const cantBadgeCls  = disponible > 0 ? 'inv-est-green' : 'inv-est-red';
-  const condCls = { excelente:'cond-green', bueno:'cond-blue', regular:'cond-amber', danado:'cond-red' }[item.condicion] || '';
-  const condLbl = escapeHtml({ excelente:'Excelente', bueno:'Bueno', regular:'Regular', danado:'Dañado' }[item.condicion] || item.condicion);
+  const condCls = { nuevo:'cond-purple', excelente:'cond-green', bueno:'cond-blue', regular:'cond-amber', danado:'cond-red' }[item.condicion] || '';
+  const condLbl = escapeHtml({ nuevo:'Nuevo', excelente:'Excelente', bueno:'Bueno', regular:'Regular', danado:'Dañado' }[item.condicion] || item.condicion);
   const puedePrestar = isCant ? (item.estado === 'disponible' && disponible > 0) : item.estado === 'disponible';
   return `
 <div class="inv-card">
-  <div class="inv-card-head">
+  <div class="inv-card-head inv-card-head-click" onclick="openSimilarEquiposModal('${escapeHtml(item.id)}')" title="Ver equipos similares">
     <div class="inv-card-icon-wrap">
       <i class="ti ti-package"></i>
     </div>
@@ -1569,7 +1604,7 @@ function renderInventoryModalBody(item) {
     <div class="field-group">
       <label>Condición física</label>
       <select id="inv-condicion">
-        ${[['excelente','Excelente'],['bueno','Bueno'],['regular','Regular'],['danado','Dañado']].map(
+        ${[['nuevo','Nuevo'],['excelente','Excelente'],['bueno','Bueno'],['regular','Regular'],['danado','Dañado']].map(
           ([val, lbl]) => `<option value="${val}"${v('condicion')===val?' selected':''}>${lbl}</option>`).join('')}
       </select>
     </div>
@@ -1846,7 +1881,7 @@ function generateLoanWord(loanId) {
   const anio    = now.getFullYear();
   const hoy     = now.toLocaleDateString('es-HN', { day: 'numeric', month: 'long', year: 'numeric' });
 
-  const condMap  = { excelente:'Excelente', bueno:'Bueno', regular:'Regular', danado:'Dañado' };
+  const condMap  = { nuevo:'Nuevo', excelente:'Excelente', bueno:'Bueno', regular:'Regular', danado:'Dañado' };
   const condicion = condMap[item.condicion] || item.condicion || '';
   const tipoDesc  = [item.tipo, item.marca, item.modelo].filter(Boolean).join(' ');
   const logoUrl   = window.location.origin + '/assets/gcm.jpg';
@@ -2340,6 +2375,7 @@ function renderUsrDetailHtml(u) {
     ${row('ti-calendar', 'Registrado',   fmtDate(u.created_at))}
   </div>
 
+  ${isSuperAdmin() ? `
   <div class="usd-section">
     <div class="usd-section-title"><i class="ti ti-lock"></i> Contraseña</div>
     <div style="display:flex;gap:8px;align-items:center">
@@ -2356,7 +2392,7 @@ function renderUsrDetailHtml(u) {
       </button>
     </div>
     <div id="usdPassMsg" style="font-size:.78rem;margin-top:6px"></div>
-  </div>
+  </div>` : ''}
 </div>`;
 }
 

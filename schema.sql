@@ -569,9 +569,13 @@ GO
 
 -- ============================================================
 -- 8. Acceso avanzado por módulo (inventario, préstamos, bitácora,
---    solicitudes). Por defecto solo el rol superadmin (nivel 4)
---    puede usar estas secciones. Un admin/técnico (nivel < 4) solo
---    obtiene acceso al módulo si el superadmin se lo otorga.
+--    solicitudes, usuarios). Por defecto solo el rol superadmin
+--    (nivel 4) puede usar estas secciones. Un admin/técnico
+--    (nivel < 4) solo obtiene acceso al módulo si el superadmin
+--    se lo otorga. El módulo 'usuarios' controla la visibilidad
+--    del listado "Usuarios registrados" (datos personales de otros
+--    usuarios); el cambio de contraseña queda reservado al
+--    superadmin sin importar este permiso (ver PATCH /usuarios/:id/password).
 -- ============================================================
 
 -- Columna previa (interruptor único para los 4 módulos juntos) —
@@ -599,6 +603,9 @@ IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('usuarios')
 GO
 IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('usuarios') AND name = 'acceso_solicitudes')
   ALTER TABLE usuarios ADD acceso_solicitudes BIT NOT NULL DEFAULT 0;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('usuarios') AND name = 'acceso_usuarios')
+  ALTER TABLE usuarios ADD acceso_usuarios BIT NOT NULL DEFAULT 0;
 GO
 
 -- ============================================================

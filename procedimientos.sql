@@ -25,7 +25,7 @@ BEGIN
   SELECT u.id, u.username, u.password_hash, u.nombre, u.apellido,
          r.nombre AS rol,
          r.nivel  AS rol_nivel,
-         u.acceso_inventario, u.acceso_prestamos, u.acceso_bitacora, u.acceso_solicitudes
+         u.acceso_inventario, u.acceso_prestamos, u.acceso_bitacora, u.acceso_solicitudes, u.acceso_usuarios
   FROM usuarios u
   JOIN roles r ON r.id = u.rol_id
   WHERE u.username = @username
@@ -284,7 +284,7 @@ BEGIN
          LTRIM(RTRIM(CONCAT(u.nombre, ' ', ISNULL(u.apellido, '')))) AS nombre,
          r.nombre AS rol,
          r.nivel,
-         u.acceso_inventario, u.acceso_prestamos, u.acceso_bitacora, u.acceso_solicitudes
+         u.acceso_inventario, u.acceso_prestamos, u.acceso_bitacora, u.acceso_solicitudes, u.acceso_usuarios
   FROM usuarios u
   JOIN roles r ON r.id = u.rol_id
   WHERE r.nivel >= 2 AND u.activo = 1

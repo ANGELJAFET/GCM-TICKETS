@@ -10,22 +10,23 @@ Es una plataforma interna con dos portales (empleados y administración/TI) para
 | Rol | Nivel | Puede |
 |---|---|---|
 | **Empleado** | 1 | Portal de usuario: crear y dar seguimiento a sus propios tickets |
-| **Técnico** | 2 | Panel admin: gestionar tickets, ver el listado general de usuarios (solo lectura) |
-| **Admin** | 3 | Panel admin: gestión completa de tickets y usuarios (activar/desactivar, contraseñas, altas de técnicos) |
-| **Superadmin** | 4 | Todo lo anterior + control total sin restricciones |
+| **Técnico** | 2 | Panel admin: gestionar tickets. Ver el listado general de usuarios solo si el superadmin le otorga el módulo "Usuarios" |
+| **Admin** | 3 | Panel admin: gestión completa de tickets; activar/desactivar y eliminar usuarios; altas de técnicos. Ver el listado de usuarios solo si el superadmin le otorga el módulo "Usuarios" |
+| **Superadmin** | 4 | Todo lo anterior + control total sin restricciones, incluyendo cambiar la contraseña de cualquier usuario |
 
 El inicio de sesión es obligatorio en ambos portales (JWT, 12 horas de validez). No hay acciones anónimas ni campos de "nombre" libres — todo queda ligado a la cuenta que inició sesión.
 
 ### Permisos por módulo (otorgados por el superadmin)
 
-Cuatro secciones del panel admin están restringidas por defecto a **solo el superadmin**. Cualquier otro usuario (técnico o admin) necesita que el superadmin le otorgue el permiso específico, uno por uno, desde el modal de "Usuarios administradores":
+Cinco secciones del panel admin están restringidas por defecto a **solo el superadmin**. Cualquier otro usuario (técnico o admin) necesita que el superadmin le otorgue el permiso específico, uno por uno, desde el modal de "Usuarios administradores":
 
 - **Inventario** (equipos)
 - **Préstamos**
 - **Bitácora** (auditoría del sistema)
 - **Solicitudes de registro** (aprobar/rechazar altas de empleados)
+- **Usuarios** (ver el listado "Usuarios registrados" con los datos personales — correo, teléfono, finca, área — de todos los usuarios)
 
-La gestión general de usuarios (activar/desactivar, cambiar contraseña) no está incluida en estos permisos — sigue disponible según el rol normal (técnico/admin).
+Cambiar la contraseña de otro usuario está reservado exclusivamente al superadmin, sin importar los permisos de módulo otorgados. Activar/desactivar y eliminar usuarios sigue disponible para admin/técnico según el rol normal, pero requiere primero tener acceso al módulo "Usuarios" para poder ver el listado.
 
 ### Portal de empleados
 
