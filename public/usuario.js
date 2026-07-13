@@ -493,18 +493,12 @@ async function doLogin() {
     const res  = await fetch('/api/auth/login', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ username, password })
+      body:    JSON.stringify({ username, password, portal: 'empleado' })
     });
     const data = await res.json();
 
     if (!res.ok) {
       errEl.textContent = data.error || 'Error al iniciar sesión.';
-      errEl.classList.add('show');
-      return;
-    }
-
-    if (data.rol_nivel >= 2) {
-      errEl.textContent = 'Este portal es solo para empleados. Usa el panel de administración.';
       errEl.classList.add('show');
       return;
     }

@@ -7,7 +7,9 @@ const { requireRole, requireSuperadminOrAcceso } = require('../middleware/auth')
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
 
 // GET /api/usuarios
-router.get('/usuarios', ...requireRole(2), async (req, res) => {
+// Ver el listado (datos personales de otros usuarios) requiere ser
+// superadmin o que el superadmin haya otorgado el módulo 'usuarios'.
+router.get('/usuarios', ...requireSuperadminOrAcceso('usuarios'), async (req, res) => {
   try {
     res.json(await db.exec('sp_GetUsuarios'));
   } catch (err) {
@@ -17,7 +19,7 @@ router.get('/usuarios', ...requireRole(2), async (req, res) => {
 });
 
 // GET /api/usuarios/:id/tickets
-router.get('/usuarios/:id/tickets', ...requireRole(2), async (req, res) => {
+router.get('/usuarios/:id/tickets', ...requireSuperadminOrAcceso('usuarios'), async (req, res) => {
   try {
     const user = await db.queryOne('SELECT nombre, apellido FROM usuarios WHERE id = ?', [req.params.id]);
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -69,7 +71,8 @@ router.delete('/usuarios/:id', ...requireRole(3), async (req, res) => {
 });
 
 // PATCH /api/usuarios/:id/password
-router.patch('/usuarios/:id/password', ...requireRole(3), async (req, res) => {
+// Solo el superadmin puede cambiar la contraseña de otro usuario.
+router.patch('/usuarios/:id/password', ...requireRole(4), async (req, res) => {
   try {
     const { newPassword } = req.body;
     if (!newPassword || newPassword.length < 6)
@@ -111,13 +114,14 @@ router.patch('/usuarios/:id/activo', ...requireRole(3), async (req, res) => {
 });
 
 // PATCH /api/usuarios/:id/permisos
-// Body: { inventario?, prestamos?, bitacora?, solicitudes?: boolean } — solo se
+// Body: { inventario?, prestamos?, bitacora?, solicitudes?, usuarios?: boolean } — solo se
 // actualizan los módulos presentes en el body. Solo el superadmin puede otorgar.
 const PERMISO_LABELS = {
   inventario:  { columna: 'acceso_inventario',  nombre: 'Inventario' },
   prestamos:   { columna: 'acceso_prestamos',   nombre: 'Préstamos' },
   bitacora:    { columna: 'acceso_bitacora',    nombre: 'Bitácora' },
-  solicitudes: { columna: 'acceso_solicitudes', nombre: 'Solicitudes de registro' }
+  solicitudes: { columna: 'acceso_solicitudes', nombre: 'Solicitudes de registro' },
+  usuarios:    { columna: 'acceso_usuarios',    nombre: 'Usuarios registrados' }
 };
 
 router.patch('/usuarios/:id/permisos', ...requireRole(4), async (req, res) => {
@@ -168,7 +172,8 @@ router.get('/admins', ...requireRole(2), async (req, res) => {
       acceso_inventario:  !!u.acceso_inventario,
       acceso_prestamos:   !!u.acceso_prestamos,
       acceso_bitacora:    !!u.acceso_bitacora,
-      acceso_solicitudes: !!u.acceso_solicitudes
+      acceso_solicitudes: !!u.acceso_solicitudes,
+      acceso_usuarios:    !!u.acceso_usuarios
     })));
   } catch (err) {
     console.error(err);

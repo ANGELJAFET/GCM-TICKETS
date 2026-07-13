@@ -34,7 +34,8 @@ const MODULOS_ACCESO = {
   inventario:  'acceso_inventario',
   prestamos:   'acceso_prestamos',
   bitacora:    'acceso_bitacora',
-  solicitudes: 'acceso_solicitudes'
+  solicitudes: 'acceso_solicitudes',
+  usuarios:    'acceso_usuarios'
 };
 
 // Superadmin (nivel 4) siempre pasa. Cualquier otro usuario necesita que el
