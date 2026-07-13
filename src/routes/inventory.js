@@ -4,7 +4,7 @@ const db           = require('../db');
 const { fmtDate, logAudit }  = require('../helpers');
 const { loadTicket }         = require('../ticketLoader');
 
-const CONDICIONES   = ['excelente', 'bueno', 'regular', 'danado'];
+const CONDICIONES   = ['nuevo', 'excelente', 'bueno', 'regular', 'danado'];
 const ESTADOS_INV   = ['disponible', 'en_uso', 'en_prestamo', 'en_reparacion', 'de_baja'];
 const TIPOS_MANEJO  = ['unidad', 'cantidad'];
 const { requireSuperadminOrAcceso } = require('../middleware/auth');

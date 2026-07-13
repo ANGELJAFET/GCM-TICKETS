@@ -1237,7 +1237,7 @@ function renderInvCharts() {
 
   const byEstado = { disponible:0, en_uso:0, en_prestamo:0, en_reparacion:0, de_baja:0 };
   const byTipo   = {};
-  const byCond   = { excelente:0, bueno:0, regular:0, danado:0 };
+  const byCond   = { nuevo:0, excelente:0, bueno:0, regular:0, danado:0 };
   inventoryCache.forEach(i => {
     if (i.estado   in byEstado) byEstado[i.estado]++;
     byTipo[i.tipo] = (byTipo[i.tipo] || 0) + 1;
@@ -1289,9 +1289,9 @@ function renderInvCharts() {
   if (ctxC) invCharts.cond = new Chart(ctxC, {
     type: 'doughnut',
     data: {
-      labels: ['Excelente','Bueno','Regular','Dañado'],
+      labels: ['Nuevo','Excelente','Bueno','Regular','Dañado'],
       datasets: [{ data: Object.values(byCond),
-        backgroundColor: ['#22c55e','#3b82f6','#f59e0b','#ef4444'],
+        backgroundColor: ['#8b5cf6','#22c55e','#3b82f6','#f59e0b','#ef4444'],
         borderWidth: 2, borderColor: '#fff', hoverOffset: 8 }]
     },
     options: { ...chartDefaults, cutout: '68%' }
@@ -1394,8 +1394,8 @@ function invCardHtml(item) {
   const estCls    = INV_ESTADO_CLS[item.estado] || 'inv-est-gray';
   const showCantBadge = isCant && item.estado === 'disponible';
   const cantBadgeCls  = disponible > 0 ? 'inv-est-green' : 'inv-est-red';
-  const condCls = { excelente:'cond-green', bueno:'cond-blue', regular:'cond-amber', danado:'cond-red' }[item.condicion] || '';
-  const condLbl = escapeHtml({ excelente:'Excelente', bueno:'Bueno', regular:'Regular', danado:'Dañado' }[item.condicion] || item.condicion);
+  const condCls = { nuevo:'cond-purple', excelente:'cond-green', bueno:'cond-blue', regular:'cond-amber', danado:'cond-red' }[item.condicion] || '';
+  const condLbl = escapeHtml({ nuevo:'Nuevo', excelente:'Excelente', bueno:'Bueno', regular:'Regular', danado:'Dañado' }[item.condicion] || item.condicion);
   const puedePrestar = isCant ? (item.estado === 'disponible' && disponible > 0) : item.estado === 'disponible';
   return `
 <div class="inv-card">
@@ -1593,7 +1593,7 @@ function renderInventoryModalBody(item) {
     <div class="field-group">
       <label>Condición física</label>
       <select id="inv-condicion">
-        ${[['excelente','Excelente'],['bueno','Bueno'],['regular','Regular'],['danado','Dañado']].map(
+        ${[['nuevo','Nuevo'],['excelente','Excelente'],['bueno','Bueno'],['regular','Regular'],['danado','Dañado']].map(
           ([val, lbl]) => `<option value="${val}"${v('condicion')===val?' selected':''}>${lbl}</option>`).join('')}
       </select>
     </div>
@@ -1870,7 +1870,7 @@ function generateLoanWord(loanId) {
   const anio    = now.getFullYear();
   const hoy     = now.toLocaleDateString('es-HN', { day: 'numeric', month: 'long', year: 'numeric' });
 
-  const condMap  = { excelente:'Excelente', bueno:'Bueno', regular:'Regular', danado:'Dañado' };
+  const condMap  = { nuevo:'Nuevo', excelente:'Excelente', bueno:'Bueno', regular:'Regular', danado:'Dañado' };
   const condicion = condMap[item.condicion] || item.condicion || '';
   const tipoDesc  = [item.tipo, item.marca, item.modelo].filter(Boolean).join(' ');
   const logoUrl   = window.location.origin + '/assets/gcm.jpg';

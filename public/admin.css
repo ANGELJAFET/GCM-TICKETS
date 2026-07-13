@@ -1154,6 +1154,7 @@ body { background: var(--light); font-family: var(--font); color: var(--text); m
 
 /* Condition tags */
 .cond-tag { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 6px; }
+.cond-purple { background: var(--purple-light); color: #6d28d9; }
 .cond-green { background: var(--green-light); color: #065f46; }
 .cond-blue  { background: var(--blue-light);  color: #1d4ed8; }
 .cond-amber { background: var(--amber-light); color: #92400e; }
