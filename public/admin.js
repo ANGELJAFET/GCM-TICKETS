@@ -11,7 +11,8 @@ const PERMISO_KEYS = {
   inventario:  'soporte_admin_acc_inventario',
   prestamos:   'soporte_admin_acc_prestamos',
   bitacora:    'soporte_admin_acc_bitacora',
-  solicitudes: 'soporte_admin_acc_solicitudes'
+  solicitudes: 'soporte_admin_acc_solicitudes',
+  usuarios:    'soporte_admin_acc_usuarios'
 };
 
 function isSuperAdmin() {
@@ -24,10 +25,15 @@ function hasPermiso(modulo) {
 
 function applyPermissionUI() {
   const invBtn = document.getElementById('inventarioHeaderBtn');
+  const usrBtn = document.getElementById('usuariosHeaderBtn');
   const audBtn = document.getElementById('auditoriaHeaderBtn');
   if (invBtn) invBtn.style.display = (hasPermiso('inventario') || hasPermiso('prestamos')) ? '' : 'none';
+  if (usrBtn) usrBtn.style.display = hasPermiso('usuarios') ? '' : 'none';
   if (audBtn) audBtn.style.display = hasPermiso('bitacora') ? '' : 'none';
   if (currentTab === 'inventario' && !hasPermiso('inventario') && !hasPermiso('prestamos')) {
+    setTab('todos', document.querySelector('.tab-btn'));
+  }
+  if (currentTab === 'usuarios' && !hasPermiso('usuarios')) {
     setTab('todos', document.querySelector('.tab-btn'));
   }
   if (currentTab === 'auditoria' && !hasPermiso('bitacora')) {
@@ -86,17 +92,10 @@ async function doLogin() {
   try {
     const res = await fetch('/api/auth/login', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: u, password: p })
+      body: JSON.stringify({ username: u, password: p, portal: 'admin' })
     });
     if (res.ok) {
       const data = await res.json();
-      if (data.rol_nivel < 2) {
-        const el = document.getElementById('loginError');
-        el.innerHTML = '<i class="ti ti-ban"></i> Sin permisos para acceder al panel administrativo';
-        el.classList.add('show');
-        document.getElementById('loginPass').value = '';
-        return;
-      }
       adminNombre = data.nombre || u;
       sessionStorage.setItem(SESSION_KEY, '1');
       sessionStorage.setItem(NOMBRE_KEY, adminNombre);
@@ -107,6 +106,7 @@ async function doLogin() {
       sessionStorage.setItem(PERMISO_KEYS.prestamos,   data.acceso_prestamos   ? '1' : '0');
       sessionStorage.setItem(PERMISO_KEYS.bitacora,    data.acceso_bitacora    ? '1' : '0');
       sessionStorage.setItem(PERMISO_KEYS.solicitudes, data.acceso_solicitudes ? '1' : '0');
+      sessionStorage.setItem(PERMISO_KEYS.usuarios,    data.acceso_usuarios    ? '1' : '0');
       document.getElementById('adminBadge').textContent = adminNombre.toUpperCase();
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('mainApp').classList.add('visible');
@@ -929,7 +929,8 @@ const PERMISO_CHIPS = [
   { modulo: 'inventario',  icon: 'ti-package',        label: 'Equipos' },
   { modulo: 'prestamos',   icon: 'ti-exchange',       label: 'Préstamos' },
   { modulo: 'bitacora',    icon: 'ti-history',        label: 'Bitácora' },
-  { modulo: 'solicitudes', icon: 'ti-clipboard-list', label: 'Solicitudes' }
+  { modulo: 'solicitudes', icon: 'ti-clipboard-list', label: 'Solicitudes' },
+  { modulo: 'usuarios',    icon: 'ti-users',          label: 'Usuarios' }
 ];
 
 const ROL_COLORS = { superadmin: '#7c3aed', admin: '#2563eb', tecnico: '#059669', empleado: '#64748b' };
@@ -1337,6 +1338,29 @@ function filteredInventory() {
   });
 }
 
+// Clave para detectar equipos "iguales" (mismo tipo+marca+modelo) sin importar el N° de serie.
+function invGroupKey(item) {
+  return [item.tipo, item.marca, item.modelo].map(v => (v || '').trim().toLowerCase()).join('|');
+}
+
+// Al hacer click en un equipo, muestra todos los equipos similares (misma tipo+marca+modelo).
+function openSimilarEquiposModal(id) {
+  const item = inventoryCache.find(i => i.id === id);
+  if (!item) return;
+  const key = invGroupKey(item);
+  const similares = inventoryCache.filter(i => invGroupKey(i) === key);
+  const nombre = `${item.marca}${item.modelo ? ' ' + item.modelo : ''}`;
+  document.getElementById('similarEquiposTitle').innerHTML =
+    `<i class="ti ti-devices"></i> ${escapeHtml(nombre)} <span style="font-weight:400;color:var(--text-sec)">(${similares.length} equipo${similares.length === 1 ? '' : 's'})</span>`;
+  document.getElementById('similarEquiposBody').innerHTML =
+    `<div class="inv-grid">${similares.map(invCardHtml).join('')}</div>`;
+  document.getElementById('similarEquiposBackdrop').classList.add('open');
+}
+
+function closeSimilarEquiposModal() {
+  document.getElementById('similarEquiposBackdrop').classList.remove('open');
+}
+
 function refreshInvContent() {
   const el = document.getElementById('invContent');
   if (!el) return;
@@ -1375,7 +1399,7 @@ function invCardHtml(item) {
   const puedePrestar = isCant ? (item.estado === 'disponible' && disponible > 0) : item.estado === 'disponible';
   return `
 <div class="inv-card">
-  <div class="inv-card-head">
+  <div class="inv-card-head inv-card-head-click" onclick="openSimilarEquiposModal('${escapeHtml(item.id)}')" title="Ver equipos similares">
     <div class="inv-card-icon-wrap">
       <i class="ti ti-package"></i>
     </div>
@@ -1960,18 +1984,38 @@ async function returnLoanByItem(itemId) {
   await returnLoan(loan.id);
 }
 
-async function returnLoanPartial(loanId) {
+let returnPartialLoanId = null;
+
+function returnLoanPartial(loanId) {
   const loan = loansCache.find(l => l.id === loanId);
   if (!loan) return;
   const restante = loan.cantidad - loan.cantidadDevuelta;
-  const input = prompt(`¿Cuántas unidades se devuelven ahora? (pendiente: ${restante})`, String(restante));
-  if (input === null) return;
-  const cantidadDevuelta = parseInt(input, 10);
+  returnPartialLoanId = loanId;
+  document.getElementById('returnPartialLabel').textContent = `¿Cuántas unidades se devuelven ahora? (pendiente: ${restante})`;
+  const input = document.getElementById('returnPartialInput');
+  input.max   = String(restante);
+  input.value = String(restante);
+  document.getElementById('returnPartialBackdrop').classList.add('open');
+  setTimeout(() => input.select(), 50);
+}
+
+function closeReturnPartialModal() {
+  document.getElementById('returnPartialBackdrop').classList.remove('open');
+  returnPartialLoanId = null;
+}
+
+async function confirmReturnPartial() {
+  const loanId = returnPartialLoanId;
+  const loan = loansCache.find(l => l.id === loanId);
+  if (!loan) return closeReturnPartialModal();
+  const restante = loan.cantidad - loan.cantidadDevuelta;
+  const cantidadDevuelta = parseInt(document.getElementById('returnPartialInput').value, 10);
   if (!Number.isInteger(cantidadDevuelta) || cantidadDevuelta < 1 || cantidadDevuelta > restante) {
     return showToast('Cantidad inválida');
   }
   try {
     await api(`/api/loans/${loanId}`, 'PATCH', { cantidadDevuelta });
+    closeReturnPartialModal();
     showToast('Devolución registrada ✓');
     await loadDevices();
     renderInventorySection();
@@ -2300,6 +2344,7 @@ function renderUsrDetailHtml(u) {
     ${row('ti-calendar', 'Registrado',   fmtDate(u.created_at))}
   </div>
 
+  ${isSuperAdmin() ? `
   <div class="usd-section">
     <div class="usd-section-title"><i class="ti ti-lock"></i> Contraseña</div>
     <div style="display:flex;gap:8px;align-items:center">
@@ -2316,7 +2361,7 @@ function renderUsrDetailHtml(u) {
       </button>
     </div>
     <div id="usdPassMsg" style="font-size:.78rem;margin-top:6px"></div>
-  </div>
+  </div>` : ''}
 </div>`;
 }
 

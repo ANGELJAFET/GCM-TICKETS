@@ -310,6 +310,44 @@
   </div>
 </div>
 
+<!-- ── Modal: Equipos similares ── -->
+<div class="modal-backdrop" id="similarEquiposBackdrop">
+  <div class="modal" style="width:800px;max-width:92vw">
+    <div class="modal-header">
+      <h2 id="similarEquiposTitle"><i class="ti ti-devices" aria-hidden="true"></i> Equipos similares</h2>
+      <button class="icon-btn" onclick="closeSimilarEquiposModal()" aria-label="Cerrar">
+        <i class="ti ti-x" aria-hidden="true"></i>
+      </button>
+    </div>
+    <div class="modal-body" style="gap:14px" id="similarEquiposBody">
+      <!-- filled by JS -->
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Devolución parcial ── -->
+<div class="modal-backdrop" id="returnPartialBackdrop">
+  <div class="modal" style="width:420px">
+    <div class="modal-header">
+      <h2><i class="ti ti-exchange" aria-hidden="true"></i> Registrar devolución</h2>
+      <button class="icon-btn" onclick="closeReturnPartialModal()" aria-label="Cerrar">
+        <i class="ti ti-x" aria-hidden="true"></i>
+      </button>
+    </div>
+    <div class="modal-body" style="gap:14px">
+      <div class="field-group">
+        <label id="returnPartialLabel">¿Cuántas unidades se devuelven ahora?</label>
+        <input id="returnPartialInput" type="number" min="1" step="1" onkeydown="if(event.key==='Enter'){event.preventDefault();confirmReturnPartial()}">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-action btn-cancel" onclick="closeReturnPartialModal()">Cancelar</button>
+      <button class="btn-action btn-primary" onclick="confirmReturnPartial()">
+        <i class="ti ti-check"></i> Confirmar
+      </button>
+    </div>
+  </div>
+</div>
 
 <div class="toast" id="toast"></div>
 

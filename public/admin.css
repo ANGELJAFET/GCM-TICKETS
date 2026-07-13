@@ -1136,6 +1136,10 @@ body { background: var(--light); font-family: var(--font); color: var(--text); m
 .inv-btn-danger  { background: var(--red-light); color: var(--red); border: 1.5px solid rgba(239,68,68,0.2); }
 .inv-btn-danger:hover  { background: var(--red); color: white; }
 
+/* Click en el encabezado del equipo → ver equipos similares (mismo tipo+marca+modelo) */
+.inv-card-head-click { cursor: pointer; border-radius: 10px; margin: -4px; padding: 4px; transition: background 0.15s; }
+.inv-card-head-click:hover { background: var(--light); }
+
 /* Estado badges */
 .inv-estado-badge {
   font-size: 10px; font-weight: 700; padding: 3px 9px;
