@@ -159,6 +159,30 @@ router.patch('/usuarios/:id/permisos', ...requireRole(4), async (req, res) => {
   }
 });
 
+// GET /api/usuarios/lista  — todos los usuarios activos (para autocompletado)
+router.get('/usuarios/lista', ...requireRole(2), async (req, res) => {
+  try {
+    const rows = await db.query(
+      `SELECT u.id,
+              LTRIM(RTRIM(CONCAT(u.nombre, ' ', ISNULL(u.apellido, '')))) AS nombre,
+              u.area,
+              d.nombre AS departamento
+       FROM usuarios u
+       LEFT JOIN departamentos d ON d.id = u.departamento_id
+       WHERE u.activo = 1
+       ORDER BY u.nombre`
+    );
+    res.json(rows.map(u => ({
+      id:          u.id,
+      nombre:      (u.nombre || '').trim(),
+      detalle:     (u.area || u.departamento || '').trim()
+    })));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al cargar lista de usuarios' });
+  }
+});
+
 // GET /api/admins
 router.get('/admins', ...requireRole(2), async (req, res) => {
   try {

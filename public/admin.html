@@ -325,6 +325,28 @@
   </div>
 </div>
 
+<!-- ── Modal: Confirmar devolución completa ── -->
+<div class="modal-backdrop" id="returnConfirmBackdrop">
+  <div class="modal" style="width:420px">
+    <div class="modal-header">
+      <h2><i class="ti ti-arrow-back-up" aria-hidden="true"></i> Confirmar devolución</h2>
+      <button class="icon-btn" onclick="closeReturnConfirmModal()" aria-label="Cerrar">
+        <i class="ti ti-x" aria-hidden="true"></i>
+      </button>
+    </div>
+    <div class="modal-body" style="gap:14px">
+      <div id="returnConfirmInfo"></div>
+      <div id="returnConfirmErr" class="rec-error" style="display:none"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-action btn-cancel" onclick="closeReturnConfirmModal()">Cancelar</button>
+      <button class="btn-action btn-primary" id="returnConfirmBtn" onclick="confirmReturnLoan()">
+        <i class="ti ti-check"></i> Confirmar devolución
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Modal: Devolución parcial ── -->
 <div class="modal-backdrop" id="partialReturnBackdrop">
   <div class="modal" style="width:400px">

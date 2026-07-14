@@ -295,7 +295,7 @@ router.get('/loans', ...requireSuperadminOrAcceso('prestamos'), async (req, res)
       estado: l.estado,
       cantidad: l.cantidad,
       cantidadDevuelta: l.cantidad_devuelta,
-      autorizadoPor: l.autorizado_por_id || '',
+      autorizadoPor: (l.autorizado_display || '').trim() || '',
       notas: l.notas,
       equipoDesc: l.equipoDesc
     })));
@@ -308,7 +308,7 @@ router.get('/loans', ...requireSuperadminOrAcceso('prestamos'), async (req, res)
 // POST /api/loans
 router.post('/loans', ...requireSuperadminOrAcceso('prestamos'), async (req, res) => {
   try {
-    const { inventoryId, empleado, departamento, fechaDevolucion, autorizadoPor, notas, cantidad } = req.body;
+    const { inventoryId, empleado, departamento, fechaDevolucion, autorizadoPorId, notas, cantidad } = req.body;
     if (!inventoryId || !empleado)
       return res.status(400).json({ error: 'inventoryId y empleado son requeridos' });
 
@@ -334,11 +334,7 @@ router.post('/loans', ...requireSuperadminOrAcceso('prestamos'), async (req, res
     const u = await db.findUserByNombre(empleado);
     if (u) empleadoId = u.id;
 
-    let autorizadoId = null;
-    if (autorizadoPor) {
-      const au = await db.findUserByNombre(autorizadoPor);
-      if (au) autorizadoId = au.id;
-    }
+    const autorizadoId = autorizadoPorId ? parseInt(autorizadoPorId, 10) || null : null;
 
     await db.query(
       `INSERT INTO prestamos (id, inventario_id, empleado_id, empleado_nombre, departamento,

@@ -75,6 +75,7 @@ let solicitudesCache = [];
 let usrSolFilter    = 'pendiente';
 let usrSearch       = '';
 let adminsCache     = [];
+let usuariosLista   = [];
 
 const TEMPLATES = [
   { label: 'Acuse de recibo',    text: 'Hemos recibido su solicitud y la estamos atendiendo. Le mantendremos informado del avance.' },
@@ -262,7 +263,10 @@ function escapeHtml(str) {
 
 async function loadAdmins() {
   try {
-    adminsCache = await api('/api/admins');
+    [adminsCache, usuariosLista] = await Promise.all([
+      api('/api/admins'),
+      api('/api/usuarios/lista').catch(() => [])
+    ]);
   } catch { adminsCache = []; }
   const sel = document.getElementById('filterAsignado');
   if (sel) {
@@ -1094,6 +1098,16 @@ function switchInvView(view) {
   renderInventorySection();
 }
 
+function invGoToEquipos(estado, q) {
+  if (!hasPermiso('inventario')) return;
+  switchInvView('equipos');
+  const qEl = document.getElementById('invQ');
+  const eEl = document.getElementById('invFEstado');
+  if (qEl) qEl.value = q || '';
+  if (eEl) eEl.value = estado || '';
+  refreshInvContent();
+}
+
 function renderInventorySection() {
   const section = document.getElementById('receptionSection');
   if (!section) return;
@@ -1129,23 +1143,23 @@ function renderInventorySection() {
   </div>
 
   <div class="inv-stats-row">
-    <div class="inv-stat-card blue">
+    <div class="inv-stat-card blue" style="cursor:pointer" onclick="invGoToEquipos('','')" title="Ver todos los equipos">
       <div class="inv-stat-icon"><i class="ti ti-package"></i></div>
       <div><div class="inv-stat-val">${total}</div><div class="inv-stat-lbl">Total equipos</div></div>
     </div>
-    <div class="inv-stat-card green">
+    <div class="inv-stat-card green" style="cursor:pointer" onclick="invGoToEquipos('disponible','')" title="Ver equipos disponibles">
       <div class="inv-stat-icon"><i class="ti ti-circle-check"></i></div>
       <div><div class="inv-stat-val">${disponibles}</div><div class="inv-stat-lbl">Disponibles</div></div>
     </div>
-    <div class="inv-stat-card amber">
+    <div class="inv-stat-card amber" style="cursor:pointer" onclick="invGoToEquipos('en_prestamo','')" title="Ver equipos prestados">
       <div class="inv-stat-icon"><i class="ti ti-exchange"></i></div>
       <div><div class="inv-stat-val">${prestados}</div><div class="inv-stat-lbl">Prestados</div></div>
     </div>
-    <div class="inv-stat-card red">
+    <div class="inv-stat-card red" style="cursor:pointer" onclick="invGoToEquipos('en_reparacion','')" title="Ver equipos en reparación">
       <div class="inv-stat-icon"><i class="ti ti-tool"></i></div>
       <div><div class="inv-stat-val">${reparacion}</div><div class="inv-stat-lbl">En reparación</div></div>
     </div>
-    <div class="inv-stat-card gray">
+    <div class="inv-stat-card gray" style="cursor:pointer" onclick="invGoToEquipos('de_baja','')" title="Ver equipos de baja">
       <div class="inv-stat-icon"><i class="ti ti-archive"></i></div>
       <div><div class="inv-stat-val">${baja}</div><div class="inv-stat-lbl">De baja</div></div>
     </div>
@@ -1164,6 +1178,9 @@ function renderInventorySection() {
       <button class="inv-subtab${currentInvView==='prestamos'?' active':''}" onclick="switchInvView('prestamos')">
         <i class="ti ti-exchange"></i> Préstamos
         ${activos > 0 ? `<span class="inv-badge">${activos}</span>` : ''}
+      </button>
+      <button class="inv-subtab${currentInvView==='asignaciones'?' active':''}" onclick="switchInvView('asignaciones')">
+        <i class="ti ti-users"></i> Responsables
       </button>` : ''}
     </div>
     ${currentInvView === 'equipos' && hasPermiso('inventario') ? `
@@ -1176,7 +1193,7 @@ function renderInventorySection() {
   </div>
 
   <div id="invContent">
-    ${currentInvView === 'dashboard' ? renderDashboardHtml() : currentInvView === 'equipos' ? renderEquiposHtml() : renderPrestamosHtml()}
+    ${currentInvView === 'dashboard' ? renderDashboardHtml() : currentInvView === 'equipos' ? renderEquiposHtml() : currentInvView === 'asignaciones' ? renderAsignacionesHtml() : renderPrestamosHtml()}
   </div>
 </div>`;
 
@@ -1260,6 +1277,7 @@ function renderInvCharts() {
     animation: { duration: 500 }
   };
 
+  const estadoKeys = ['disponible','en_uso','en_prestamo','en_reparacion','de_baja'];
   const ctxE = document.getElementById('invChartEstado');
   if (ctxE) invCharts.estado = new Chart(ctxE, {
     type: 'doughnut',
@@ -1269,8 +1287,15 @@ function renderInvCharts() {
         backgroundColor: ['#22c55e','#3b82f6','#f59e0b','#ef4444','#9ca3af'],
         borderWidth: 2, borderColor: '#fff', hoverOffset: 8 }]
     },
-    options: { ...chartDefaults, cutout: '68%' }
+    options: {
+      ...chartDefaults, cutout: '68%',
+      onClick(_, elems) {
+        if (!elems.length) return;
+        invGoToEquipos(estadoKeys[elems[0].index], '');
+      }
+    }
   });
+  if (ctxE) ctxE.style.cursor = 'pointer';
 
   const tipoKeys = Object.keys(byTipo);
   const ctxT = document.getElementById('invChartTipo');
@@ -1291,11 +1316,17 @@ function renderInvCharts() {
         scales: {
           x: { grid:{display:false}, ticks:{precision:0,font:{size:11}} },
           y: { grid:{display:false}, ticks:{font:{size:11}} }
+        },
+        onClick(_, elems) {
+          if (!elems.length) return;
+          invGoToEquipos('', tipoKeys[elems[0].index]);
         }
       }
     });
+    ctxT.style.cursor = 'pointer';
   }
 
+  const condKeys = ['nuevo','excelente','bueno','regular','dañado'];
   const ctxC = document.getElementById('invChartCond');
   if (ctxC) invCharts.cond = new Chart(ctxC, {
     type: 'doughnut',
@@ -1305,18 +1336,24 @@ function renderInvCharts() {
         backgroundColor: ['#8b5cf6','#22c55e','#3b82f6','#f59e0b','#ef4444'],
         borderWidth: 2, borderColor: '#fff', hoverOffset: 8 }]
     },
-    options: { ...chartDefaults, cutout: '68%' }
+    options: {
+      ...chartDefaults, cutout: '68%',
+      onClick(_, elems) {
+        if (!elems.length) return;
+        invGoToEquipos('', condKeys[elems[0].index]);
+      }
+    }
   });
+  if (ctxC) ctxC.style.cursor = 'pointer';
 }
 
 // ── Equipos view ──────────────────────────────────────────────────────────────
 function renderEquiposHtml() {
-  const items = filteredInventory();
   return `
 <div class="inv-filter-bar">
   <div class="inv-search-wrap">
     <i class="ti ti-search"></i>
-    <input class="inv-search" id="invQ" type="text" placeholder="Buscar por marca, modelo, serie…"
+    <input class="inv-search" id="invQ" type="text" placeholder="Buscar por marca, modelo, serie, condición, estado, ubicación, responsable…"
            oninput="refreshInvContent()">
   </div>
   <select class="inv-filter-sel" id="invFEstado" onchange="refreshInvContent()">
@@ -1328,23 +1365,55 @@ function renderEquiposHtml() {
     <option value="de_baja">De baja</option>
   </select>
 </div>
-${!items.length ? `
+<div id="invGrid">${renderEquiposGrid()}</div>`;
+}
+
+function renderEquiposGrid() {
+  const items = filteredInventory();
+  if (!items.length) return `
 <div class="inv-empty">
   <i class="ti ti-package-off"></i>
   <p>${inventoryCache.length ? 'No hay equipos que coincidan con los filtros.' : 'No hay equipos registrados aún.'}</p>
   ${!inventoryCache.length ? `<button class="inv-add-btn" onclick="openInventoryModal()"><i class="ti ti-plus"></i> Agregar primer equipo</button>` : ''}
-</div>` : `
-<div class="inv-grid">
-  ${items.map(invCardHtml).join('')}
-</div>`}`;
+</div>`;
+  return `<div class="inv-grid">${items.map(invCardHtml).join('')}</div>`;
+}
+
+const INV_CONDICION_LABEL = {
+  nuevo: 'nuevo', excelente: 'excelente', bueno: 'bueno', regular: 'regular', danado: 'dañado'
+};
+
+function invSearchText(i) {
+  return [
+    i.tipo, i.marca, i.modelo, i.serie, i.color, i.ubicacion,
+    i.responsable, i.notas, i.fechaIngreso,
+    INV_CONDICION_LABEL[i.condicion] || i.condicion,
+    INV_ESTADO_LABEL[i.estado] || i.estado,
+    i.tipoManejo === 'cantidad' ? 'lote cantidad stock' : 'unidad serie',
+    i.garantia ? 'garantia' : ''
+  ].filter(Boolean).join(' ').toLowerCase();
 }
 
 function filteredInventory() {
-  const q      = (document.getElementById('invQ')?.value || '').toLowerCase();
+  const q      = (document.getElementById('invQ')?.value || '').toLowerCase().trim();
   const estado = document.getElementById('invFEstado')?.value || '';
   return inventoryCache.filter(i => {
-    if (estado && i.estado !== estado) return false;
-    if (q && !`${i.tipo} ${i.marca} ${i.modelo} ${i.serie} ${i.ubicacion}`.toLowerCase().includes(q)) return false;
+    if (estado) {
+      if (i.tipoManejo === 'cantidad') {
+        const prestadas   = i.cantidadPrestada || 0;
+        const disponibles = (i.cantidadTotal || 0) - prestadas;
+        if (estado === 'en_prestamo' && prestadas === 0)    return false;
+        if (estado === 'disponible'  && disponibles <= 0)   return false;
+        if (estado !== 'en_prestamo' && estado !== 'disponible' && i.estado !== estado) return false;
+      } else {
+        if (i.estado !== estado) return false;
+      }
+    }
+    if (q) {
+      const texto = invSearchText(i);
+      const terminos = q.split(/\s+/);
+      if (!terminos.every(t => texto.includes(t))) return false;
+    }
     return true;
   });
 }
@@ -1373,9 +1442,9 @@ function closeSimilarEquiposModal() {
 }
 
 function refreshInvContent() {
-  const el = document.getElementById('invContent');
+  const el = document.getElementById('invGrid');
   if (!el) return;
-  el.innerHTML = renderEquiposHtml();
+  el.innerHTML = renderEquiposGrid();
 }
 
 function garantiaBadgeHtml(garantia) {
@@ -1453,6 +1522,114 @@ function invCardHtml(item) {
 </div>`;
 }
 
+// ── Asignaciones view ─────────────────────────────────────────────────────────
+// Vista centrada en la PERSONA: muestra quién tiene qué equipo asignado,
+// usando el campo `responsable` de cada equipo en inventario.
+function renderAsignacionesHtml() {
+  const conResponsable = inventoryCache.filter(i => (i.responsable || '').trim());
+
+  if (!conResponsable.length) return `
+<div class="inv-empty">
+  <i class="ti ti-users-group"></i>
+  <p>Ningún equipo tiene un responsable asignado todavía.</p>
+  <p style="font-size:12px;color:var(--gray)">Edita un equipo y completa el campo "Responsable" para verlo aquí.</p>
+</div>`;
+
+  // Agrupar por responsable
+  const byPersona = {};
+  conResponsable.forEach(i => {
+    const key = i.responsable.trim();
+    if (!byPersona[key]) byPersona[key] = [];
+    byPersona[key].push(i);
+  });
+
+  const INV_ESTADO_LABEL = { disponible:'Disponible', en_uso:'En uso', en_prestamo:'Prestado', en_reparacion:'En reparación', de_baja:'De baja' };
+  const INV_ESTADO_COLOR = { disponible:'#22c55e', en_uso:'#3b82f6', en_prestamo:'#f59e0b', en_reparacion:'#f97316', de_baja:'#ef4444' };
+
+  const equipoRow = item => {
+    const estadoLabel = INV_ESTADO_LABEL[item.estado] || item.estado;
+    const estadoColor = INV_ESTADO_COLOR[item.estado] || 'var(--gray)';
+    const cantInfo = item.tipoManejo === 'cantidad'
+      ? `<span style="color:var(--gray);font-size:11px">${item.cantidadPrestada||0} de ${item.cantidadTotal} uds. prestadas</span>`
+      : '';
+    return `
+<div class="asig-equipo-row" style="display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:8px;background:var(--light);margin-bottom:5px">
+  <div style="width:32px;height:32px;border-radius:7px;background:${estadoColor}20;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+    <i class="ti ti-device-laptop" style="color:${estadoColor};font-size:15px"></i>
+  </div>
+  <div style="flex:1;min-width:0">
+    <div style="font-weight:600;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+      ${escapeHtml(item.marca || '')} ${escapeHtml(item.modelo || '')}
+      <span style="font-weight:400;color:var(--gray);font-size:11px">${escapeHtml(item.tipo || '')}</span>
+    </div>
+    <div style="font-size:11px;color:var(--gray);margin-top:2px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      ${item.serie ? `<span><i class="ti ti-fingerprint" style="font-size:10px"></i> ${escapeHtml(item.serie)}</span>` : `<span><i class="ti ti-tag" style="font-size:10px"></i> ${escapeHtml(item.id)}</span>`}
+      ${item.ubicacion ? `<span><i class="ti ti-map-pin" style="font-size:10px"></i> ${escapeHtml(item.ubicacion)}</span>` : ''}
+      ${cantInfo}
+      <span style="background:${estadoColor}20;color:${estadoColor};padding:1px 8px;border-radius:20px;font-size:10px;font-weight:600">${estadoLabel}</span>
+    </div>
+  </div>
+  <button class="inv-btn inv-btn-outline" style="font-size:11px;padding:5px 10px;flex-shrink:0"
+          onclick="openEditInventoryModal('${escapeHtml(item.id)}')" title="Ver / editar equipo">
+    <i class="ti ti-pencil"></i>
+  </button>
+</div>`;
+  };
+
+  const personaCard = (nombre, items) => {
+    const searchData = [nombre, ...items.map(i => `${i.marca||''} ${i.modelo||''} ${i.tipo||''} ${i.serie||''} ${i.id} ${i.ubicacion||''} ${i.estado||''}`)].join(' ').toLowerCase();
+    return `
+<div class="asig-persona-card" data-search="${escapeHtml(searchData)}"
+     style="background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:12px">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+    <div style="width:38px;height:38px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:#fff;flex-shrink:0">
+      ${escapeHtml(nombre[0]?.toUpperCase() || '?')}
+    </div>
+    <div style="flex:1">
+      <div style="font-weight:700;font-size:14px;color:var(--text)">${escapeHtml(nombre)}</div>
+      <div style="font-size:11px;color:var(--gray)">${items.length} equipo${items.length!==1?'s':''} asignado${items.length!==1?'s':''}</div>
+    </div>
+  </div>
+  ${items.map(equipoRow).join('')}
+</div>`;
+  };
+
+  const cards = Object.entries(byPersona)
+    .sort(([a],[b]) => a.localeCompare(b))
+    .map(([nombre, items]) => personaCard(nombre, items))
+    .join('');
+
+  const totalPersonas = Object.keys(byPersona).length;
+
+  return `
+<div style="display:flex;flex-direction:column;gap:0">
+  <div class="inv-filter-bar" style="margin-bottom:14px">
+    <div class="inv-search-wrap" style="flex:1">
+      <i class="ti ti-search"></i>
+      <input class="inv-search" id="asigQ" type="text"
+             placeholder="Buscar por nombre, marca, modelo, serie, ubicación…"
+             oninput="refreshAsignaciones()">
+    </div>
+    <div style="font-size:12px;color:var(--gray);padding:0 4px;white-space:nowrap;align-self:center">
+      ${totalPersonas} persona${totalPersonas!==1?'s':''} · ${conResponsable.length} equipo${conResponsable.length!==1?'s':''}
+    </div>
+  </div>
+  <div id="asigGrid">
+    ${cards}
+  </div>
+</div>`;
+}
+
+function refreshAsignaciones() {
+  const q    = (document.getElementById('asigQ')?.value || '').toLowerCase().trim();
+  const grid = document.getElementById('asigGrid');
+  if (!grid) return;
+  grid.querySelectorAll('.asig-persona-card').forEach(card => {
+    const data = card.dataset.search || '';
+    card.style.display = (!q || data.includes(q)) ? '' : 'none';
+  });
+}
+
 // ── Préstamos view ────────────────────────────────────────────────────────────
 function renderPrestamosHtml() {
   if (!loansCache.length) return `
@@ -1480,7 +1657,7 @@ function renderPrestamosHtml() {
   <div class="loan-person-col">
     <div class="loan-person-name"><i class="ti ti-user" style="font-size:11px"></i> ${escapeHtml(loan.empleado)}</div>
     ${loan.departamento ? `<div class="loan-dept">${escapeHtml(loan.departamento)}</div>` : ''}
-    ${loan.autorizadoPor ? `<div class="loan-dept">Auth: ${escapeHtml(loan.autorizadoPor)}</div>` : ''}
+    ${loan.autorizadoPor ? `<div class="loan-dept"><i class="ti ti-user-check" style="font-size:10px"></i> Autorizado por: ${escapeHtml(loan.autorizadoPor)}</div>` : ''}
   </div>
   <div class="loan-dates-col">
     <div class="loan-date-row"><i class="ti ti-calendar-plus"></i> ${escapeHtml(loan.fechaPrestamo)}</div>
@@ -1627,7 +1804,16 @@ function renderInventoryModalBody(item) {
     </div>
     <div class="field-group">
       <label>Responsable</label>
-      <input id="inv-responsable" type="text" value="${v('responsable')}" placeholder="Nombre del responsable">
+      <div style="position:relative">
+        <input id="inv-responsable" type="text" autocomplete="off"
+               value="${v('responsable')}"
+               placeholder="Nombre del responsable (o selecciona un usuario)"
+               style="width:100%;box-sizing:border-box"
+               oninput="invRespFilter()"
+               onfocus="invRespShowDropdown()"
+               onblur="setTimeout(()=>{const d=document.getElementById('inv-resp-dd');if(d)d.style.display='none'},200)">
+        <div id="inv-resp-dd" style="display:none;position:fixed;background:var(--surface,#1e2130);border:1.5px solid var(--border);border-radius:10px;max-height:200px;overflow-y:auto;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,.35)"></div>
+      </div>
     </div>
   </div>
   <div class="field-group">
@@ -1682,6 +1868,95 @@ function invSwitchModo(modo) {
   const cantField  = document.getElementById('inv-field-cantidad');
   if (serieField) serieField.style.display = modo === 'cantidad' ? 'none' : '';
   if (cantField)  cantField.style.display  = modo === 'cantidad' ? '' : 'none';
+}
+
+function invRespPositionDropdown() {
+  const input = document.getElementById('inv-responsable');
+  const dd    = document.getElementById('inv-resp-dd');
+  if (!input || !dd) return;
+  const rect = input.getBoundingClientRect();
+  dd.style.top   = `${rect.bottom + 4}px`;
+  dd.style.left  = `${rect.left}px`;
+  dd.style.width = `${rect.width}px`;
+}
+
+function invRespShowDropdown() {
+  invRespPositionDropdown();
+  invRespFilter();
+}
+
+function invRespFilter() {
+  const input = document.getElementById('inv-responsable');
+  const dd    = document.getElementById('inv-resp-dd');
+  if (!input || !dd) return;
+  invRespPositionDropdown();
+  const q = input.value.toLowerCase().trim();
+  const matches = usuariosLista.filter(u => !q || u.nombre.toLowerCase().includes(q));
+  _usuariosDdRender(dd, matches, 'invRespSelect');
+}
+
+function invRespSelect(nombre) {
+  const input = document.getElementById('inv-responsable');
+  const dd    = document.getElementById('inv-resp-dd');
+  if (input) input.value = nombre;
+  if (dd)    dd.style.display = 'none';
+}
+
+
+function _usuariosDdRender(dd, matches, onSelectFn) {
+  if (!matches.length) { dd.style.display = 'none'; return; }
+  dd.innerHTML = matches.slice(0, 12).map(u => `
+    <div class="usr-dd-opt"
+         data-nombre="${escapeHtml(u.nombre)}" data-detalle="${escapeHtml(u.detalle||'')}"
+         data-fn="${escapeHtml(onSelectFn)}"
+         onmouseover="this.style.background='var(--light)'" onmouseout="this.style.background=''"
+         style="padding:9px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s">
+      <div style="font-weight:600;font-size:13px;color:var(--text)">${escapeHtml(u.nombre)}</div>
+      ${u.detalle ? `<div style="font-size:11px;color:var(--gray)">${escapeHtml(u.detalle)}</div>` : ''}
+    </div>`).join('');
+  dd.querySelectorAll('.usr-dd-opt').forEach(el => {
+    el.addEventListener('mousedown', e => {
+      e.preventDefault();
+      const fn = el.dataset.fn;
+      if (fn === 'invRespSelect')      invRespSelect(el.dataset.nombre, el.dataset.detalle);
+      else if (fn === 'loanEmpleadoSelect') loanEmpleadoSelect(el.dataset.nombre, el.dataset.detalle);
+    });
+  });
+  dd.style.display = '';
+}
+
+function loanEmpleadoPositionDropdown() {
+  const input = document.getElementById('loan-empleado');
+  const dd    = document.getElementById('loan-emp-dd');
+  if (!input || !dd) return;
+  const rect = input.getBoundingClientRect();
+  dd.style.top   = `${rect.bottom + 4}px`;
+  dd.style.left  = `${rect.left}px`;
+  dd.style.width = `${rect.width}px`;
+}
+
+function loanEmpleadoShowDropdown() {
+  loanEmpleadoPositionDropdown();
+  loanEmpleadoFilter();
+}
+
+function loanEmpleadoFilter() {
+  const input = document.getElementById('loan-empleado');
+  const dd    = document.getElementById('loan-emp-dd');
+  if (!input || !dd) return;
+  loanEmpleadoPositionDropdown();
+  const q = input.value.toLowerCase().trim();
+  const matches = usuariosLista.filter(u => !q || u.nombre.toLowerCase().includes(q));
+  _usuariosDdRender(dd, matches, 'loanEmpleadoSelect');
+}
+
+function loanEmpleadoSelect(nombre, detalle) {
+  const input = document.getElementById('loan-empleado');
+  const dept  = document.getElementById('loan-dept');
+  const dd    = document.getElementById('loan-emp-dd');
+  if (input) input.value = nombre;
+  if (dept && detalle && !dept.value) dept.value = detalle;
+  if (dd)    dd.style.display = 'none';
 }
 
 async function saveInventoryItem() {
@@ -1765,21 +2040,48 @@ async function openLoanModal(itemId) {
   try {
     const admins = await api('/api/admins');
     adminOptions += admins.map(a =>
-      `<option value="${escapeHtml(a.nombre)}">${escapeHtml(a.nombre)} (${escapeHtml(a.rol)})</option>`
+      `<option value="${a.id}">${escapeHtml(a.nombre)} (${escapeHtml(a.rol)})</option>`
     ).join('');
   } catch {}
+
+  const preselected = itemId ? inventoryCache.find(i => i.id === itemId) : null;
+  const preselectedLabel = preselected
+    ? `${escapeHtml(preselected.marca)} ${escapeHtml(preselected.modelo || preselected.tipo)} (${escapeHtml(preselected.id)})`
+    : '';
 
   document.getElementById('loanModalBody').innerHTML = `
 <div style="display:flex;flex-direction:column;gap:14px">
   <div class="field-group">
     <label>Equipo a prestar *</label>
-    <select id="loan-item" onchange="loanItemChanged()">
-      <option value="">— Seleccionar equipo —</option>
-      ${availableItems.map(i => `
-        <option value="${escapeHtml(i.id)}" ${i.id === itemId ? 'selected' : ''}>
-          ${escapeHtml(i.id)} — ${escapeHtml(i.marca)} ${escapeHtml(i.modelo || i.tipo)}${i.tipoManejo === 'cantidad' ? ` (${invDisponible(i)} disponibles)` : ''}
-        </option>`).join('')}
-    </select>
+    <div style="position:relative">
+      <i class="ti ti-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--gray);font-size:13px;pointer-events:none;z-index:1"></i>
+      <input id="loan-item-search" type="text" autocomplete="off"
+             placeholder="Buscar por marca, modelo, tipo, ubicación…"
+             value="${preselectedLabel}"
+             style="width:100%;padding:10px 14px 10px 34px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-family:var(--font);background:var(--light);color:var(--text);outline:none;box-sizing:border-box"
+             oninput="loanItemFilter()"
+             onfocus="loanItemShowDropdown()"
+             onblur="setTimeout(()=>{const d=document.getElementById('loan-item-dd');if(d)d.style.display='none'},200)">
+      <input type="hidden" id="loan-item" value="${escapeHtml(itemId || '')}">
+      <div id="loan-item-dd" style="display:none;position:fixed;background:var(--surface,#1e2130);border:1.5px solid var(--border);border-radius:10px;max-height:230px;overflow-y:auto;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,.35)">
+        ${availableItems.length ? availableItems.map(i => `
+        <div class="loan-dd-opt" data-id="${escapeHtml(i.id)}"
+             onmousedown="event.preventDefault();loanItemSelect('${escapeHtml(i.id)}')"
+             onmouseover="this.style.background='var(--light)'" onmouseout="this.style.background=''"
+             style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s">
+          <div style="font-weight:600;color:var(--text);font-size:13px">
+            ${escapeHtml(i.marca)} ${escapeHtml(i.modelo || '')}
+            <span style="font-weight:400;color:var(--gray);font-size:11px;margin-left:4px">${escapeHtml(i.tipo)}</span>
+          </div>
+          <div style="font-size:11px;color:var(--gray);margin-top:2px">
+            ${escapeHtml(i.id)}
+            ${i.tipoManejo === 'cantidad' ? ` · <span style="color:#22c55e;font-weight:600">${invDisponible(i)} disponibles</span> de ${i.cantidadTotal}` : ' · Unidad individual'}
+            ${i.ubicacion ? ` · ${escapeHtml(i.ubicacion)}` : ''}
+          </div>
+        </div>`).join('')
+        : `<div style="padding:14px;text-align:center;color:var(--gray);font-size:13px">No hay equipos disponibles</div>`}
+      </div>
+    </div>
   </div>
   <div class="field-group" id="loan-field-cantidad" style="display:none">
     <label>Cantidad a prestar *</label>
@@ -1788,7 +2090,14 @@ async function openLoanModal(itemId) {
   <div class="field-row">
     <div class="field-group">
       <label>Empleado / Responsable *</label>
-      <input id="loan-empleado" type="text" placeholder="Nombre completo">
+      <div style="position:relative">
+        <input id="loan-empleado" type="text" autocomplete="off" placeholder="Nombre completo"
+               style="width:100%;box-sizing:border-box"
+               oninput="loanEmpleadoFilter()"
+               onfocus="loanEmpleadoShowDropdown()"
+               onblur="setTimeout(()=>{const d=document.getElementById('loan-emp-dd');if(d)d.style.display='none'},200)">
+        <div id="loan-emp-dd" style="display:none;position:fixed;background:var(--surface,#1e2130);border:1.5px solid var(--border);border-radius:10px;max-height:200px;overflow-y:auto;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,.35)"></div>
+      </div>
     </div>
     <div class="field-group">
       <label>Departamento</label>
@@ -1832,6 +2141,47 @@ function loanItemChanged() {
   }
 }
 
+function loanItemPositionDropdown() {
+  const input = document.getElementById('loan-item-search');
+  const dd    = document.getElementById('loan-item-dd');
+  if (!input || !dd) return;
+  const rect = input.getBoundingClientRect();
+  dd.style.top   = (rect.bottom + 4) + 'px';
+  dd.style.left  = rect.left + 'px';
+  dd.style.width = rect.width + 'px';
+}
+
+function loanItemShowDropdown() {
+  const dd = document.getElementById('loan-item-dd');
+  if (!dd) return;
+  loanItemPositionDropdown();
+  dd.style.display = '';
+  loanItemFilter();
+}
+
+function loanItemFilter() {
+  const q  = (document.getElementById('loan-item-search')?.value || '').toLowerCase().trim();
+  const dd = document.getElementById('loan-item-dd');
+  if (!dd) return;
+  loanItemPositionDropdown();
+  dd.style.display = '';
+  dd.querySelectorAll('.loan-dd-opt').forEach(opt => {
+    opt.style.display = (!q || opt.textContent.toLowerCase().includes(q)) ? '' : 'none';
+  });
+}
+
+function loanItemSelect(id) {
+  const item = inventoryCache.find(i => i.id === id);
+  if (!item) return;
+  const hidden = document.getElementById('loan-item');
+  const search = document.getElementById('loan-item-search');
+  const dd     = document.getElementById('loan-item-dd');
+  if (hidden) hidden.value = id;
+  if (search) search.value = `${item.marca} ${item.modelo || item.tipo} (${id})`;
+  if (dd)     dd.style.display = 'none';
+  loanItemChanged();
+}
+
 function closeLoanModal() {
   document.getElementById('loanModalBackdrop').classList.remove('open');
   loanForItemId = null;
@@ -1842,7 +2192,7 @@ async function saveLoan() {
   const empleado    = (document.getElementById('loan-empleado')?.value || '').trim();
   const departamento= (document.getElementById('loan-dept')?.value     || '').trim();
   const fechaDev    = document.getElementById('loan-devolucion')?.value || '';
-  const autorizadoPor = document.getElementById('loan-auth')?.value    || '';
+  const autorizadoPorId = parseInt(document.getElementById('loan-auth')?.value || '0', 10) || null;
   const notas       = (document.getElementById('loan-notas')?.value    || '').trim();
   const errEl = document.getElementById('loan-modal-err');
   const showErr = msg => { errEl.textContent = msg; errEl.style.display = ''; };
@@ -1859,7 +2209,7 @@ async function saveLoan() {
   }
 
   try {
-    await api('/api/loans', 'POST', { inventoryId, empleado, departamento, fechaDevolucion: fechaDev, autorizadoPor, notas, cantidad });
+    await api('/api/loans', 'POST', { inventoryId, empleado, departamento, fechaDevolucion: fechaDev, autorizadoPorId, notas, cantidad });
     showToast('Préstamo registrado ✓');
     closeLoanModal();
     await loadDevices();
@@ -1979,14 +2329,54 @@ ${escapeHtml(String(loan.empleado || '').toUpperCase())}${loan.departamento ? `<
   }
 }
 
-async function returnLoan(loanId) {
-  if (!confirm('¿Registrar la devolución de este equipo?')) return;
+let _returnConfirmLoanId = null;
+
+function returnLoan(loanId) {
+  const loan = loansCache.find(l => l.id === loanId);
+  if (!loan) return;
+  _returnConfirmLoanId = loanId;
+  const item = inventoryCache.find(i => i.id === loan.inventoryId);
+  const equipo = item
+    ? `<strong>${escapeHtml(item.marca)}${item.modelo ? ' ' + escapeHtml(item.modelo) : ''}</strong> <span style="color:var(--gray);font-size:12px">${escapeHtml(item.tipo)}</span>`
+    : `<strong>${escapeHtml(loan.inventoryId)}</strong>`;
+  const dept = loan.departamento ? ` · ${escapeHtml(loan.departamento)}` : '';
+  document.getElementById('returnConfirmInfo').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="inv-detail-row"><i class="ti ti-package" style="color:var(--primary)"></i><span>Equipo: ${equipo}</span></div>
+      <div class="inv-detail-row"><i class="ti ti-user" style="color:var(--primary)"></i><span>Prestado a: <strong>${escapeHtml(loan.empleado)}</strong>${dept}</span></div>
+      <div class="inv-detail-row"><i class="ti ti-calendar" style="color:var(--gray)"></i><span style="color:var(--gray);font-size:12px">Desde: ${escapeHtml(loan.fechaPrestamo)}</span></div>
+    </div>`;
+  document.getElementById('returnConfirmErr').style.display = 'none';
+  const btn = document.getElementById('returnConfirmBtn');
+  btn.disabled = false;
+  btn.innerHTML = '<i class="ti ti-check"></i> Confirmar devolución';
+  document.getElementById('returnConfirmBackdrop').classList.add('open');
+}
+
+function closeReturnConfirmModal() {
+  document.getElementById('returnConfirmBackdrop').classList.remove('open');
+  _returnConfirmLoanId = null;
+}
+
+async function confirmReturnLoan() {
+  const loanId = _returnConfirmLoanId;
+  if (!loanId) return;
+  const btn = document.getElementById('returnConfirmBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader-2"></i> Registrando…';
   try {
     await api(`/api/loans/${loanId}`, 'PATCH', { estado: 'devuelto' });
     showToast('Devolución registrada ✓');
+    closeReturnConfirmModal();
     await loadDevices();
     renderInventorySection();
-  } catch { showToast('Error al registrar devolución'); }
+  } catch {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-check"></i> Confirmar devolución';
+    const errEl = document.getElementById('returnConfirmErr');
+    errEl.textContent = 'Error al registrar. Verifica la conexión.';
+    errEl.style.display = '';
+  }
 }
 
 async function returnLoanByItem(itemId) {

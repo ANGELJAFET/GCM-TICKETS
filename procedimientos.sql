@@ -497,10 +497,12 @@ BEGIN
   SET NOCOUNT ON;
   SELECT p.*,
          CONCAT(i.marca, ' ', ISNULL(i.modelo, i.tipo)) AS equipoDesc,
-         LTRIM(RTRIM(CONCAT(e.nombre, ' ', ISNULL(e.apellido, '')))) AS empleado_display
+         LTRIM(RTRIM(CONCAT(e.nombre, ' ', ISNULL(e.apellido, '')))) AS empleado_display,
+         LTRIM(RTRIM(CONCAT(a.nombre, ' ', ISNULL(a.apellido, '')))) AS autorizado_display
   FROM prestamos p
   JOIN inventario i ON i.id = p.inventario_id
   LEFT JOIN usuarios e ON e.id = p.empleado_id
+  LEFT JOIN usuarios a ON a.id = p.autorizado_por_id
   ORDER BY p.created_at DESC;
 END;
 GO
