@@ -448,17 +448,17 @@ function setTab(tab, btn) {
   if (toolbar) toolbar.style.display = isSpecial ? 'none' : '';
   if (isSpecial) document.getElementById('chartsSection').style.display = 'none';
 
-  const invBtn   = document.getElementById('inventarioHeaderBtn');
-  const usrBtn   = document.getElementById('usuariosHeaderBtn');
-  const audBtn   = document.getElementById('auditoriaHeaderBtn');
+  const invBtn = document.getElementById('inventarioHeaderBtn');
+  const usrBtn = document.getElementById('usuariosHeaderBtn');
+  const audBtn = document.getElementById('auditoriaHeaderBtn');
   if (invBtn) invBtn.classList.toggle('inv-header-active', isInv);
   if (usrBtn) usrBtn.classList.toggle('inv-header-active', isUsr);
   if (audBtn) audBtn.classList.toggle('inv-header-active', isAudit);
 
-  if (isInv)   renderInventorySection();
+  if (isInv)        renderInventorySection();
   else if (isUsr)   loadUsersData();
   else if (isAudit) loadAuditData();
-  else          renderList();
+  else              renderList();
 }
 
 function toggleInventario() {

@@ -271,45 +271,34 @@ body { background: var(--light); font-family: var(--font); color: var(--text); m
 .ion-content { flex: 1; overflow-y: auto; padding: 20px 24px; }
 
 /* ── Stats ── */
-.stats-grid { display: grid; grid-template-columns: repeat(6,1fr); gap: 14px; margin-bottom: 20px; }
+.stats-grid { display: grid; grid-template-columns: repeat(6,1fr); gap: 8px; margin-bottom: 12px; }
 @media(max-width:1000px){ .stats-grid { grid-template-columns: repeat(3,1fr); } }
 @media(max-width:500px)  { .stats-grid { grid-template-columns: repeat(2,1fr); } }
 .stat-card {
-  background: white; border-radius: 14px; padding: 16px 18px;
+  background: white; border-radius: 10px; padding: 10px 12px;
   border: 1px solid var(--border); box-shadow: var(--shadow-sm);
-  transition: all 0.2s; position: relative; overflow: hidden;
+  transition: all 0.2s; display: flex; align-items: center; gap: 10px;
 }
-.stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
-.stat-card::after {
-  content: ''; position: absolute; top: -20px; right: -20px;
-  width: 80px; height: 80px; border-radius: 50%;
-  pointer-events: none; opacity: 0.6;
-}
+.stat-card:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
 .stat-card .icon {
-  width: 40px; height: 40px; border-radius: 12px;
+  width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  font-size: 22px; margin-bottom: 12px;
+  font-size: 16px;
 }
-.stat-card .val  { font-size: 28px; font-weight: 800; line-height: 1; }
-.stat-card .lbl  { font-size: 11px; color: var(--text-sec); font-weight: 500; margin-top: 4px; }
+.stat-card .val  { font-size: 20px; font-weight: 800; line-height: 1; }
+.stat-card .lbl  { font-size: 10px; color: var(--text-sec); font-weight: 500; margin-top: 2px; }
 .stat-card.blue   .icon { background: #eff6ff; }
 .stat-card.blue   .val  { color: var(--blue); }
-.stat-card.blue::after  { background: radial-gradient(circle, rgba(59,130,246,0.1), transparent); }
 .stat-card.green  .icon { background: #d1fae5; }
 .stat-card.green  .val  { color: var(--green); }
-.stat-card.green::after { background: radial-gradient(circle, rgba(16,185,129,0.1), transparent); }
 .stat-card.amber  .icon { background: #fef3c7; }
 .stat-card.amber  .val  { color: var(--amber); }
-.stat-card.amber::after { background: radial-gradient(circle, rgba(245,158,11,0.1), transparent); }
 .stat-card.red    .icon { background: #fee2e2; }
 .stat-card.red    .val  { color: var(--red); }
-.stat-card.red::after   { background: radial-gradient(circle, rgba(239,68,68,0.1), transparent); }
 .stat-card.purple .icon { background: #ede9fe; }
 .stat-card.purple .val  { color: var(--purple); }
-.stat-card.purple::after{ background: radial-gradient(circle, rgba(139,92,246,0.1), transparent); }
 .stat-card.orange .icon { background: #ffedd5; }
 .stat-card.orange .val  { color: var(--orange); }
-.stat-card.orange::after{ background: radial-gradient(circle, rgba(249,115,22,0.1), transparent); }
 
 /* ── Ticket cards ── */
 .tickets-list { display: flex; flex-direction: column; gap: 10px; }
@@ -582,18 +571,18 @@ body { background: var(--light); font-family: var(--font); color: var(--text); m
 @keyframes pulse-sla { 0%,100%{opacity:1} 50%{opacity:0.6} }
 
 /* ── Charts ── */
-.charts-section { margin-bottom: 20px; }
+.charts-section { margin-bottom: 14px; }
 .charts-grid {
-  display: grid; grid-template-columns: repeat(3,1fr); gap: 14px;
+  display: grid; grid-template-columns: repeat(3,1fr); gap: 8px;
 }
 @media(max-width:900px) { .charts-grid { grid-template-columns: 1fr; } }
 .chart-card {
-  background: white; border-radius: 14px; border: 1px solid var(--border);
-  padding: 16px 18px; box-shadow: var(--shadow-sm);
+  background: white; border-radius: 10px; border: 1px solid var(--border);
+  padding: 10px 14px; box-shadow: var(--shadow-sm);
 }
 .chart-title {
-  font-size: 12px; font-weight: 700; color: var(--text-sec);
-  margin-bottom: 12px; display: flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 700; color: var(--text-sec);
+  margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
   text-transform: uppercase; letter-spacing: 0.5px;
 }
 
