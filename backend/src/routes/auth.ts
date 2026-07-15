@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import rateLimit from 'express-rate-limit';
 import db from '../db';
 import mailer from '../mailer';
 import { SESSION_SECRET } from '../config';
@@ -9,6 +10,25 @@ const router = express.Router();
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
 const EMAIL_RE    = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Protege contra fuerza bruta de contraseña — 10 intentos / 15 min por IP,
+// no cuenta los logins exitosos.
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+  message: { error: 'Demasiados intentos. Espera unos minutos e intenta de nuevo.' },
+});
+
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiadas solicitudes. Intenta de nuevo más tarde.' },
+});
+
 const FINCAS = [
   'FINCA CORML', 'FINCA EMAR', 'FINCA NOVAHONDURAS 7', 'FINCA LA ESPERANZA',
   'FINCA CORML 1', 'FINCA CORML 2', 'FINCA CADEMA', 'FINCA EL CONCHAL',
@@ -16,7 +36,7 @@ const FINCAS = [
 ];
 
 // POST /api/auth/login
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', loginLimiter, async (req: Request, res: Response) => {
   try {
     const { username, password, portal } = req.body;
     if (!username || !password)
@@ -42,7 +62,7 @@ router.post('/login', async (req: Request, res: Response) => {
     const token = jwt.sign(
       { id: user.id, username: user.username, nombre, rol_nivel: user.rol_nivel },
       SESSION_SECRET,
-      { expiresIn: '12h' }
+      { expiresIn: '12h', algorithm: 'HS256' }
     );
 
     res.json({
@@ -65,7 +85,7 @@ router.post('/login', async (req: Request, res: Response) => {
 });
 
 // POST /api/auth/register
-router.post('/register', async (req: Request, res: Response) => {
+router.post('/register', registerLimiter, async (req: Request, res: Response) => {
   try {
     const { username, email, password, nombre, apellido, telefono, departamento, finca, area, mensaje } = req.body;
 

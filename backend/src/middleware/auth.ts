@@ -10,7 +10,7 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!token) return res.status(401).json({ error: 'Sesión requerida' });
 
   try {
-    const payload = jwt.verify(token, SESSION_SECRET) as unknown as JwtUser;
+    const payload = jwt.verify(token, SESSION_SECRET, { algorithms: ['HS256'] }) as unknown as JwtUser;
     req.user = {
       id: payload.id, username: payload.username,
       nombre: payload.nombre, rol_nivel: payload.rol_nivel

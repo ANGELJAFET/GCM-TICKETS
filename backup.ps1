@@ -5,9 +5,26 @@
 
 $BackupRoot = "C:\Backups\GCM-Tickets"
 $AppUploads = "C:\Users\Administrador\SistemaApp\backend\uploads"
+$EnvFile    = "C:\Users\Administrador\SistemaApp\backend\.env"
 $Date       = Get-Date -Format "yyyy-MM-dd"
 $BackupDir  = "$BackupRoot\$Date"
 $KeepDays   = 7
+
+# Lee DB_USER / DB_PASSWORD de backend\.env — nunca hardcodear credenciales aqui
+$envVars = @{}
+if (Test-Path $EnvFile) {
+    Get-Content $EnvFile | ForEach-Object {
+        if ($_ -match '^\s*([A-Z_]+)\s*=\s*(.*)\s*$') {
+            $envVars[$matches[1]] = $matches[2]
+        }
+    }
+}
+$DbUser = if ($envVars.DB_USER) { $envVars.DB_USER } else { "sa" }
+$DbPass = $envVars.DB_PASSWORD
+if (-not $DbPass) {
+    Write-Host "$(Get-Date -Format 'HH:mm:ss') ERROR: No se encontro DB_PASSWORD en $EnvFile" -ForegroundColor Red
+    exit 1
+}
 
 # Crear carpeta del dia
 New-Item -ItemType Directory -Force -Path $BackupDir | Out-Null
@@ -16,7 +33,7 @@ New-Item -ItemType Directory -Force -Path $BackupDir | Out-Null
 $sqlBackup = "$BackupDir\gcm_tickets_$Date.bak"
 $sqlQuery  = "BACKUP DATABASE [gcm_tickets] TO DISK = N'$sqlBackup' WITH NOFORMAT, NOINIT, COMPRESSION, STATS = 10"
 
-sqlcmd -S localhost -U sa -P "GcmApp@2024!" -Q $sqlQuery -C 2>&1 | Out-Null
+sqlcmd -S localhost -U $DbUser -P $DbPass -Q $sqlQuery -C 2>&1 | Out-Null
 
 if (Test-Path $sqlBackup) {
     $size = [math]::Round((Get-Item $sqlBackup).Length / 1MB, 1)

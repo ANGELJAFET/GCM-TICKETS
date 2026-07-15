@@ -67,7 +67,7 @@ router.delete('/usuarios/:id', ...requireRole(3), async (req: Request, res: Resp
     res.json({ ok: true });
   } catch (err: any) {
     console.error('delete usuario:', err);
-    res.status(500).json({ error: err.message || 'Error al eliminar usuario' });
+    res.status(500).json({ error: 'Error al eliminar usuario' });
   }
 });
 
@@ -87,7 +87,7 @@ router.patch('/usuarios/:id/password', ...requireRole(4), async (req: Request, r
     res.json({ ok: true });
   } catch (err: any) {
     console.error('change password:', err);
-    res.status(500).json({ error: err.message || 'Error al cambiar contraseña' });
+    res.status(500).json({ error: 'Error al cambiar contraseña' });
   }
 });
 

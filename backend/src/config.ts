@@ -15,6 +15,8 @@ const WEB_PORT = parseInt(process.env.WEB_PORT || '3001');
 
 const rawSessionSecret = process.env.SESSION_SECRET;
 if (!rawSessionSecret) throw new Error('SESSION_SECRET no está configurado en .env');
+if (rawSessionSecret.length < 32)
+  throw new Error('SESSION_SECRET es demasiado corto (mínimo 32 caracteres) — genera uno con: openssl rand -hex 32');
 const SESSION_SECRET: string = rawSessionSecret;
 
 export { UPLOADS, ASSETS, PORT, WEB_PORT, SESSION_SECRET };

@@ -4,9 +4,12 @@ import bcrypt from 'bcrypt';
 
 const ROUNDS = parseInt(process.env.BCRYPT_ROUNDS || '12');
 
+const dbPassword = process.env.DB_PASSWORD;
+if (!dbPassword) throw new Error('DB_PASSWORD no está configurado en .env');
+
 const baseConfig: sql.config = {
   user:     process.env.DB_USER     || 'sa',
-  password: process.env.DB_PASSWORD || 'GcmApp@2024!',
+  password: dbPassword,
   server:   process.env.DB_SERVER   || 'localhost',
   port:     parseInt(process.env.DB_PORT || '1433'),
   database: process.env.DB_NAME     || 'gcm_tickets',

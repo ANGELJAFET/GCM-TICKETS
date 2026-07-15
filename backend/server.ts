@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import fs from 'fs';
 
 import db from './src/db';
@@ -23,6 +24,15 @@ const app = express();
 // (no por cookies), así que reflejar el origen no habilita CSRF: un sitio
 // externo no tiene forma de obtener el token para adjuntarlo a sus llamadas.
 app.use(cors({ origin: true }));
+// contentSecurityPolicy: este servidor solo expone JSON + archivos estáticos de
+// /uploads, nunca HTML propio, así que la CSP por defecto de helmet (pensada
+// para páginas) no aplica y solo podría interferir. crossOriginResourcePolicy
+// se relaja porque el frontend (otro origen/puerto) carga imágenes/videos de
+// /uploads directamente en <img>/<video>.
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
 app.use(express.json());
 app.use('/uploads', express.static(UPLOADS));
 

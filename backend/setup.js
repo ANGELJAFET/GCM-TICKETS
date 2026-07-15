@@ -8,9 +8,14 @@ const DB_NAME        = process.env.DB_NAME        || 'gcm_tickets';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 const BCRYPT_ROUNDS  = parseInt(process.env.BCRYPT_ROUNDS || '12');
 
+if (!process.env.DB_PASSWORD) {
+  console.error('✗ DB_PASSWORD no está configurado en .env');
+  process.exit(1);
+}
+
 const baseConfig = {
   user:     process.env.DB_USER     || 'sa',
-  password: process.env.DB_PASSWORD || 'GcmApp@2024!',
+  password: process.env.DB_PASSWORD,
   server:   process.env.DB_SERVER   || 'localhost',
   port:     parseInt(process.env.DB_PORT || '1433'),
   options:  { trustServerCertificate: true, encrypt: false }

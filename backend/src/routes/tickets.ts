@@ -8,7 +8,8 @@ import { loadTicket, loadAllTickets } from '../ticketLoader';
 import { upload } from '../middleware/upload';
 import { mobileSessions } from '../mobileSessions';
 import { UPLOADS } from '../config';
-import { requireAuth } from '../middleware/auth';
+import { requireAuth, requireRole } from '../middleware/auth';
+import { Ticket } from '../types';
 
 const router = express.Router();
 
@@ -16,10 +17,24 @@ const PRIORIDADES = ['Baja', 'Media', 'Alta', 'Crítica'];
 const CATEGORIAS  = ['Hardware', 'Software', 'Red', 'Acceso', 'Otro'];
 const ESTADOS     = ['abierto', 'en_progreso', 'cerrado'];
 
+// Empleados (rol_nivel 1) solo ven/operan sus propios tickets y nunca las
+// notas internas de staff; técnicos/admins/superadmin (nivel >= 2) ven todo.
+const isStaff = (user: { rol_nivel: number }) => user.rol_nivel >= 2;
+
+function sanitizeForRequester(ticket: Ticket, user: { rol_nivel: number }): Ticket {
+  return isStaff(user) ? ticket : { ...ticket, notes: [] };
+}
+
 // GET /api/tickets
 router.get('/', requireAuth, async (req: Request, res: Response) => {
   try {
-    res.json(await loadAllTickets());
+    let tickets = await loadAllTickets();
+    if (!isStaff(req.user!)) {
+      tickets = tickets
+        .filter(t => t.reporterId === req.user!.id)
+        .map(t => sanitizeForRequester(t, req.user!));
+    }
+    res.json(tickets);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al cargar tickets' });
@@ -79,16 +94,18 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
 router.get('/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const ticket = await loadTicket(req.params.id);
-    if (!ticket) return res.status(404).json({ error: 'Ticket no encontrado' });
-    res.json(ticket);
+    // 404 (no 403) para no confirmarle a un empleado que un ticket ajeno existe.
+    if (!ticket || (!isStaff(req.user!) && ticket.reporterId !== req.user!.id))
+      return res.status(404).json({ error: 'Ticket no encontrado' });
+    res.json(sanitizeForRequester(ticket, req.user!));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al cargar ticket' });
   }
 });
 
-// PATCH /api/tickets/:id
-router.patch('/:id', requireAuth, async (req: Request, res: Response) => {
+// PATCH /api/tickets/:id — solo staff (técnico/admin/superadmin) gestiona tickets
+router.patch('/:id', ...requireRole(2), async (req: Request, res: Response) => {
   const id  = req.params.id;
   let row: any = null;
   try {
@@ -175,8 +192,8 @@ router.patch('/:id', requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-// DELETE /api/tickets/:id
-router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
+// DELETE /api/tickets/:id — solo staff
+router.delete('/:id', ...requireRole(2), async (req: Request, res: Response) => {
   try {
     const id   = req.params.id;
     const atts = await db.query<any>('SELECT nombre_archivo FROM adjuntos WHERE ticket_id = ?', [id]);
@@ -195,11 +212,13 @@ router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/tickets/:id/comments
+// POST /api/tickets/:id/comments — el dueño del ticket o cualquier miembro de staff
 router.post('/:id/comments', requireAuth, async (req: Request, res: Response) => {
   try {
     const id = req.params.id;
-    if (!await db.queryOne('SELECT id FROM tickets WHERE id = ?', [id]))
+    const tkt = await db.queryOne<any>('SELECT reporter_id FROM tickets WHERE id = ?', [id]);
+    if (!tkt) return res.status(404).json({ error: 'Ticket no encontrado' });
+    if (!isStaff(req.user!) && tkt.reporter_id !== req.user!.id)
       return res.status(404).json({ error: 'Ticket no encontrado' });
     if (!req.body.text)
       return res.status(400).json({ error: 'El texto es requerido' });
@@ -221,8 +240,8 @@ router.post('/:id/comments', requireAuth, async (req: Request, res: Response) =>
   }
 });
 
-// POST /api/tickets/:id/notes
-router.post('/:id/notes', requireAuth, async (req: Request, res: Response) => {
+// POST /api/tickets/:id/notes — solo staff (canal interno, no visible al empleado)
+router.post('/:id/notes', ...requireRole(2), async (req: Request, res: Response) => {
   try {
     const id = req.params.id;
     if (!await db.queryOne('SELECT id FROM tickets WHERE id = ?', [id]))
@@ -243,11 +262,13 @@ router.post('/:id/notes', requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/tickets/:id/attachments
+// POST /api/tickets/:id/attachments — el dueño del ticket o cualquier miembro de staff
 router.post('/:id/attachments', requireAuth, upload.single('file'), async (req: Request, res: Response) => {
   try {
     const id = req.params.id;
-    if (!await db.queryOne('SELECT id FROM tickets WHERE id = ?', [id]))
+    const tkt = await db.queryOne<any>('SELECT reporter_id FROM tickets WHERE id = ?', [id]);
+    if (!tkt) return res.status(404).json({ error: 'Ticket no encontrado' });
+    if (!isStaff(req.user!) && tkt.reporter_id !== req.user!.id)
       return res.status(404).json({ error: 'Ticket no encontrado' });
     if (!req.file)
       return res.status(400).json({ error: 'No se recibió archivo' });
@@ -279,7 +300,9 @@ router.post('/:id/attachments/from-mobile', requireAuth, async (req: Request, re
     if (!s || s.status !== 'ready') return res.status(400).json({ error: 'Sesión no válida o archivo no recibido' });
 
     const id = req.params.id;
-    if (!await db.queryOne('SELECT id FROM tickets WHERE id = ?', [id]))
+    const tkt = await db.queryOne<any>('SELECT reporter_id FROM tickets WHERE id = ?', [id]);
+    if (!tkt) return res.status(404).json({ error: 'Ticket no encontrado' });
+    if (!isStaff(req.user!) && tkt.reporter_id !== req.user!.id)
       return res.status(404).json({ error: 'Ticket no encontrado' });
 
     const filename = path.basename(s.filePath!);
