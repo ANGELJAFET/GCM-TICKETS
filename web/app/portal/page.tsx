@@ -141,7 +141,7 @@ function PortalApp() {
                   <span
                     className={
                       'min-w-4.5 rounded-[10px] px-1.75 py-0.5 text-center text-[10px] font-bold ' +
-                      (active ? 'bg-white/25 text-white' : 'bg-slate-200 text-slate-600')
+                      (active ? 'bg-white/25 text-white' : 'bg-slate-200 text-slate-600 dark:bg-admin-dark-bg dark:text-admin-dark-text-sec')
                     }
                   >
                     {count}

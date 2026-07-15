@@ -111,7 +111,7 @@ export function QRModal({ open, onClose, onConfirm }: QRModalProps) {
       }
       footer={
         <>
-          <button type="button" onClick={onClose} className="inline-flex items-center gap-1.5 rounded-[10px] border-[1.5px] border-portal-border bg-white px-5.5 py-2.5 text-[13px] font-bold text-portal-text-sec hover:bg-slate-100">
+          <button type="button" onClick={onClose} className="inline-flex items-center gap-1.5 rounded-[10px] border-[1.5px] border-portal-border bg-white px-5.5 py-2.5 text-[13px] font-bold text-portal-text-sec hover:bg-slate-100 dark:border-white/10 dark:bg-admin-dark-surface dark:text-admin-dark-text-sec dark:hover:bg-admin-dark-bg">
             <IconX size={14} /> Cancelar
           </button>
           {state === 'ready' && file && (

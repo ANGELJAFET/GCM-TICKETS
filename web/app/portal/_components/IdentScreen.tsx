@@ -73,7 +73,7 @@ export function IdentScreen() {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') document.getElementById('loginPassword')?.focus();
               }}
-              className="rounded-[10px] border-[1.5px] border-slate-200 bg-slate-50 px-3.5 py-3.25 text-sm text-portal-text outline-none transition-all focus:border-portal-navy focus:bg-white focus:shadow-[0_0_0_3px_rgba(26,46,107,0.1)] dark:border-white/12 dark:bg-admin-dark-bg dark:text-admin-dark-text"
+              className="rounded-[10px] border-[1.5px] border-slate-200 bg-slate-50 px-3.5 py-3.25 text-sm text-portal-text outline-none transition-all focus:border-portal-navy focus:bg-white focus:shadow-[0_0_0_3px_rgba(26,46,107,0.1)] dark:border-white/12 dark:bg-admin-dark-bg dark:text-admin-dark-text dark:focus:bg-admin-dark-bg"
             />
           </div>
           <div className="mb-4 flex flex-col gap-1.5">
@@ -88,7 +88,7 @@ export function IdentScreen() {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleLogin();
               }}
-              className="rounded-[10px] border-[1.5px] border-slate-200 bg-slate-50 px-3.5 py-3.25 text-sm text-portal-text outline-none transition-all focus:border-portal-navy focus:bg-white focus:shadow-[0_0_0_3px_rgba(26,46,107,0.1)] dark:border-white/12 dark:bg-admin-dark-bg dark:text-admin-dark-text"
+              className="rounded-[10px] border-[1.5px] border-slate-200 bg-slate-50 px-3.5 py-3.25 text-sm text-portal-text outline-none transition-all focus:border-portal-navy focus:bg-white focus:shadow-[0_0_0_3px_rgba(26,46,107,0.1)] dark:border-white/12 dark:bg-admin-dark-bg dark:text-admin-dark-text dark:focus:bg-admin-dark-bg"
             />
           </div>
 

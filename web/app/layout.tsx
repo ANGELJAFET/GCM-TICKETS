@@ -12,6 +12,9 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "GCM Tickets",
   description: "Sistema de tickets de soporte técnico",
+  icons: {
+    icon: "/assets/gcm.jpg",
+  },
 };
 
 export default function RootLayout({

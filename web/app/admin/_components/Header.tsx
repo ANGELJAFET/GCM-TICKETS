@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import {
   IconUsersGroup,
   IconAddressBook,
@@ -12,6 +13,7 @@ import {
   IconMoon,
   IconSun,
   IconLogout,
+  IconTicket,
 } from '@tabler/icons-react';
 import { useAdminAuth } from '@/lib/auth';
 import { toggleDarkMode, isDarkMode } from '@/lib/theme';
@@ -20,8 +22,11 @@ import { AdminManagerModal } from './AdminManagerModal';
 
 export function Header({ hasSlaAlert = false }: { hasSlaAlert?: boolean }) {
   const { user, hasPermiso, logout } = useAdminAuth();
+  const pathname = usePathname();
   const [dark, setDark] = useState(false);
   const [managerOpen, setManagerOpen] = useState(false);
+
+  const onTickets = pathname === '/admin';
 
   const showInventario = hasPermiso('inventario') || hasPermiso('prestamos');
   const showUsuarios = hasPermiso('usuarios');
@@ -54,6 +59,15 @@ export function Header({ hasSlaAlert = false }: { hasSlaAlert?: boolean }) {
         <AdminManagerModal open={managerOpen} onClose={() => setManagerOpen(false)} />
 
         <NotificationBell forceDot={hasSlaAlert} />
+
+        <Link
+          href="/admin"
+          className={`flex items-center gap-1.5 rounded-[10px] border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+            onTickets ? 'border-white/25 bg-white/20 text-white' : 'border-white/13 bg-white/7 text-white/90 hover:bg-white/15'
+          }`}
+        >
+          <IconTicket size={15} /> Tickets
+        </Link>
 
         {showUsuarios && (
           <Link

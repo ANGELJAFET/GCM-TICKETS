@@ -17,11 +17,11 @@ export function InvStatsRow({ items, onGoTo }: InvStatsRowProps) {
   const baja = items.filter((i) => i.estado === 'de_baja').length;
 
   const cards = [
-    { estado: '', icon: IconPackage, val: total, lbl: 'Total equipos', cls: 'bg-admin-blue-light text-admin-blue' },
-    { estado: 'disponible', icon: IconCircleCheck, val: disponibles, lbl: 'Disponibles', cls: 'bg-admin-green-light text-admin-green' },
-    { estado: 'en_prestamo', icon: IconExchange, val: prestados, lbl: 'Prestados', cls: 'bg-admin-amber-light text-admin-amber' },
-    { estado: 'en_reparacion', icon: IconTool, val: reparacion, lbl: 'En reparación', cls: 'bg-admin-red-light text-admin-red' },
-    { estado: 'de_baja', icon: IconArchive, val: baja, lbl: 'De baja', cls: 'bg-admin-light text-admin-gray' },
+    { estado: '', icon: IconPackage, val: total, lbl: 'Total equipos', cls: 'bg-admin-blue-light text-admin-blue dark:bg-admin-blue/15' },
+    { estado: 'disponible', icon: IconCircleCheck, val: disponibles, lbl: 'Disponibles', cls: 'bg-admin-green-light text-admin-green dark:bg-admin-green/15' },
+    { estado: 'en_prestamo', icon: IconExchange, val: prestados, lbl: 'Prestados', cls: 'bg-admin-amber-light text-admin-amber dark:bg-admin-amber/15' },
+    { estado: 'en_reparacion', icon: IconTool, val: reparacion, lbl: 'En reparación', cls: 'bg-admin-red-light text-admin-red dark:bg-admin-red/15' },
+    { estado: 'de_baja', icon: IconArchive, val: baja, lbl: 'De baja', cls: 'bg-admin-light text-admin-gray dark:bg-admin-dark-alt' },
   ];
 
   return (

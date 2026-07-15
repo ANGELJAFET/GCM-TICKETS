@@ -161,23 +161,33 @@ router.patch('/usuarios/:id/permisos', ...requireRole(4), async (req: Request, r
 });
 
 // GET /api/usuarios/lista  — todos los usuarios activos (para autocompletado)
+const ROL_LABEL: Record<number, string> = { 2: 'Técnico', 3: 'Admin', 4: 'Superadmin' };
+
 router.get('/usuarios/lista', ...requireRole(2), async (req: Request, res: Response) => {
   try {
     const rows = await db.query<any>(
       `SELECT u.id,
               LTRIM(RTRIM(CONCAT(u.nombre, ' ', ISNULL(u.apellido, '')))) AS nombre,
               u.area,
-              d.nombre AS departamento
+              d.nombre AS departamento,
+              r.nivel
        FROM usuarios u
        LEFT JOIN departamentos d ON d.id = u.departamento_id
+       LEFT JOIN roles r ON r.id = u.rol_id
        WHERE u.activo = 1
        ORDER BY u.nombre`
     );
-    res.json(rows.map(u => ({
-      id:          u.id,
-      nombre:      (u.nombre || '').trim(),
-      detalle:     (u.area || u.departamento || '').trim()
-    })));
+    res.json(rows.map(u => {
+      const esPortal = u.nivel === 1;
+      return {
+        id:       u.id,
+        nombre:   (u.nombre || '').trim(),
+        esPortal,
+        detalle:  esPortal
+          ? ((u.departamento || u.area || 'Sin departamento asignado').trim())
+          : (ROL_LABEL[u.nivel] || '')
+      };
+    }));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al cargar lista de usuarios' });

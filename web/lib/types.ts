@@ -97,6 +97,7 @@ export interface UsuarioListado {
   id: number;
   nombre: string;
   detalle: string;
+  esPortal: boolean;
 }
 
 export interface Usuario {

@@ -28,7 +28,7 @@ export function EquiposView({ allCount, items, query, estado, onQueryChange, onE
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
             placeholder="Buscar por marca, modelo, serie, condición, estado, ubicación, responsable…"
-            className="h-9.5 w-full rounded-[10px] border-[1.5px] border-admin-border bg-admin-light pr-3.5 pl-9.5 text-[13px] outline-none focus:border-admin-blue focus:bg-white dark:border-white/10 dark:bg-admin-dark-bg"
+            className="h-9.5 w-full rounded-[10px] border-[1.5px] border-admin-border bg-admin-light pr-3.5 pl-9.5 text-[13px] outline-none focus:border-admin-blue focus:bg-white dark:border-white/10 dark:bg-admin-dark-bg dark:focus:bg-admin-dark-bg"
           />
         </div>
         <select

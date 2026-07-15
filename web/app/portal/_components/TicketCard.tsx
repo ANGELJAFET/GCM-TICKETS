@@ -56,7 +56,7 @@ function CommentItem({ c }: { c: TicketComment }) {
     <div
       className={
         'mb-2 rounded-xl px-3.5 py-2.5 text-xs leading-relaxed ' +
-        (isUser ? 'border border-[#c4d0ea] bg-portal-accent-light' : 'border border-portal-border bg-[#f5f7fc]')
+        (isUser ? 'border border-[#c4d0ea] bg-portal-accent-light dark:border-admin-blue/40 dark:bg-admin-blue/15' : 'border border-portal-border bg-[#f5f7fc] dark:border-white/10 dark:bg-admin-dark-alt')
       }
     >
       {isUser ? (
@@ -120,7 +120,7 @@ export function TicketCard({ ticket: t, onReply }: TicketCardProps) {
                 target="_blank"
                 rel="noreferrer"
                 title={a.name}
-                className="flex max-w-45 flex-col items-center gap-1 overflow-hidden rounded-[10px] border-[1.5px] border-portal-border bg-slate-50 transition-all hover:border-portal-navy hover:shadow-[0_4px_14px_rgba(26,46,107,0.18)]"
+                className="flex max-w-45 flex-col items-center gap-1 overflow-hidden rounded-[10px] border-[1.5px] border-portal-border bg-slate-50 transition-all hover:border-portal-navy hover:shadow-[0_4px_14px_rgba(26,46,107,0.18)] dark:bg-admin-dark-bg"
               >
                 {/* Adjuntos son archivos subidos dinámicamente al backend — next/image exige dominios configurados, un <img> plano es más simple aquí. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -130,7 +130,7 @@ export function TicketCard({ ticket: t, onReply }: TicketCardProps) {
                 </span>
               </a>
             ) : isVideo(a.name) ? (
-              <div key={i} className="flex max-w-55 flex-col items-center gap-1 overflow-hidden rounded-[10px] border-[1.5px] border-portal-border bg-slate-50">
+              <div key={i} className="flex max-w-55 flex-col items-center gap-1 overflow-hidden rounded-[10px] border-[1.5px] border-portal-border bg-slate-50 dark:bg-admin-dark-bg">
                 <video src={a.path} controls preload="metadata" className="block max-h-35 bg-black" />
                 <span className="max-w-55 truncate px-2 py-1 text-center text-[10px] font-semibold text-portal-text-sec">
                   <IconVideo size={10} className="inline" /> {a.name}
@@ -142,7 +142,7 @@ export function TicketCard({ ticket: t, onReply }: TicketCardProps) {
                 href={a.path}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-portal-border bg-slate-50 px-2.75 py-1 text-[11px] font-semibold text-portal-accent hover:border-blue-200 hover:bg-portal-accent-light"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-portal-border bg-slate-50 px-2.75 py-1 text-[11px] font-semibold text-portal-accent hover:border-blue-200 hover:bg-portal-accent-light dark:bg-admin-dark-bg"
               >
                 <IconPaperclip size={11} /> {a.name}
               </a>
@@ -204,7 +204,7 @@ export function TicketCard({ ticket: t, onReply }: TicketCardProps) {
             }}
             placeholder="Escribe tu mensaje al equipo de soporte..."
             className={
-              'w-full resize-none rounded-[10px] border-[1.5px] bg-slate-50 px-3.5 py-2.75 text-[13px] text-portal-text outline-none transition-all focus:border-portal-navy focus:bg-white focus:shadow-[0_0_0_3px_rgba(26,46,107,0.12)] ' +
+              'w-full resize-none rounded-[10px] border-[1.5px] bg-slate-50 px-3.5 py-2.75 text-[13px] text-portal-text outline-none transition-all focus:border-portal-navy focus:bg-white focus:shadow-[0_0_0_3px_rgba(26,46,107,0.12)] dark:bg-admin-dark-bg dark:text-admin-dark-text dark:focus:bg-admin-dark-bg ' +
               (replyError ? 'border-portal-red' : 'border-portal-border')
             }
           />

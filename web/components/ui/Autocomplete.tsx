@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
+import { Pill } from './Pill';
 
 interface AutocompleteProps<T> {
   items: T[];
@@ -10,6 +11,8 @@ interface AutocompleteProps<T> {
   onSelect: (item: T) => void;
   getLabel: (item: T) => string;
   getDetail?: (item: T) => string | undefined;
+  /** Etiqueta corta junto al nombre (ej. distinguir portal vs panel admin). */
+  getBadge?: (item: T) => { label: string; className: string } | null | undefined;
   placeholder?: string;
   className?: string;
   inputClassName?: string;
@@ -25,6 +28,7 @@ export function Autocomplete<T>({
   onSelect,
   getLabel,
   getDetail,
+  getBadge,
   placeholder,
   className,
   inputClassName,
@@ -74,7 +78,12 @@ export function Autocomplete<T>({
                 }}
                 className="flex w-full flex-col items-start px-3 py-2 text-left text-sm hover:bg-admin-blue-light dark:hover:bg-admin-dark-alt"
               >
-                <span className="font-medium">{getLabel(item)}</span>
+                <span className="flex items-center gap-1.5">
+                  <span className="font-medium">{getLabel(item)}</span>
+                  {getBadge?.(item) && (
+                    <Pill className={getBadge(item)!.className}>{getBadge(item)!.label}</Pill>
+                  )}
+                </span>
                 {getDetail?.(item) && <span className="text-xs opacity-60">{getDetail(item)}</span>}
               </button>
             </li>

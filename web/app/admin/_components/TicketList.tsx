@@ -21,13 +21,13 @@ function GroupHeader({ title, icon: Icon, count, mine }: { title: string; icon: 
     <div
       className={clsx(
         'mt-4 mb-2 flex items-center justify-between rounded-[10px] border px-3.5 py-2 text-xs font-bold first:mt-0',
-        mine ? 'border-blue-200 bg-admin-blue-light text-blue-700' : 'border-admin-border bg-admin-light text-admin-text-sec'
+        mine ? 'border-blue-200 bg-admin-blue-light text-blue-700 dark:border-admin-blue/40 dark:bg-admin-blue/15 dark:text-admin-blue' : 'border-admin-border bg-admin-light text-admin-text-sec dark:border-white/10 dark:bg-admin-dark-alt'
       )}
     >
       <span className="flex items-center gap-1.75">
         <Icon size={14} /> {title}
       </span>
-      <span className={clsx('rounded-full px-2.25 py-0.5 text-[11px] font-extrabold', mine ? 'bg-admin-blue text-white' : 'bg-black/8')}>{count}</span>
+      <span className={clsx('rounded-full px-2.25 py-0.5 text-[11px] font-extrabold', mine ? 'bg-admin-blue text-white' : 'bg-black/8 dark:bg-white/10')}>{count}</span>
     </div>
   );
 }

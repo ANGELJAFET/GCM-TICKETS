@@ -22,7 +22,7 @@ function LoanRow({ loan, onReturnFull, onReturnPartial, onGenerateWord }: { loan
         vencido ? 'bg-red-50 hover:bg-red-100 dark:bg-red-950/20' : 'hover:bg-admin-light dark:hover:bg-admin-dark-alt'
       )}
     >
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-admin-blue-light text-admin-blue">
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-admin-blue-light text-admin-blue dark:bg-admin-blue/15">
         <IconPackage size={20} />
       </div>
       <div className="min-w-0">

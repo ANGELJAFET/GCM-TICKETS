@@ -137,7 +137,7 @@ export function DashboardView({ items, canEquipos, onAddFirst, onGoTo }: Dashboa
           {recent.length ? (
             recent.map((i) => (
               <div key={i.id} className="flex items-center gap-3 border-b border-admin-light py-2.5 last:border-b-0 dark:border-white/8">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-admin-blue-light text-admin-blue">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-admin-blue-light text-admin-blue dark:bg-admin-blue/15">
                   <IconPackage size={16} />
                 </div>
                 <div className="min-w-0 flex-1">

@@ -46,7 +46,7 @@ function fmtSize(bytes: number) {
 function CommentItem({ c }: { c: TicketComment }) {
   const isUser = c.rolNivel < 2;
   return (
-    <div className={clsx('mb-2 rounded-[10px] px-3.5 py-2.5 text-xs leading-relaxed', isUser ? 'border-l-3 border-admin-blue bg-admin-blue-light' : 'border border-black/5 bg-admin-light')}>
+    <div className={clsx('mb-2 rounded-[10px] px-3.5 py-2.5 text-xs leading-relaxed', isUser ? 'border-l-3 border-admin-blue bg-admin-blue-light dark:bg-admin-blue/15' : 'border border-black/5 bg-admin-light dark:border-white/10 dark:bg-admin-dark-alt')}>
       {isUser ? <IconUserCircle size={12} className="mr-1 inline align-[-1px] text-admin-blue" /> : <IconHeadset size={12} className="mr-1 inline align-[-1px] text-admin-gray" />}
       <strong>{c.user || '—'}</strong> ({c.ts}): {c.text}
     </div>
@@ -143,7 +143,7 @@ export function DetailDrawer({ ticket: t, open, now, onClose, admins, onReassign
               <select
                 value={t.asignado || 'Sin asignar'}
                 onChange={(e) => onReassign(t.id, e.target.value)}
-                className="w-full cursor-pointer rounded-[10px] border-[1.5px] border-admin-border bg-admin-light px-3 py-2.25 text-[13px] outline-none focus:border-admin-blue focus:bg-white focus:shadow-[0_0_0_3px_rgba(59,130,246,0.08)] dark:border-white/10 dark:bg-admin-dark-bg"
+                className="w-full cursor-pointer rounded-[10px] border-[1.5px] border-admin-border bg-admin-light px-3 py-2.25 text-[13px] outline-none focus:border-admin-blue focus:bg-white focus:shadow-[0_0_0_3px_rgba(59,130,246,0.08)] dark:border-white/10 dark:bg-admin-dark-bg dark:focus:bg-admin-dark-bg"
               >
                 <option value="Sin asignar">Sin asignar</option>
                 {admins.map((a) => (
@@ -203,7 +203,7 @@ export function DetailDrawer({ ticket: t, open, now, onClose, admins, onReassign
                   if (isImage(a.path)) {
                     return (
                       <div key={i} className="mb-1.5 overflow-hidden rounded-xl border border-admin-border dark:border-white/10">
-                        <a href={a.path} target="_blank" rel="noreferrer" className="group relative block cursor-zoom-in bg-admin-light">
+                        <a href={a.path} target="_blank" rel="noreferrer" className="group relative block cursor-zoom-in bg-admin-light dark:bg-admin-dark-alt">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={a.path} alt={a.name} className="block max-h-65 w-full object-contain transition-transform group-hover:scale-102" />
                           <div className="absolute inset-0 flex items-center justify-center bg-black/30 text-white opacity-0 transition-opacity group-hover:opacity-100">
@@ -276,7 +276,7 @@ export function DetailDrawer({ ticket: t, open, now, onClose, admins, onReassign
                 onChange={(e) => setCommentText(e.target.value)}
                 rows={2}
                 placeholder="Escribir respuesta al usuario..."
-                className="w-full resize-none rounded-[10px] border-[1.5px] border-admin-border bg-admin-light px-3.5 py-2.5 text-[13px] outline-none focus:border-admin-blue focus:bg-white focus:shadow-[0_0_0_3px_rgba(59,130,246,0.08)] dark:border-white/10 dark:bg-admin-dark-bg"
+                className="w-full resize-none rounded-[10px] border-[1.5px] border-admin-border bg-admin-light px-3.5 py-2.5 text-[13px] outline-none focus:border-admin-blue focus:bg-white focus:shadow-[0_0_0_3px_rgba(59,130,246,0.08)] dark:border-white/10 dark:bg-admin-dark-bg dark:focus:bg-admin-dark-bg"
               />
               <div className="mt-2.5">
                 <button
@@ -317,7 +317,7 @@ export function DetailDrawer({ ticket: t, open, now, onClose, admins, onReassign
               onChange={(e) => setNoteText(e.target.value)}
               rows={2}
               placeholder="Agregar nota interna (no visible al usuario)..."
-              className="w-full resize-none rounded-[10px] border-[1.5px] border-admin-border bg-admin-light px-3.5 py-2.5 text-[13px] outline-none focus:border-admin-blue focus:bg-white dark:border-white/10 dark:bg-admin-dark-bg"
+              className="w-full resize-none rounded-[10px] border-[1.5px] border-admin-border bg-admin-light px-3.5 py-2.5 text-[13px] outline-none focus:border-admin-blue focus:bg-white dark:border-white/10 dark:bg-admin-dark-bg dark:focus:bg-admin-dark-bg"
             />
             <div className="mt-2.5">
               <button

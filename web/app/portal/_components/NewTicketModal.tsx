@@ -101,7 +101,7 @@ export function NewTicketModal({ open, onClose, onSubmit, onOpenQR, mobileToken,
       }
       footer={
         <>
-          <button type="button" onClick={handleClose} className="rounded-[10px] border-[1.5px] border-portal-border bg-white px-5.5 py-2.5 text-[13px] font-bold text-portal-text-sec hover:bg-slate-100">
+          <button type="button" onClick={handleClose} className="rounded-[10px] border-[1.5px] border-portal-border bg-white px-5.5 py-2.5 text-[13px] font-bold text-portal-text-sec hover:bg-slate-100 dark:border-white/10 dark:bg-admin-dark-surface dark:text-admin-dark-text-sec dark:hover:bg-admin-dark-bg">
             Cancelar
           </button>
           <button
@@ -190,7 +190,7 @@ export function NewTicketModal({ open, onClose, onSubmit, onOpenQR, mobileToken,
                   ? 'cursor-pointer border-portal-green bg-portal-green-light'
                   : dragOver
                     ? 'cursor-pointer border-portal-accent bg-portal-accent-light'
-                    : 'cursor-pointer border-portal-border bg-slate-50 hover:border-portal-accent hover:bg-portal-accent-light')
+                    : 'cursor-pointer border-portal-border bg-slate-50 hover:border-portal-accent hover:bg-portal-accent-light dark:bg-admin-dark-bg')
             }
           >
             {hasMobilePreview && mobileFile ? (
@@ -246,7 +246,7 @@ export function NewTicketModal({ open, onClose, onSubmit, onOpenQR, mobileToken,
           <button
             type="button"
             onClick={onOpenQR}
-            className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-[10px] border-[1.5px] border-portal-navy bg-white px-4.5 py-2.25 text-[12.5px] font-bold text-portal-navy hover:border-portal-navy-dark hover:bg-[#eef1f8] hover:text-portal-navy-dark"
+            className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-[10px] border-[1.5px] border-portal-navy bg-white px-4.5 py-2.25 text-[12.5px] font-bold text-portal-navy hover:border-portal-navy-dark hover:bg-[#eef1f8] hover:text-portal-navy-dark dark:bg-admin-dark-surface dark:hover:bg-admin-dark-bg"
           >
             <IconQrcode size={16} /> Subir desde celular
           </button>

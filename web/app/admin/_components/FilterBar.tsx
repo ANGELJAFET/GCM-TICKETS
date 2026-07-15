@@ -34,7 +34,7 @@ export function FilterBar({ filters, onChange, admins, onExport }: FilterBarProp
           value={filters.search}
           onChange={(e) => set({ search: e.target.value })}
           placeholder="Buscar tickets..."
-          className="h-9.5 w-full rounded-[10px] border-[1.5px] border-admin-border bg-admin-light pr-3.5 pl-9.5 text-[13px] outline-none focus:border-admin-blue focus:bg-white focus:shadow-[0_0_0_3px_rgba(59,130,246,0.08)] dark:border-white/10 dark:bg-admin-dark-bg dark:text-admin-dark-text"
+          className="h-9.5 w-full rounded-[10px] border-[1.5px] border-admin-border bg-admin-light pr-3.5 pl-9.5 text-[13px] outline-none focus:border-admin-blue focus:bg-white focus:shadow-[0_0_0_3px_rgba(59,130,246,0.08)] dark:border-white/10 dark:bg-admin-dark-bg dark:text-admin-dark-text dark:focus:bg-admin-dark-bg"
         />
       </div>
       <select value={filters.prioridad} onChange={(e) => set({ prioridad: e.target.value })} className={selectClass}>

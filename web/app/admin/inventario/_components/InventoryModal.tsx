@@ -112,7 +112,7 @@ export function InventoryModal({ open, editingItem, usuarios, onClose, onSave }:
       className="max-w-xl"
       footer={
         <>
-          <button type="button" onClick={onClose} className="rounded-[10px] border-[1.5px] border-admin-border bg-white px-5 py-2.25 text-[13px] font-semibold text-admin-text-sec hover:bg-slate-100">
+          <button type="button" onClick={onClose} className="rounded-[10px] border-[1.5px] border-admin-border bg-white px-5 py-2.25 text-[13px] font-semibold text-admin-text-sec hover:bg-slate-100 dark:border-white/10 dark:bg-admin-dark-surface dark:text-admin-dark-text-sec dark:hover:bg-admin-dark-bg">
             Cancelar
           </button>
           <button
@@ -213,6 +213,7 @@ export function InventoryModal({ open, editingItem, usuarios, onClose, onSave }:
               onSelect={(u) => set('responsable', u.nombre)}
               getLabel={(u) => u.nombre}
               getDetail={(u) => u.detalle}
+              getBadge={(u) => (u.esPortal ? { label: 'Portal', className: 'bg-admin-blue-light text-blue-700' } : { label: 'Panel admin', className: 'bg-admin-light text-admin-gray' })}
               placeholder="Nombre del responsable (o selecciona un usuario)"
             />
           </FormField>
