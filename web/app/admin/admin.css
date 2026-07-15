@@ -1,0 +1,18 @@
+/* Animaciones decorativas del panel admin, portadas de public/admin.css */
+
+@keyframes admOrbDrift {
+  0%, 100% { transform: translate(0,0) scale(1); }
+  50%       { transform: translate(28px,-28px) scale(1.06); }
+}
+.adm-orb { position: absolute; border-radius: 50%; filter: blur(90px); pointer-events: none; }
+.adm-orb-1 { width: 560px; height: 560px; background: #1a3070; opacity: .20; top: -160px; left: -160px; animation: admOrbDrift 10s ease-in-out infinite; }
+.adm-orb-2 { width: 420px; height: 420px; background: #6b0f1a; opacity: .16; bottom: -120px; right: -100px; animation: admOrbDrift 13s ease-in-out infinite reverse; }
+.adm-orb-3 { width: 260px; height: 260px; background: #2d5be3; opacity: .10; top: 55%; left: 52%; animation: admOrbDrift 9s ease-in-out infinite 3s; }
+
+.adm-shrimp { position: absolute; pointer-events: none; user-select: none; z-index: 0; }
+.adm-shrimp-1 { width: 680px; bottom: -80px; right: -80px; opacity: .09; transform: rotate(-15deg); }
+.adm-shrimp-2 { width: 400px; top: -90px; left: -70px; opacity: .05; transform: rotate(170deg); }
+.adm-shrimp-3 { width: 320px; bottom: -50px; left: 18%; opacity: .04; transform: rotate(-40deg); }
+
+@keyframes pulse-sla { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+.sla-critical-pulse { animation: pulse-sla 2s infinite; }

@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+/* El toggle de modo oscuro existente pone data-theme="dark" en <html>
+   (ver lib/theme.ts) — se replica ese mecanismo en vez del de
+   prefers-color-scheme para que dark: siga el toggle manual del usuario. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme inline {
+  --font-admin: 'Segoe UI', system-ui, sans-serif;
+  --font-portal: var(--font-inter), 'Segoe UI', system-ui, sans-serif;
+
+  /* ── Paleta panel admin (admin.css) ─────────────────────────────────── */
+  --color-admin-blue: #3b82f6;
+  --color-admin-blue-dark: #2563eb;
+  --color-admin-blue-light: #eff6ff;
+  --color-admin-green: #10b981;
+  --color-admin-green-light: #d1fae5;
+  --color-admin-amber: #f59e0b;
+  --color-admin-amber-light: #fef3c7;
+  --color-admin-red: #ef4444;
+  --color-admin-red-light: #fee2e2;
+  --color-admin-purple: #8b5cf6;
+  --color-admin-purple-light: #ede9fe;
+  --color-admin-orange: #f97316;
+  --color-admin-orange-light: #ffedd5;
+  --color-admin-gray: #94a3b8;
+  --color-admin-light: #f1f5f9;
+  --color-admin-text: #0f172a;
+  --color-admin-text-sec: #64748b;
+  --color-admin-border: rgba(0, 0, 0, 0.07);
+  --color-admin-brand: #1a2e6b;
+  --color-admin-brand2: #1e3a8a;
+
+  /* Dark mode del panel admin */
+  --color-admin-dark-bg: #0f172a;
+  --color-admin-dark-surface: #1e293b;
+  --color-admin-dark-alt: #162032;
+  --color-admin-dark-text: #e2e8f0;
+  --color-admin-dark-text-sec: #94a3b8;
+  --color-admin-dark-border: rgba(255, 255, 255, 0.1);
+
+  /* ── Paleta portal de empleados (usuario.css) — marca GCM ───────────── */
+  --color-portal-navy: #1a2e6b;
+  --color-portal-navy-dark: #0f1d47;
+  --color-portal-navy-mid: #1e3a8a;
+  --color-portal-navy-light: #e6ebf8;
+  --color-portal-red: #cc2222;
+  --color-portal-red-light: #fde8e8;
+  --color-portal-accent: #1f52c4;
+  --color-portal-accent-dark: #183fa8;
+  --color-portal-accent-light: #eaeef9;
+  --color-portal-green: #0da870;
+  --color-portal-green-light: #cdf5e4;
+  --color-portal-amber: #e8920a;
+  --color-portal-amber-light: #fef0c2;
+  --color-portal-orange: #e86310;
+  --color-portal-gray: #8898aa;
+  --color-portal-border: #d4dbee;
+  --color-portal-bg: #c8d5ed;
+  --color-portal-text: #0d1630;
+  --color-portal-text-sec: #596880;
+
+  /* Dark mode del portal */
+  --color-portal-dark-bg: #0f172a;
+  --color-portal-dark-surface: #1e293b;
+  --color-portal-dark-text: #e2e8f0;
+  --color-portal-dark-text-sec: #94a3b8;
+  --color-portal-dark-border: rgba(255, 255, 255, 0.1);
+
+  --shadow-adm-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 5px rgba(0, 0, 0, 0.04);
+  --shadow-adm: 0 4px 16px rgba(0, 0, 0, 0.09);
+  --shadow-portal-sm: 0 1px 2px rgba(26, 46, 107, 0.08), 0 2px 8px rgba(26, 46, 107, 0.07);
+  --shadow-portal: 0 4px 16px rgba(26, 46, 107, 0.12), 0 1px 4px rgba(26, 46, 107, 0.07);
+  --shadow-portal-md: 0 8px 32px rgba(26, 46, 107, 0.17), 0 2px 8px rgba(26, 46, 107, 0.09);
+}
+
+body {
+  min-height: 100vh;
+}

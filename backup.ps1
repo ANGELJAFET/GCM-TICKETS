@@ -4,7 +4,7 @@
 # ================================================================
 
 $BackupRoot = "C:\Backups\GCM-Tickets"
-$AppUploads = "C:\Users\Administrador\SistemaApp\uploads"
+$AppUploads = "C:\Users\Administrador\SistemaApp\backend\uploads"
 $Date       = Get-Date -Format "yyyy-MM-dd"
 $BackupDir  = "$BackupRoot\$Date"
 $KeepDays   = 7
