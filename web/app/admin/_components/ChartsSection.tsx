@@ -45,23 +45,28 @@ export function ChartsSection({ tickets }: { tickets: Ticket[] }) {
         <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-admin-text-sec uppercase">
           <IconChartDonut size={14} /> Por estado
         </div>
-        <Doughnut data={statusData} options={{ responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }} height={140} />
+        <div className="relative h-40">
+          <Doughnut data={statusData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10, padding: 8 } } } }} />
+        </div>
       </div>
       <div className="rounded-[10px] border border-admin-border bg-white p-3.5 shadow-[var(--shadow-adm-sm)] dark:border-white/10 dark:bg-admin-dark-surface">
         <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-admin-text-sec uppercase">
           <IconChartBar size={14} /> Por técnico
         </div>
-        <Bar
-          data={techData}
-          options={{ responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }}
-          height={140}
-        />
+        <div className="relative h-40">
+          <Bar
+            data={techData}
+            options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }}
+          />
+        </div>
       </div>
       <div className="rounded-[10px] border border-admin-border bg-white p-3.5 shadow-[var(--shadow-adm-sm)] dark:border-white/10 dark:bg-admin-dark-surface">
         <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-admin-text-sec uppercase">
           <IconChartPie size={14} /> Por categoría
         </div>
-        <Pie data={catData} options={{ responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }} height={140} />
+        <div className="relative h-40">
+          <Pie data={catData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10, padding: 8 } } } }} />
+        </div>
       </div>
     </div>
   );
