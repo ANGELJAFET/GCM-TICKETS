@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { IconClipboardList, IconLock, IconInbox, IconCheck, IconX, IconMail, IconBuilding, IconMapPin, IconMap2, IconCalendar } from '@tabler/icons-react';
+import { useConfirm } from '@/components/ui';
 import type { Solicitud, SolicitudEstado } from '@/lib/types';
 
 const FILTERS: { value: SolicitudEstado; label: string }[] = [
@@ -23,6 +24,7 @@ interface SolicitudesCardProps {
 }
 
 export function SolicitudesCard({ canView, solicitudes, onAprobar, onRechazar }: SolicitudesCardProps) {
+  const { confirm, prompt } = useConfirm();
   const [filter, setFilter] = useState<SolicitudEstado>('pendiente');
   const pendientesCount = solicitudes.filter((s) => s.estado === 'pendiente').length;
 
@@ -124,8 +126,13 @@ export function SolicitudesCard({ canView, solicitudes, onAprobar, onRechazar }:
               <div className="flex shrink-0 gap-1.5">
                 <button
                   type="button"
-                  onClick={() => {
-                    if (confirm('¿Aprobar esta solicitud y crear la cuenta de usuario?')) onAprobar(s.id);
+                  onClick={async () => {
+                    const ok = await confirm({
+                      title: 'Aprobar solicitud',
+                      message: '¿Aprobar esta solicitud y crear la cuenta de usuario?',
+                      confirmText: 'Aprobar',
+                    });
+                    if (ok) onAprobar(s.id);
                   }}
                   className="flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-bold text-white hover:opacity-85"
                 >
@@ -133,8 +140,14 @@ export function SolicitudesCard({ canView, solicitudes, onAprobar, onRechazar }:
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    const motivo = prompt('Motivo de rechazo (opcional):');
+                  onClick={async () => {
+                    const motivo = await prompt({
+                      title: 'Rechazar solicitud',
+                      message: 'Indica el motivo del rechazo (opcional):',
+                      placeholder: 'Motivo…',
+                      confirmText: 'Rechazar',
+                      danger: true,
+                    });
                     if (motivo === null) return;
                     onRechazar(s.id, motivo);
                   }}

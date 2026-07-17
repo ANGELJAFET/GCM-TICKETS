@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { AdminAuthProvider } from '@/lib/auth';
-import { ToastProvider } from '@/components/ui';
+import { ToastProvider, ConfirmProvider } from '@/components/ui';
 import { NotificationsProvider } from './_components/NotificationsContext';
 import './admin.css';
 
@@ -13,7 +13,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="min-h-screen bg-admin-light font-(family-name:--font-admin) text-admin-text dark:bg-admin-dark-bg dark:text-admin-dark-text">
       <AdminAuthProvider>
         <ToastProvider>
-          <NotificationsProvider>{children}</NotificationsProvider>
+          <ConfirmProvider>
+            <NotificationsProvider>{children}</NotificationsProvider>
+          </ConfirmProvider>
         </ToastProvider>
       </AdminAuthProvider>
     </div>

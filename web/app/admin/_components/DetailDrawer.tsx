@@ -19,7 +19,7 @@ import {
   IconZoomIn,
   IconFileTypePdf,
 } from '@tabler/icons-react';
-import { Drawer, Tabs } from '@/components/ui';
+import { Drawer, Tabs, useConfirm } from '@/components/ui';
 import type { AdminUser, Ticket, TicketComment } from '@/lib/types';
 import { StatusBadge, PrioBadge, SlaBadge } from './badges';
 
@@ -67,6 +67,7 @@ interface DetailDrawerProps {
 }
 
 export function DetailDrawer({ ticket: t, open, now, onClose, admins, onReassign, onChangeStatus, onDelete, onAddComment, onAddNote }: DetailDrawerProps) {
+  const { confirm } = useConfirm();
   const [tab, setTab] = useState<'info' | 'notes' | 'history'>('info');
   const [commentText, setCommentText] = useState('');
   const [noteText, setNoteText] = useState('');
@@ -186,8 +187,14 @@ export function DetailDrawer({ ticket: t, open, now, onClose, admins, onReassign
                 )}
                 <button
                   type="button"
-                  onClick={() => {
-                    if (confirm('¿Eliminar este ticket permanentemente?')) onDelete(t.id);
+                  onClick={async () => {
+                    const ok = await confirm({
+                      title: 'Eliminar ticket',
+                      message: '¿Eliminar este ticket permanentemente? Esta acción no se puede deshacer.',
+                      confirmText: 'Eliminar',
+                      danger: true,
+                    });
+                    if (ok) onDelete(t.id);
                   }}
                   className="inline-flex items-center gap-1.5 rounded-[10px] bg-linear-to-br from-red-600 to-admin-red px-4 py-2.25 text-[13px] font-semibold text-white shadow-[0_2px_8px_rgba(239,68,68,0.32)] hover:-translate-y-0.5"
                 >
