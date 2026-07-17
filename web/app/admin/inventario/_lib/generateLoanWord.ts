@@ -73,17 +73,11 @@ ${it.ubicacion ? `<tr><td style="${SB}">UBICACION HABITUAL:</td><td style="${S}"
 
 ${loan.notas ? `<p><b>NOTA:</b>&nbsp;${escapeHtml(String(loan.notas).toUpperCase())}</p>` : ''}
 
-<table border="0" width="100%" cellspacing="0" cellpadding="0" style="margin-top:28px;">
-<tr>
-<td width="20%">&nbsp;</td>
-<td width="60%" align="center" style="${S}font-weight:bold;border-top:1px solid #000;padding-top:6px;">
-${escapeHtml(String(loan.empleado || '').toUpperCase())}${loan.departamento ? `<br><span style="${S}font-weight:normal;">${escapeHtml(String(loan.departamento).toUpperCase())}</span>` : ''}
-</td>
-<td width="20%">&nbsp;</td>
-</tr>
-</table>
+<p style="text-align:justify;line-height:1.4;margin-top:10px;margin-bottom:8px;">
+<b>RESPONSABILIDAD:</b>&nbsp;EL RECEPTOR SE COMPROMETE A RESGUARDAR Y UTILIZAR EL EQUIPO UNICAMENTE PARA FINES LABORALES, Y A DEVOLVERLO EN LAS MISMAS CONDICIONES EN QUE LO RECIBIO. EN CASO DE DAÑO, PERDIDA O ROBO OCASIONADO POR NEGLIGENCIA O MAL USO, EL RECEPTOR SE HACE RESPONSABLE DE SU REPARACION O REPOSICION.
+</p>
 
-<table border="0" width="100%" cellspacing="0" cellpadding="3" style="margin-top:28px;">
+<table border="0" width="100%" cellspacing="0" cellpadding="3" style="margin-top:34px;">
 <tr>
 <td width="50%" valign="top" style="${S}border-top:2px solid #000;padding-top:6px;">
 <b>Entregado por:</b><br>${escapeHtml(String(adminNombre || 'Depto. Sistemas / TI').toUpperCase())}
