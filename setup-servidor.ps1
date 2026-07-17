@@ -1,4 +1,4 @@
-# ================================================================
+﻿# ================================================================
 # setup-servidor.ps1
 # Configura GCM Tickets como servicio permanente en Windows Server
 # Ejecutar como Administrador en PowerShell
