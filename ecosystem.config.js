@@ -6,7 +6,7 @@ module.exports = {
       // "pm2 start" (compila server.ts/src/**/*.ts a dist/). Escucha en el
       // puerto de PORT en .env (default 3000).
       script: 'dist/server.js',
-      cwd: 'C:\\Users\\Administrador\\SistemaApp\\backend',
+      cwd: 'C:\\Users\\Administrador\\SistemaApp\\api',
       // fork (no cluster): con instances:1 PM2 usaría cluster por defecto, y ni
       // el backend ni Next.js estan pensados para el modo cluster de Node.
       exec_mode: 'fork',
@@ -25,7 +25,7 @@ module.exports = {
       name: 'gcm-tickets-web',
       // Frontend Next.js (web/). Requiere haber corrido "npm run build"
       // dentro de web/ antes de "pm2 start". Escucha en el puerto 3001
-      // (debe coincidir con WEB_PORT en backend/.env). En Windows, PM2 no
+      // (debe coincidir con WEB_PORT en api/.env). En Windows, PM2 no
       // puede lanzar "npm" (npm.cmd) directamente, así que ejecutamos el
       // binario de Next.js — equivale a "next start -p 3001".
       script: 'node_modules/next/dist/bin/next',

@@ -4,13 +4,13 @@
 # ================================================================
 
 $BackupRoot = "C:\Backups\GCM-Tickets"
-$AppUploads = "C:\Users\Administrador\SistemaApp\backend\uploads"
-$EnvFile    = "C:\Users\Administrador\SistemaApp\backend\.env"
+$AppUploads = "C:\Users\Administrador\SistemaApp\api\uploads"
+$EnvFile    = "C:\Users\Administrador\SistemaApp\api\.env"
 $Date       = Get-Date -Format "yyyy-MM-dd"
 $BackupDir  = "$BackupRoot\$Date"
 $KeepDays   = 7
 
-# Lee DB_USER / DB_PASSWORD de backend\.env — nunca hardcodear credenciales aqui
+# Lee DB_USER / DB_PASSWORD de api\.env — nunca hardcodear credenciales aqui
 $envVars = @{}
 if (Test-Path $EnvFile) {
     Get-Content $EnvFile | ForEach-Object {

@@ -3,7 +3,7 @@ Sistema de helpdesk interno para Grupo Milcien S.A. de C.V.
 
 Proyecto dividido en dos partes independientes:
 
-- **`backend/`** — API en Express + TypeScript + JWT, conectada a SQL Server.
+- **`api/`** — API en Express + TypeScript + JWT, conectada a SQL Server.
 - **`web/`** — Frontend en Next.js + TypeScript + Tailwind (panel admin y portal de empleados).
 
 ## Qué hace el sistema
@@ -67,10 +67,10 @@ cd SistemaApp
 
 ### 2. Configurar variables de entorno del backend
 ```bash
-cd backend
+cd api
 copy .env.example .env
 ```
-Edita `backend\.env` con los datos de tu servidor:
+Edita `api\.env` con los datos de tu servidor:
 
 | Variable | Descripción | Ejemplo |
 |---|---|---|
@@ -116,7 +116,7 @@ Ejecuta `start.bat` y `start-web.bat` (cada uno en su propia ventana), luego abr
 |---|---|---|
 | `admin` | `admin123` | Superadmin |
 
-> Para cambiar la contraseña inicial antes de instalar, edita `ADMIN_PASSWORD` en `backend\.env`.
+> Para cambiar la contraseña inicial antes de instalar, edita `ADMIN_PASSWORD` en `api\.env`.
 > Solo aplica si el usuario `admin` no existe aún — si ya existe, el setup no lo modifica.
 
 ## Estructura del proyecto
@@ -129,7 +129,7 @@ SistemaAPP/
 ├── setup-servidor.ps1         — Instalación como servicio permanente (Windows Server)
 ├── backup.ps1                 — Backup diario de BD + uploads
 │
-├── backend/                   — API (Express + TypeScript + JWT)
+├── api/                       — API (Express + TypeScript + JWT)
 │   ├── server.ts              — Punto de entrada
 │   ├── tsconfig.json          — Config de compilación (→ dist/)
 │   ├── package.json
@@ -172,11 +172,11 @@ SistemaAPP/
 
 ## Actualizar esquema o stored procedures
 
-Si recibes una actualización que incluye cambios en `backend/schema.sql` o `backend/procedimientos.sql`:
+Si recibes una actualización que incluye cambios en `api/schema.sql` o `api/procedimientos.sql`:
 
 ```bash
 git pull
-cd backend
+cd api
 npm run setup
 ```
 
@@ -184,5 +184,5 @@ Luego arranca normalmente con `start.bat`.
 
 ## Configuración de email (opcional)
 
-Para activar notificaciones por correo, completa las variables `SMTP_*` en `backend\.env`
+Para activar notificaciones por correo, completa las variables `SMTP_*` en `api\.env`
 usando una [Contraseña de aplicación de Google](https://myaccount.google.com/apppasswords).
