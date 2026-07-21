@@ -16,14 +16,18 @@ function resolveApiUrl(): string {
 
 const API_URL = resolveApiUrl();
 
-// Los adjuntos (/uploads/archivo.ext) los sirve el backend, no el frontend —
-// una ruta relativa en <img src="/uploads/..."> se resolvería contra el
-// origen del frontend (otro puerto) y nunca cargaría. Se arma la URL
-// completa quitando el sufijo /api de API_URL.
-const UPLOADS_ORIGIN = API_URL.replace(/\/api\/?$/, '');
+// Los archivos subidos (adjuntos de tickets, fotos de inventario) los sirve
+// el backend en /uploads, en la raíz — no bajo /api. Como backend y frontend
+// corren en puertos/orígenes distintos, las rutas relativas ("/uploads/x.jpg")
+// apuntarían al frontend y darían 404; hay que anteponer el origen del
+// backend (API_URL sin el /api).
+const API_ORIGIN = API_URL.replace(/\/api\/?$/, '');
 
-function uploadUrl(path: string): string {
-  return /^https?:\/\//.test(path) ? path : `${UPLOADS_ORIGIN}${path}`;
+/** Convierte una ruta de archivo del backend ("/uploads/x.jpg") en URL absoluta
+ *  hacia el backend. Deja intactas las URLs ya absolutas y los blobs locales. */
+export function fileUrl(p: string): string {
+  if (!p || /^(https?:|blob:|data:)/i.test(p)) return p;
+  return `${API_ORIGIN}${p.startsWith('/') ? '' : '/'}${p}`;
 }
 
 export class ApiError extends Error {
@@ -92,4 +96,4 @@ export async function api<T = unknown>(path: string, opts: ApiOptions = {}): Pro
   return data as T;
 }
 
-export { API_URL, uploadUrl };
+export { API_URL };

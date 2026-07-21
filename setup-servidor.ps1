@@ -1,11 +1,11 @@
-# ================================================================
+﻿# ================================================================
 # setup-servidor.ps1
 # Configura GCM Tickets como servicio permanente en Windows Server
 # Ejecutar como Administrador en PowerShell
 # ================================================================
 
 $RepoRoot    = "C:\Users\Administrador\SistemaApp"
-$BackendPath = "$RepoRoot\backend"
+$BackendPath = "$RepoRoot\api"
 $AppPort     = 3000
 $WebPath     = "$RepoRoot\web"
 $WebPort     = 3001
@@ -166,7 +166,7 @@ foreach ($ip in $ips) {
     Write-Host "    http://$($ip.IPAddress):$WebPort/portal" -ForegroundColor Yellow
 }
 Write-Host ""
-Write-Host "  IMPORTANTE: en backend\.env, WEB_APP_URL debe apuntar a la IP/dominio" -ForegroundColor White
+Write-Host "  IMPORTANTE: en api\.env, WEB_APP_URL debe apuntar a la IP/dominio" -ForegroundColor White
 Write-Host "  real de este servidor (no localhost) para que el QR de 'subir desde" -ForegroundColor White
 Write-Host "  celular' funcione desde otros equipos." -ForegroundColor White
 

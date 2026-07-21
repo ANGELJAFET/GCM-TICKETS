@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { IconPackage, IconEdit, IconDeviceFloppy, IconLoader2, IconShieldCheck, IconLock, IconQrcode, IconPhoto } from '@tabler/icons-react';
 import { Modal, FormField, Input, Select, Textarea, Autocomplete } from '@/components/ui';
-import { uploadUrl } from '@/lib/api';
+import { fileUrl } from '@/lib/api';
 import type { InventoryItem, InvCondicion, InvEstado, InvTipoManejo, UsuarioListado } from '@/lib/types';
 import { INV_ESTADO_LABEL } from '../_lib/invHelpers';
 import { QRPhotoModal, type MobilePhoto } from './QRPhotoModal';
@@ -82,7 +82,7 @@ export function InventoryModal({ open, editingItem, usuarios, onClose, onSave }:
 
   // Vista previa: la foto recién tomada por celular tiene prioridad sobre la
   // que ya tenía guardada el equipo (si se está editando uno existente).
-  const photoPreviewUrl = mobilePhoto ? uploadUrl(mobilePhoto.path) : editingItem?.foto ? uploadUrl(editingItem.foto) : null;
+  const photoPreviewUrl = mobilePhoto ? fileUrl(mobilePhoto.path) : editingItem?.foto ? fileUrl(editingItem.foto) : null;
 
   function set<K extends keyof InventoryFormValues>(key: K, value: InventoryFormValues[K]) {
     setForm((f) => ({ ...f, [key]: value }));

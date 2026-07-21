@@ -17,8 +17,8 @@ import {
   IconVideo,
   IconPaperclip,
 } from '@tabler/icons-react';
+import { fileUrl } from '@/lib/api';
 import type { Ticket, TicketComment } from '@/lib/types';
-import { uploadUrl } from '@/lib/api';
 
 const STATUS_LABEL: Record<string, string> = { abierto: 'Abierto', en_progreso: 'En progreso', cerrado: 'Cerrado' };
 const STATUS_ICON: Record<string, typeof IconCircleDot> = {
@@ -100,7 +100,7 @@ export function TicketCard({ ticket: t, onReply }: TicketCardProps) {
       <div className="mb-2.5 flex items-start justify-between gap-2.5">
         <div>
           <div className="mb-1.5 inline-block rounded-[7px] border border-portal-navy-dark bg-portal-navy px-2 py-0.5 font-mono text-[10px] font-bold tracking-wide text-[#e8edf8]">
-            {t.id} · {t.categoria}
+            {t.categoria}
           </div>
           <div className="text-[15px] leading-snug font-bold tracking-tight">{t.title}</div>
         </div>
@@ -117,33 +117,33 @@ export function TicketCard({ ticket: t, onReply }: TicketCardProps) {
             isImage(a.name) ? (
               <a
                 key={i}
-                href={uploadUrl(a.path)}
+                href={fileUrl(a.path)}
                 target="_blank"
                 rel="noreferrer"
                 title={a.name}
-                className="flex max-w-45 flex-col items-center gap-1 overflow-hidden rounded-[10px] border-[1.5px] border-portal-border bg-slate-50 transition-all hover:border-portal-navy hover:shadow-[0_4px_14px_rgba(26,46,107,0.18)] dark:bg-admin-dark-bg"
+                className="flex max-w-45 flex-col items-center gap-1 overflow-hidden rounded-[10px] border-[1.5px] border-portal-border bg-slate-50 transition-all hover:border-portal-navy hover:shadow-[0_4px_14px_rgba(26,46,107,0.18)] dark:border-white/10 dark:bg-admin-dark-bg"
               >
                 {/* Adjuntos son archivos subidos dinámicamente al backend — next/image exige dominios configurados, un <img> plano es más simple aquí. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={uploadUrl(a.path)} alt={a.name} className="block max-h-32.5 w-full max-w-45 object-cover" />
-                <span className="max-w-45 truncate px-2 py-1 text-center text-[10px] font-semibold text-portal-text-sec">
+                <img src={fileUrl(a.path)} alt={a.name} className="block max-h-32.5 w-full max-w-45 object-cover" />
+                <span className="max-w-45 truncate px-2 py-1 text-center text-[10px] font-semibold text-portal-text-sec dark:text-portal-dark-text-sec">
                   <IconPhoto size={10} className="inline" /> {a.name}
                 </span>
               </a>
             ) : isVideo(a.name) ? (
-              <div key={i} className="flex max-w-55 flex-col items-center gap-1 overflow-hidden rounded-[10px] border-[1.5px] border-portal-border bg-slate-50 dark:bg-admin-dark-bg">
-                <video src={uploadUrl(a.path)} controls preload="metadata" className="block max-h-35 bg-black" />
-                <span className="max-w-55 truncate px-2 py-1 text-center text-[10px] font-semibold text-portal-text-sec">
+              <div key={i} className="flex max-w-55 flex-col items-center gap-1 overflow-hidden rounded-[10px] border-[1.5px] border-portal-border bg-slate-50 dark:border-white/10 dark:bg-admin-dark-bg">
+                <video src={fileUrl(a.path)} controls preload="metadata" className="block max-h-35 bg-black" />
+                <span className="max-w-55 truncate px-2 py-1 text-center text-[10px] font-semibold text-portal-text-sec dark:text-portal-dark-text-sec">
                   <IconVideo size={10} className="inline" /> {a.name}
                 </span>
               </div>
             ) : (
               <a
                 key={i}
-                href={uploadUrl(a.path)}
+                href={fileUrl(a.path)}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-portal-border bg-slate-50 px-2.75 py-1 text-[11px] font-semibold text-portal-accent hover:border-blue-200 hover:bg-portal-accent-light dark:bg-admin-dark-bg"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-portal-border bg-slate-50 px-2.75 py-1 text-[11px] font-semibold text-portal-accent hover:border-blue-200 hover:bg-portal-accent-light dark:border-white/10 dark:bg-admin-dark-bg dark:text-blue-300"
               >
                 <IconPaperclip size={11} /> {a.name}
               </a>

@@ -16,8 +16,8 @@ import {
   IconTicket,
 } from '@tabler/icons-react';
 import { Modal, FormField, Select, Input, Textarea } from '@/components/ui';
+import { fileUrl } from '@/lib/api';
 import type { TicketCategoria, TicketPrioridad } from '@/lib/types';
-import { uploadUrl } from '@/lib/api';
 import type { MobileFile } from './QRModal';
 
 const CATEGORIAS: TicketCategoria[] = ['Hardware', 'Software', 'Red', 'Acceso', 'Otro'];
@@ -198,7 +198,7 @@ export function NewTicketModal({ open, onClose, onSubmit, onOpenQR, mobileToken,
               <>
                 {/\.(jpg|jpeg|png|gif|webp)$/i.test(mobileFile.name) && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={uploadUrl(mobileFile.path)} alt="" className="mb-2 block max-h-50 w-full rounded-[10px] border border-emerald-200 bg-white/60 object-contain" />
+                  <img src={fileUrl(mobileFile.path)} alt="" className="mb-2 block max-h-50 w-full rounded-[10px] border border-emerald-200 bg-white/60 object-contain" />
                 )}
                 <span className="flex flex-wrap items-center justify-center gap-1.5 text-xs font-semibold">
                   <IconDeviceMobile size={16} className="text-portal-accent" />

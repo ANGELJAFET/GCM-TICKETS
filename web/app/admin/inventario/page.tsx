@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { IconArrowLeft, IconPackage, IconLock } from '@tabler/icons-react';
 import { useAdminAuth } from '@/lib/auth';
 import { api, ApiError } from '@/lib/api';
-import { useToast } from '@/components/ui';
+import { useToast, useConfirm } from '@/components/ui';
 import type { AdminUser, InvCondicion, InventoryItem, Loan, UsuarioListado } from '@/lib/types';
 import { Header } from '../_components/Header';
 import { LoginScreen } from '../_components/LoginScreen';
@@ -27,6 +27,7 @@ import { generateReturnWord } from './_lib/generateReturnWord';
 function InventarioApp() {
   const { user, token, hasPermiso } = useAdminAuth();
   const { showToast } = useToast();
+  const { confirm } = useConfirm();
 
   const canEquipos = hasPermiso('inventario');
   const canPrestamos = hasPermiso('prestamos');
@@ -109,7 +110,13 @@ function InventarioApp() {
 
   async function handleDeleteInventory(id: string) {
     const item = items.find((i) => i.id === id);
-    if (!confirm(`¿Eliminar "${item?.marca} ${item?.modelo || ''}" (${id}) del inventario?\nEsta acción no se puede deshacer.`)) return;
+    const ok = await confirm({
+      title: 'Eliminar del inventario',
+      message: `¿Eliminar "${item?.marca} ${item?.modelo || ''}" (${id}) del inventario?\nEsta acción no se puede deshacer.`,
+      confirmText: 'Eliminar',
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await api(`/inventory/${id}`, { method: 'DELETE', token });
       showToast('Equipo eliminado del inventario');

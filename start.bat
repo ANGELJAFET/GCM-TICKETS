@@ -1,6 +1,6 @@
 @echo off
-:: Ir a la carpeta del backend (junto a este archivo)
-cd /d "%~dp0\backend"
+:: Ir a la carpeta de la API (junto a este archivo)
+cd /d "%~dp0\api"
 
 title GCM Tickets — Backend (API)
 color 0A

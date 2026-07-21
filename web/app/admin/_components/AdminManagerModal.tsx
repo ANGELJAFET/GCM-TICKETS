@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import useSWR from 'swr';
 import { IconUsersGroup, IconTrash, IconUserPlus, IconPackage, IconExchange, IconHistory, IconClipboardList, IconUsers } from '@tabler/icons-react';
-import { Modal, FormField, Input, useToast } from '@/components/ui';
+import { Modal, FormField, Input, useToast, useConfirm } from '@/components/ui';
 import { useAdminAuth } from '@/lib/auth';
 import { api, ApiError } from '@/lib/api';
 import type { AdminUser } from '@/lib/types';
@@ -26,6 +26,7 @@ interface AdminManagerModalProps {
 export function AdminManagerModal({ open, onClose }: AdminManagerModalProps) {
   const { user, token, isSuperAdmin } = useAdminAuth();
   const { showToast } = useToast();
+  const { confirm } = useConfirm();
   const { data: admins, mutate } = useSWR<AdminUser[]>(open && token ? ['/admins', token] : null, ([url]: [string]) => api<AdminUser[]>(url, { token }));
 
   const [nombre, setNombre] = useState('');
@@ -83,7 +84,13 @@ export function AdminManagerModal({ open, onClose }: AdminManagerModalProps) {
       showToast('Solo el administrador principal puede eliminar usuarios');
       return;
     }
-    if (!confirm(`¿Eliminar al usuario @${username}?\nEsta acción no se puede deshacer.`)) return;
+    const ok = await confirm({
+      title: 'Eliminar usuario',
+      message: `¿Eliminar al usuario @${username}?\nEsta acción no se puede deshacer.`,
+      confirmText: 'Eliminar',
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await api(`/admins/${username}`, { method: 'DELETE', token });
       await mutate();
