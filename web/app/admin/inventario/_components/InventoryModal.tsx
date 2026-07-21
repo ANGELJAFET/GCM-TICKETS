@@ -1,10 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { IconPackage, IconEdit, IconDeviceFloppy, IconLoader2, IconShieldCheck, IconLock } from '@tabler/icons-react';
+import { IconPackage, IconEdit, IconDeviceFloppy, IconLoader2, IconShieldCheck, IconLock, IconQrcode, IconPhoto } from '@tabler/icons-react';
 import { Modal, FormField, Input, Select, Textarea, Autocomplete } from '@/components/ui';
+import { uploadUrl } from '@/lib/api';
 import type { InventoryItem, InvCondicion, InvEstado, InvTipoManejo, UsuarioListado } from '@/lib/types';
 import { INV_ESTADO_LABEL } from '../_lib/invHelpers';
+import { QRPhotoModal, type MobilePhoto } from './QRPhotoModal';
 
 export interface InventoryFormValues {
   tipoManejo: InvTipoManejo;
@@ -20,6 +22,7 @@ export interface InventoryFormValues {
   responsable: string;
   notas: string;
   garantia: { inicio: string; vence: string; proveedor: string } | null;
+  mobileToken: string | null;
 }
 
 const EMPTY_FORM: InventoryFormValues = {
@@ -36,6 +39,7 @@ const EMPTY_FORM: InventoryFormValues = {
   responsable: '',
   notas: '',
   garantia: null,
+  mobileToken: null,
 };
 
 function itemToForm(item: InventoryItem): InventoryFormValues {
@@ -53,6 +57,7 @@ function itemToForm(item: InventoryItem): InventoryFormValues {
     responsable: item.responsable || '',
     notas: item.notas || '',
     garantia: item.garantia ? { inicio: item.garantia.inicio || '', vence: item.garantia.vence || '', proveedor: item.garantia.proveedor || '' } : null,
+    mobileToken: null,
   };
 }
 
@@ -72,6 +77,12 @@ export function InventoryModal({ open, editingItem, usuarios, onClose, onSave }:
   const [tieneGarantia, setTieneGarantia] = useState(() => !!editingItem?.garantia);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [mobilePhoto, setMobilePhoto] = useState<MobilePhoto | null>(null);
+
+  // Vista previa: la foto recién tomada por celular tiene prioridad sobre la
+  // que ya tenía guardada el equipo (si se está editando uno existente).
+  const photoPreviewUrl = mobilePhoto ? uploadUrl(mobilePhoto.path) : editingItem?.foto ? uploadUrl(editingItem.foto) : null;
 
   function set<K extends keyof InventoryFormValues>(key: K, value: InventoryFormValues[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -219,6 +230,26 @@ export function InventoryModal({ open, editingItem, usuarios, onClose, onSave }:
           </FormField>
         </div>
 
+        <FormField label="Foto del equipo">
+          <div className="flex items-center gap-3">
+            {photoPreviewUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={photoPreviewUrl} alt="Foto del equipo" className="h-16 w-16 shrink-0 rounded-lg border border-admin-border object-cover dark:border-white/10" />
+            ) : (
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-dashed border-admin-border text-admin-gray dark:border-white/10">
+                <IconPhoto size={22} />
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => setQrOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-[10px] border-[1.5px] border-admin-border bg-white px-3.5 py-2 text-[12.5px] font-semibold text-admin-text-sec hover:border-admin-blue hover:text-admin-blue dark:border-white/10 dark:bg-admin-dark-surface dark:text-admin-dark-text-sec"
+            >
+              <IconQrcode size={15} /> {photoPreviewUrl ? 'Reemplazar foto' : 'Tomar foto con el celular'}
+            </button>
+          </div>
+        </FormField>
+
         <FormField label="Notas">
           <Textarea rows={2} value={form.notas} onChange={(e) => set('notas', e.target.value)} placeholder="Observaciones adicionales…" />
         </FormField>
@@ -249,6 +280,15 @@ export function InventoryModal({ open, editingItem, usuarios, onClose, onSave }:
 
         {error && <div className="rounded-lg border border-admin-red/20 bg-admin-red-light px-3.5 py-2.5 text-xs font-semibold text-red-800">{error}</div>}
       </div>
+
+      <QRPhotoModal
+        open={qrOpen}
+        onClose={() => setQrOpen(false)}
+        onConfirm={(token, file) => {
+          set('mobileToken', token);
+          setMobilePhoto(file);
+        }}
+      />
     </Modal>
   );
 }

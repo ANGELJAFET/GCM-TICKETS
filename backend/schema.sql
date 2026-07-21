@@ -205,6 +205,7 @@ CREATE TABLE inventario (
   responsable_id INT REFERENCES usuarios(id),
   notas          NVARCHAR(MAX),
   garantia       NVARCHAR(500),
+  foto           NVARCHAR(500),
   fecha_ingreso  DATE,
   created_at     DATETIME2     NOT NULL DEFAULT GETDATE(),
   updated_at     DATETIME2
@@ -651,6 +652,30 @@ IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('prestamos'
 GO
 IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('prestamos') AND name = 'cantidad_devuelta')
   ALTER TABLE prestamos ADD cantidad_devuelta INT NOT NULL DEFAULT 0;
+GO
+
+-- ============================================================
+-- 11. Foto del equipo (inventario)
+--     Ruta relativa (/uploads/archivo.ext) de una foto opcional del
+--     equipo, capturada desde el navegador o desde el celular vía el
+--     mismo mecanismo de sesión temporal + QR que usan los tickets.
+-- ============================================================
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('inventario') AND name = 'foto')
+  ALTER TABLE inventario ADD foto NVARCHAR(500) NULL;
+GO
+
+-- ============================================================
+-- 12. Comprobante de devolución
+--     Condición del equipo y nota opcional capturadas al momento de
+--     devolver un préstamo (parcial o total) — usadas para generar el
+--     comprobante de devolución exportable, distinto del comprobante de
+--     préstamo (generateLoanWord.ts / generateReturnWord.ts en el frontend).
+-- ============================================================
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('prestamos') AND name = 'condicion_devolucion')
+  ALTER TABLE prestamos ADD condicion_devolucion NVARCHAR(20) NULL;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('prestamos') AND name = 'nota_devolucion')
+  ALTER TABLE prestamos ADD nota_devolucion NVARCHAR(500) NULL;
 GO
 
 -- ============================================================

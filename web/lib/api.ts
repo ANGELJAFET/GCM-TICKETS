@@ -16,6 +16,16 @@ function resolveApiUrl(): string {
 
 const API_URL = resolveApiUrl();
 
+// Los adjuntos (/uploads/archivo.ext) los sirve el backend, no el frontend —
+// una ruta relativa en <img src="/uploads/..."> se resolvería contra el
+// origen del frontend (otro puerto) y nunca cargaría. Se arma la URL
+// completa quitando el sufijo /api de API_URL.
+const UPLOADS_ORIGIN = API_URL.replace(/\/api\/?$/, '');
+
+function uploadUrl(path: string): string {
+  return /^https?:\/\//.test(path) ? path : `${UPLOADS_ORIGIN}${path}`;
+}
+
 export class ApiError extends Error {
   status: number;
   constructor(message: string, status: number) {
@@ -82,4 +92,4 @@ export async function api<T = unknown>(path: string, opts: ApiOptions = {}): Pro
   return data as T;
 }
 
-export { API_URL };
+export { API_URL, uploadUrl };

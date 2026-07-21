@@ -20,7 +20,10 @@ router.get('/qr/:token', async (req: Request, res: Response) => {
   const s = mobileSessions.get(req.params.token);
   if (!s || s.expiresAt < Date.now()) return res.status(410).json({ error: 'Sesión expirada' });
 
-  const url = `${getWebAppUrl()}/mobile-upload?session=${req.params.token}`;
+  // `type` es solo cosmético (ajusta el texto/opciones que ve el celular en
+  // /mobile-upload) — la sesión en sí es genérica y no distingue de dónde vino.
+  const type = typeof req.query.type === 'string' ? `&type=${encodeURIComponent(req.query.type)}` : '';
+  const url = `${getWebAppUrl()}/mobile-upload?session=${req.params.token}${type}`;
   try {
     const png = await QRCode.toBuffer(url, { width: 300, margin: 2 });
     res.set('Content-Type', 'image/png').send(png);

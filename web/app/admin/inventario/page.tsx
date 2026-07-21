@@ -7,7 +7,7 @@ import { IconArrowLeft, IconPackage, IconLock } from '@tabler/icons-react';
 import { useAdminAuth } from '@/lib/auth';
 import { api, ApiError } from '@/lib/api';
 import { useToast } from '@/components/ui';
-import type { AdminUser, InventoryItem, Loan, UsuarioListado } from '@/lib/types';
+import type { AdminUser, InvCondicion, InventoryItem, Loan, UsuarioListado } from '@/lib/types';
 import { Header } from '../_components/Header';
 import { LoginScreen } from '../_components/LoginScreen';
 import { InvStatsRow } from './_components/InvStatsRow';
@@ -20,8 +20,9 @@ import { InventoryModal, type InventoryFormValues } from './_components/Inventor
 import { LoanModal, type LoanFormValues } from './_components/LoanModal';
 import { SimilarEquiposModal } from './_components/SimilarEquiposModal';
 import { ReturnConfirmModal, PartialReturnModal } from './_components/ReturnModals';
-import { filterInventory, invGroupKey } from './_lib/invHelpers';
+import { filterInventory, filterLoans, invGroupKey } from './_lib/invHelpers';
 import { generateLoanWord } from './_lib/generateLoanWord';
+import { generateReturnWord } from './_lib/generateReturnWord';
 
 function InventarioApp() {
   const { user, token, hasPermiso } = useAdminAuth();
@@ -46,6 +47,8 @@ function InventarioApp() {
   const [view, setView] = useState<InvView>('dashboard');
   const [query, setQuery] = useState('');
   const [estadoFilter, setEstadoFilter] = useState('');
+  const [loanQuery, setLoanQuery] = useState('');
+  const [loanEstadoFilter, setLoanEstadoFilter] = useState('');
 
   const [invModalOpen, setInvModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
@@ -60,6 +63,7 @@ function InventarioApp() {
   const [partialReturnLoan, setPartialReturnLoan] = useState<Loan | null>(null);
 
   const filteredEquipos = useMemo(() => filterInventory(items, query, estadoFilter), [items, query, estadoFilter]);
+  const filteredLoans = useMemo(() => filterLoans(loanList, loanQuery, loanEstadoFilter), [loanList, loanQuery, loanEstadoFilter]);
   const activosCount = loanList.filter((l) => l.estado === 'activo').length;
 
   function goToEquipos(estado: string, tipo?: string) {
@@ -85,6 +89,7 @@ function InventarioApp() {
       notas: values.notas.trim(),
       garantia: values.garantia,
     };
+    if (values.mobileToken) body.mobileToken = values.mobileToken;
     if (values.tipoManejo === 'cantidad') body.cantidadTotal = parseInt(values.cantidadTotal, 10);
     else body.serie = values.serie.trim();
 
@@ -139,8 +144,8 @@ function InventarioApp() {
     if (loan) setReturnConfirmLoan(loan);
   }
 
-  async function confirmReturnFull(loanId: string) {
-    await api(`/loans/${loanId}`, { method: 'PATCH', token, body: { estado: 'devuelto' } });
+  async function confirmReturnFull(loanId: string, condicionDevolucion: InvCondicion, notaDevolucion: string) {
+    await api(`/loans/${loanId}`, { method: 'PATCH', token, body: { estado: 'devuelto', condicionDevolucion, notaDevolucion: notaDevolucion || undefined } });
     showToast('Devolución registrada ✓');
     setReturnConfirmLoan(null);
     await reload();
@@ -151,8 +156,8 @@ function InventarioApp() {
     if (loan) setPartialReturnLoan(loan);
   }
 
-  async function confirmReturnPartial(loanId: string, cantidad: number) {
-    await api(`/loans/${loanId}`, { method: 'PATCH', token, body: { cantidadDevuelta: cantidad } });
+  async function confirmReturnPartial(loanId: string, cantidad: number, condicionDevolucion: InvCondicion, notaDevolucion: string) {
+    await api(`/loans/${loanId}`, { method: 'PATCH', token, body: { cantidadDevuelta: cantidad, condicionDevolucion, notaDevolucion: notaDevolucion || undefined } });
     showToast('Devolución registrada ✓');
     setPartialReturnLoan(null);
     await reload();
@@ -172,7 +177,8 @@ function InventarioApp() {
     if (!loan) return showToast('Préstamo no encontrado');
     const item = items.find((i) => i.id === loan.inventoryId);
     try {
-      generateLoanWord(loan, item, user?.nombre || '');
+      if (loan.estado === 'devuelto') generateReturnWord(loan, item, user?.nombre || '');
+      else generateLoanWord(loan, item, user?.nombre || '');
       showToast('Comprobante generado ✓');
     } catch {
       showToast('Error al generar comprobante');
@@ -277,7 +283,19 @@ function InventarioApp() {
               onDelete={handleDeleteInventory}
             />
           )}
-          {view === 'prestamos' && canPrestamos && <PrestamosView loans={loanList} onReturnFull={handleReturnFull} onReturnPartial={handleReturnPartial} onGenerateWord={handleGenerateWord} />}
+          {view === 'prestamos' && canPrestamos && (
+            <PrestamosView
+              allCount={loanList.length}
+              loans={filteredLoans}
+              query={loanQuery}
+              estado={loanEstadoFilter}
+              onQueryChange={setLoanQuery}
+              onEstadoChange={setLoanEstadoFilter}
+              onReturnFull={handleReturnFull}
+              onReturnPartial={handleReturnPartial}
+              onGenerateWord={handleGenerateWord}
+            />
+          )}
           {view === 'asignaciones' && canPrestamos && (
             <ResponsablesView
               items={items}

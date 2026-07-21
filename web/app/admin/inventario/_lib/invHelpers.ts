@@ -1,4 +1,4 @@
-import type { InventoryItem, InvEstado, InvCondicion } from '@/lib/types';
+import type { InventoryItem, InvEstado, InvCondicion, Loan } from '@/lib/types';
 
 export const INV_ESTADO_LABEL: Record<InvEstado, string> = {
   disponible: 'Disponible',
@@ -91,6 +91,42 @@ export function filterInventory(items: InventoryItem[], query: string, estado: s
     }
     if (q) {
       const texto = invSearchText(i);
+      const terminos = q.split(/\s+/);
+      if (!terminos.every((t) => texto.includes(t))) return false;
+    }
+    return true;
+  });
+}
+
+function loanSearchText(l: Loan): string {
+  return [
+    l.id,
+    l.inventoryId,
+    l.equipoDesc,
+    l.empleado,
+    l.departamento,
+    l.autorizadoPor,
+    l.notas,
+    l.notaDevolucion,
+    l.fechaPrestamo,
+    l.fechaDevolucionReal,
+    (l.condicionDevolucion && CONDICION_LABEL[l.condicionDevolucion]) || l.condicionDevolucion || '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+}
+
+// Mismo criterio que filterInventory: texto libre (todos los términos deben
+// aparecer, en cualquier orden) + filtro exacto de estado. `estado` es
+// 'activo' | 'devuelto' | '' — a diferencia del de inventario, no hay que
+// derivar nada (Loan.estado ya es exactamente eso).
+export function filterLoans(loans: Loan[], query: string, estado: string): Loan[] {
+  const q = normalize(query.trim());
+  return loans.filter((l) => {
+    if (estado && l.estado !== estado) return false;
+    if (q) {
+      const texto = loanSearchText(l);
       const terminos = q.split(/\s+/);
       if (!terminos.every((t) => texto.includes(t))) return false;
     }

@@ -10,7 +10,9 @@ const MAX_VIDEO_SECONDS = 15;
 type PanelId = 'select' | 'sending' | 'ok' | 'err';
 
 function MobileUploadInner() {
-  const session = useSearchParams().get('session');
+  const params = useSearchParams();
+  const session = params.get('session');
+  const isInventario = params.get('type') === 'inventario';
   const [panel, setPanel] = useState<PanelId>(session ? 'select' : 'err');
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -110,7 +112,9 @@ function MobileUploadInner() {
         />
         <div className="text-left">
           <h1 className="text-base font-bold">GCM Tickets</h1>
-          <p className="mt-0.5 text-[11px] opacity-82">Grupo Milcien — Adjuntar evidencia al ticket</p>
+          <p className="mt-0.5 text-[11px] opacity-82">
+            Grupo Milcien — {isInventario ? 'Foto del equipo para inventario' : 'Adjuntar evidencia al ticket'}
+          </p>
         </div>
       </div>
 
@@ -123,12 +127,12 @@ function MobileUploadInner() {
                 <circle cx="8.5" cy="8.5" r="1.5" />
                 <polyline points="21 15 16 10 5 21" />
               </svg>
-              Selecciona el tipo de evidencia
+              {isInventario ? 'Toma la foto del equipo' : 'Selecciona el tipo de evidencia'}
             </div>
 
             {!file ? (
               <>
-                <div className="mb-1.5 grid grid-cols-2 gap-3">
+                <div className={isInventario ? 'mb-1.5' : 'mb-1.5 grid grid-cols-2 gap-3'}>
                   <label
                     htmlFor="filePhoto"
                     className="flex flex-col items-center justify-center gap-2.5 rounded-2xl border-2 border-dashed border-blue-300 bg-blue-50 px-3 py-6 text-center text-sm font-semibold text-blue-800 active:scale-97"
@@ -146,27 +150,33 @@ function MobileUploadInner() {
                     onChange={(e) => onFileChosen(e.target, 'photo')}
                   />
 
-                  <label
-                    htmlFor="fileVideo"
-                    className="flex flex-col items-center justify-center gap-2.5 rounded-2xl border-2 border-dashed border-violet-300 bg-violet-50 px-3 py-6 text-center text-sm font-semibold text-violet-900 active:scale-97"
-                  >
-                    <span className="text-3xl leading-none">🎬</span>
-                    <span className="text-[13px] font-bold">Grabar video</span>
-                    <span className="text-[11px] font-normal opacity-70">máx. 15 segundos</span>
-                  </label>
-                  <input
-                    ref={videoInputRef}
-                    type="file"
-                    id="fileVideo"
-                    accept="video/*"
-                    className="hidden"
-                    onChange={(e) => onFileChosen(e.target, 'video')}
-                  />
+                  {!isInventario && (
+                    <>
+                      <label
+                        htmlFor="fileVideo"
+                        className="flex flex-col items-center justify-center gap-2.5 rounded-2xl border-2 border-dashed border-violet-300 bg-violet-50 px-3 py-6 text-center text-sm font-semibold text-violet-900 active:scale-97"
+                      >
+                        <span className="text-3xl leading-none">🎬</span>
+                        <span className="text-[13px] font-bold">Grabar video</span>
+                        <span className="text-[11px] font-normal opacity-70">máx. 15 segundos</span>
+                      </label>
+                      <input
+                        ref={videoInputRef}
+                        type="file"
+                        id="fileVideo"
+                        accept="video/*"
+                        className="hidden"
+                        onChange={(e) => onFileChosen(e.target, 'video')}
+                      />
+                    </>
+                  )}
                 </div>
 
-                <div className="mt-2.5 w-full rounded-[10px] border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-center text-xs text-amber-800">
-                  ⏱ Los videos se limitan a <strong>15 segundos</strong>. El selector de tu celular te permite grabar directamente.
-                </div>
+                {!isInventario && (
+                  <div className="mt-2.5 w-full rounded-[10px] border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-center text-xs text-amber-800">
+                    ⏱ Los videos se limitan a <strong>15 segundos</strong>. El selector de tu celular te permite grabar directamente.
+                  </div>
+                )}
               </>
             ) : (
               <div className="flex w-full flex-col items-center gap-3.5">

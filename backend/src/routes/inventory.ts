@@ -3,6 +3,19 @@ import db from '../db';
 import { fmtDate, logAudit } from '../helpers';
 import { loadTicket } from '../ticketLoader';
 import { requireSuperadminOrAcceso } from '../middleware/auth';
+import { mobileSessions } from '../mobileSessions';
+
+// Resuelve un mobileToken (sesión de subida por QR) a la ruta del archivo ya
+// guardado en /uploads. No borra el archivo, solo la sesión en memoria —
+// así el barrido periódico de mobileSessions ya no la considera "huérfana"
+// y no elimina la foto que acabamos de asociar a un equipo.
+function resolveMobilePhoto(mobileToken: unknown): string | null {
+  if (typeof mobileToken !== 'string' || !mobileToken) return null;
+  const s = mobileSessions.get(mobileToken);
+  if (!s || s.status !== 'ready' || !s.file) return null;
+  mobileSessions.delete(mobileToken);
+  return s.file.path;
+}
 
 const router = express.Router();
 
@@ -106,6 +119,7 @@ router.get('/inventory', ...requireSuperadminOrAcceso('inventario'), async (req:
       cantidadPrestada: i.tipo_manejo === 'cantidad' ? (prestadoPorId[i.id] || 0) : 0,
       ubicacion: i.ubicacion,
       responsable: (i.responsable_display || '').trim() || '',
+      foto: i.foto || null,
       notas: i.notas, garantia: i.garantia ? JSON.parse(i.garantia) : null,
       fechaIngreso: i.fecha_ingreso ? fmtDate(i.fecha_ingreso) : fmtDate(i.created_at),
       fechaTs: new Date(i.created_at).getTime(),
@@ -121,7 +135,7 @@ router.get('/inventory', ...requireSuperadminOrAcceso('inventario'), async (req:
 router.post('/inventory', ...requireSuperadminOrAcceso('inventario'), async (req: Request, res: Response) => {
   try {
     const { tipo, marca, modelo, serie, color, condicion, estado, ubicacion, responsable, notas, garantia,
-            tipoManejo, cantidadTotal } = req.body;
+            tipoManejo, cantidadTotal, mobileToken } = req.body;
     if (!tipo || !marca) return res.status(400).json({ error: 'Tipo y marca son requeridos' });
     if (condicion && !CONDICIONES.includes(condicion)) return res.status(400).json({ error: 'Condición inválida' });
     const estadoInicial = (estado && ESTADOS_INV.includes(estado) && estado !== 'en_prestamo') ? estado : 'disponible';
@@ -146,14 +160,16 @@ router.post('/inventory', ...requireSuperadminOrAcceso('inventario'), async (req
       if (u) responsableId = u.id;
     }
 
+    const foto = resolveMobilePhoto(mobileToken);
+
     await db.query(
       `INSERT INTO inventario (id, tipo, marca, modelo, numero_serie, color, condicion,
-                               estado, ubicacion, responsable_id, notas, garantia, fecha_ingreso,
+                               estado, ubicacion, responsable_id, notas, garantia, foto, fecha_ingreso,
                                tipo_manejo, cantidad_total)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), ?, ?)`,
       [id, tipo, marca, modelo || '', modo === 'unidad' ? serie : '', color || '',
        condicion || 'bueno', estadoInicial, ubicacion || '', responsableId,
-       notas || '', garantia ? JSON.stringify(garantia) : null, modo, cantTotal]
+       notas || '', garantia ? JSON.stringify(garantia) : null, foto, modo, cantTotal]
     );
 
     await db.query(
@@ -165,7 +181,7 @@ router.post('/inventory', ...requireSuperadminOrAcceso('inventario'), async (req
 
     res.status(201).json({ id, tipo, marca, modelo, serie: modo === 'unidad' ? serie : '', color, condicion,
       estado: estadoInicial, tipoManejo: modo, cantidadTotal: cantTotal, cantidadPrestada: 0,
-      ubicacion, responsable, notas, garantia, historial: [] });
+      ubicacion, responsable, foto, notas, garantia, historial: [] });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al registrar equipo' });
@@ -239,6 +255,12 @@ router.patch('/inventory/:id', ...requireSuperadminOrAcceso('inventario'), async
       vals.push(rid);
     }
 
+    const nuevaFoto = resolveMobilePhoto(req.body.mobileToken);
+    if (nuevaFoto) {
+      sets.push('foto = ?');
+      vals.push(nuevaFoto);
+    }
+
     if (sets.length) {
       vals.push(id);
       await db.query(`UPDATE inventario SET ${sets.join(', ')}, updated_at = NOW() WHERE id = ?`, vals);
@@ -298,6 +320,8 @@ router.get('/loans', ...requireSuperadminOrAcceso('prestamos'), async (req: Requ
       cantidadDevuelta: l.cantidad_devuelta,
       autorizadoPor: (l.autorizado_display || '').trim() || '',
       notas: l.notas,
+      condicionDevolucion: l.condicion_devolucion || null,
+      notaDevolucion: l.nota_devolucion || null,
       equipoDesc: l.equipoDesc
     })));
   } catch (err) {
@@ -397,21 +421,36 @@ router.patch('/loans/:id', ...requireSuperadminOrAcceso('prestamos'), async (req
       if (cantidadARegistrar > restante)
         return res.status(400).json({ error: `Solo quedan ${restante} unidades pendientes de devolver en este préstamo` });
 
+      if (req.body.condicionDevolucion !== undefined && !CONDICIONES.includes(req.body.condicionDevolucion))
+        return res.status(400).json({ error: 'Condición de devolución inválida' });
+
       const nuevaDevuelta = loan.cantidad_devuelta + cantidadARegistrar;
       const nuevoEstado   = nuevaDevuelta >= loan.cantidad ? 'devuelto' : 'activo';
 
       await db.query(
         `UPDATE prestamos SET cantidad_devuelta = ?, estado = ?,
-                              fecha_devolucion_real = ${nuevoEstado === 'devuelto' ? 'NOW()' : 'fecha_devolucion_real'}
+                              fecha_devolucion_real = ${nuevoEstado === 'devuelto' ? 'NOW()' : 'fecha_devolucion_real'},
+                              condicion_devolucion = COALESCE(?, condicion_devolucion),
+                              nota_devolucion = COALESCE(?, nota_devolucion)
          WHERE id = ?`,
-        [nuevaDevuelta, nuevoEstado, id]
+        [nuevaDevuelta, nuevoEstado, req.body.condicionDevolucion || null, req.body.notaDevolucion || null, id]
       );
 
+      // La condición reportada al devolver no solo queda impresa en el
+      // comprobante — alimenta la ficha real del equipo. Si vuelve "dañado",
+      // se manda a 'en_reparacion' en vez de 'disponible' para que nadie lo
+      // vuelva a prestar sin revisarlo primero. Solo aplica a modo 'unidad':
+      // en modo 'cantidad' el estado del ítem no representa disponibilidad
+      // (ver getCantidadPrestada) y una sola condición no describe N unidades.
       const item = await db.queryOne<any>('SELECT tipo_manejo FROM inventario WHERE id = ?', [loan.inventario_id]);
+      let nuevoEstadoInv: string | null = null;
       if (item?.tipo_manejo === 'unidad' && nuevoEstado === 'devuelto') {
+        const condDev = req.body.condicionDevolucion as string | undefined;
+        nuevoEstadoInv = condDev === 'danado' ? 'en_reparacion' : 'disponible';
         await db.query(
-          `UPDATE inventario SET estado = 'disponible', updated_at = NOW() WHERE id = ? AND estado = 'en_prestamo'`,
-          [loan.inventario_id]
+          `UPDATE inventario SET estado = ?, condicion = COALESCE(?, condicion), updated_at = NOW()
+           WHERE id = ? AND estado = 'en_prestamo'`,
+          [nuevoEstadoInv, condDev || null, loan.inventario_id]
         );
       }
 
@@ -419,7 +458,7 @@ router.patch('/loans/:id', ...requireSuperadminOrAcceso('prestamos'), async (req
         'INSERT INTO historial_inventario (inventario_id, accion) VALUES (?, ?)',
         [loan.inventario_id, item?.tipo_manejo === 'cantidad'
           ? `Devolución de ${cantidadARegistrar} unidades de ${loan.empleado_nombre} (${id})${nuevoEstado === 'activo' ? ` — quedan ${loan.cantidad - nuevaDevuelta} pendientes` : ''}`
-          : `Devolución de ${loan.empleado_nombre} (${id})`]
+          : `Devolución de ${loan.empleado_nombre} (${id})${nuevoEstadoInv === 'en_reparacion' ? ' — regresó dañado, enviado a reparación' : ''}`]
       );
       await logAudit(req.user!.nombre,
         'Registró devolución de préstamo', 'prestamo', id,

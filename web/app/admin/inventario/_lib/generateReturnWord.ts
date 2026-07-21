@@ -6,18 +6,31 @@ function escapeHtml(str: unknown): string {
   return String(str ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string);
 }
 
-// Genera un comprobante .doc (truco HTML→Word, sin librería) idéntico al de
-// admin.js — se descarga directo desde el navegador vía Blob.
-export function generateLoanWord(loan: Loan, item: Partial<InventoryItem> | undefined, adminNombre: string) {
+// Hermano de generateLoanWord.ts — mismo truco HTML→Word y mismo membrete,
+// pero documenta el evento de devolución (fecha real, condición al
+// regresar, quién recibe en TI) en vez de la entrega original. Antes de esto
+// el botón "Comprobante" de un préstamo ya devuelto regeneraba el mismo
+// comprobante de préstamo, sin dejar constancia de la devolución.
+export function generateReturnWord(loan: Loan, item: Partial<InventoryItem> | undefined, adminNombre: string) {
   const it = item || {};
-  const now = new Date();
+  const now = loan.fechaDevolucionReal ? new Date(loan.fechaDevolucionReal) : new Date();
   const dia = now.getDate();
   const mes = now.toLocaleDateString('es-HN', { month: 'long' }).toUpperCase();
   const anio = now.getFullYear();
 
-  const condicion = CONDICION_MAP[it.condicion || ''] || it.condicion || '';
+  const condicion = CONDICION_MAP[loan.condicionDevolucion || ''] || loan.condicionDevolucion || '';
   const tipoDesc = [it.tipo, it.marca, it.modelo].filter(Boolean).join(' ');
   const logoUrl = window.location.origin + '/assets/gcm.jpg';
+
+  // Mismo criterio que "vencido" en PrestamosView.tsx (new Date() sobre la
+  // fecha ya formateada por fmtDate en el backend) — se reusa aquí para no
+  // duplicar formato ni agregar campos *Ts nuevos solo para esta cuenta.
+  let diasAtraso = 0;
+  if (loan.fechaDevolucionEstimada && loan.fechaDevolucionReal) {
+    const est = new Date(loan.fechaDevolucionEstimada);
+    const real = new Date(loan.fechaDevolucionReal);
+    diasAtraso = Math.max(0, Math.round((real.getTime() - est.getTime()) / 86400000));
+  }
 
   const S = 'font-family:Arial,sans-serif;font-size:11pt;color:#000;';
   const SB = 'font-family:Arial,sans-serif;font-size:11pt;color:#000;font-weight:bold;';
@@ -27,7 +40,7 @@ export function generateLoanWord(loan: Loan, item: Partial<InventoryItem> | unde
 <head>
 <meta charset="utf-8">
 <meta name="color-scheme" content="light only">
-<title>Prestamo ${loan.id}</title>
+<title>Devolucion ${loan.id}</title>
 <style>
 html{color-scheme:light only;}
 body{${S}margin:1.5cm 2cm;line-height:1.3;background:#ffffff !important;}
@@ -52,32 +65,33 @@ GRUPO CAMARONERO MILCIEN S.A. de C.V.
 
 <hr style="border:0;border-top:2px solid #000;margin:6px 0 10px;">
 
-<p><b>ASUNTO:</b>&nbsp;&nbsp;PRESTAMO DE EQUIPO TECNOLOGICO.&nbsp;&nbsp;&nbsp;&nbsp;No.&nbsp;${loan.id}</p>
+<p><b>ASUNTO:</b>&nbsp;&nbsp;DEVOLUCION DE EQUIPO TECNOLOGICO.&nbsp;&nbsp;&nbsp;&nbsp;No.&nbsp;${loan.id}</p>
 
 <p><b>FECHA:</b>&nbsp;&nbsp;__${dia}__de__${mes}__${anio}__.</p>
 
 <p style="text-align:justify;line-height:1.5;margin-bottom:8px;">
-POR ESTE MEDIO HACEMOS CONSTAR, QUE SE ENTREGO EN CALIDAD DE PRESTAMO
+POR ESTE MEDIO HACEMOS CONSTAR, QUE SE RECIBIO EN CALIDAD DE DEVOLUCION
 LA CANTIDAD DE: __${loan.cantidad || 1}__ ${escapeHtml(tipoDesc.toUpperCase())} CON LAS SIGUIENTES CARACTERISTICAS:
 </p>
 
 <table border="0" cellpadding="2" cellspacing="0" style="margin-left:18px;margin-bottom:10px;line-height:1.5;">
+<tr><td style="${SB}">N&deg; DE INVENTARIO:</td><td style="${S}">&nbsp;${escapeHtml(loan.inventoryId)}</td></tr>
 <tr><td style="${SB}">MARCA:</td><td style="${S}">&nbsp;${escapeHtml((it.marca || '').toUpperCase())}${it.modelo ? ' ' + escapeHtml(it.modelo.toUpperCase()) : ''}</td></tr>
 ${it.serie ? `<tr><td style="${SB}">S/N:</td><td style="${S}">&nbsp;${escapeHtml(it.serie.toUpperCase())}</td></tr>` : ''}
 ${it.color ? `<tr><td style="${SB}">COLOR:</td><td style="${S}">&nbsp;${escapeHtml(it.color.toUpperCase())}</td></tr>` : ''}
-${condicion ? `<tr><td style="${SB}">CONDICION:</td><td style="${S}">&nbsp;${escapeHtml(condicion.toUpperCase())}</td></tr>` : ''}
-${it.ubicacion ? `<tr><td style="${SB}">UBICACION HABITUAL:</td><td style="${S}">&nbsp;${escapeHtml(it.ubicacion.toUpperCase())}</td></tr>` : ''}
+${condicion ? `<tr><td style="${SB}">CONDICION AL DEVOLVER:</td><td style="${S}">&nbsp;${escapeHtml(condicion.toUpperCase())}</td></tr>` : ''}
+${it.ubicacion ? `<tr><td style="${SB}">UBICACION DE DESTINO:</td><td style="${S}">&nbsp;${escapeHtml(it.ubicacion.toUpperCase())}</td></tr>` : ''}
 </table>
 
-<p><b>FECHA DE DEVOLUCION ESTIMADA:</b>&nbsp;${loan.fechaDevolucionEstimada ? escapeHtml(loan.fechaDevolucionEstimada) : '__________________________'}</p>
+<table border="0" cellpadding="2" cellspacing="0" style="margin-left:18px;margin-bottom:10px;line-height:1.5;">
+<tr><td style="${SB}">PRESTADO DESDE:</td><td style="${S}">&nbsp;${escapeHtml(loan.fechaPrestamo)}</td></tr>
+${loan.fechaDevolucionEstimada ? `<tr><td style="${SB}">DEVOLUCION ESTIMADA:</td><td style="${S}">&nbsp;${escapeHtml(loan.fechaDevolucionEstimada)}</td></tr>` : ''}
+<tr><td style="${SB}">DEVOLUCION REAL:</td><td style="${S}">&nbsp;${escapeHtml(loan.fechaDevolucionReal || '')}${diasAtraso > 0 ? ` <span style="color:#b91c1c;font-weight:bold;">(${diasAtraso} d&iacute;a${diasAtraso === 1 ? '' : 's'} de atraso)</span>` : ''}</td></tr>
+${loan.autorizadoPor ? `<tr><td style="${SB}">PRESTAMO AUTORIZADO POR:</td><td style="${S}">&nbsp;${escapeHtml(loan.autorizadoPor.toUpperCase())}</td></tr>` : ''}
+</table>
 
-${loan.notas ? `<p><b>NOTA:</b>&nbsp;${escapeHtml(String(loan.notas).toUpperCase())}</p>` : ''}
-
-<p style="text-align:justify;line-height:1.5;margin-top:10px;">
-EL EMPLEADO RECEPTOR SE COMPROMETE A DAR BUEN USO AL EQUIPO Y SERÁ RESPONSABLE POR CUALQUIER
-DAÑO, PÉRDIDA O DETERIORO OCURRIDO DURANTE EL PERÍODO DEL PRÉSTAMO, SALVO EL DESGASTE NORMAL
-POR USO. AL FIRMAR ESTE DOCUMENTO, ACEPTA LAS CONDICIONES AQUÍ DESCRITAS.
-</p>
+${loan.notas ? `<p><b>NOTA DEL PRESTAMO:</b>&nbsp;${escapeHtml(String(loan.notas).toUpperCase())}</p>` : ''}
+${loan.notaDevolucion ? `<p><b>NOTA DE DEVOLUCION:</b>&nbsp;${escapeHtml(String(loan.notaDevolucion).toUpperCase())}</p>` : ''}
 
 <table border="0" width="100%" cellspacing="0" cellpadding="0" style="margin-top:28px;">
 <tr>
@@ -92,10 +106,10 @@ ${escapeHtml(String(loan.empleado || '').toUpperCase())}${loan.departamento ? `<
 <table border="0" width="100%" cellspacing="0" cellpadding="3" style="margin-top:28px;">
 <tr>
 <td width="50%" valign="top" style="${S}border-top:2px solid #000;padding-top:6px;">
-<b>Entregado por:</b><br>${escapeHtml(String(adminNombre || 'Depto. Sistemas / TI').toUpperCase())}
+<b>Entrega (empleado):</b><br>${escapeHtml(String(loan.empleado || '').toUpperCase())}
 </td>
 <td width="50%" align="right" valign="top" style="${S}border-top:2px solid #000;padding-top:6px;">
-<b>Recibi Conforme:</b><br>${escapeHtml(String(loan.empleado || '').toUpperCase())}
+<b>Recibi Conforme (TI):</b><br>${escapeHtml(String(adminNombre || 'Depto. Sistemas / TI').toUpperCase())}
 </td>
 </tr>
 </table>
@@ -107,7 +121,7 @@ ${escapeHtml(String(loan.empleado || '').toUpperCase())}${loan.departamento ? `<
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `prestamo_${loan.id}_${loan.inventoryId}.doc`;
+  a.download = `devolucion_${loan.id}_${loan.inventoryId}.doc`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

@@ -17,6 +17,7 @@ import {
   IconTrash,
 } from '@tabler/icons-react';
 import type { InventoryItem } from '@/lib/types';
+import { uploadUrl } from '@/lib/api';
 import { INV_ESTADO_LABEL, INV_ESTADO_CLS, CONDICION_LABEL, CONDICION_CLS, invDisponible, puedePrestar, garantiaInfo } from '../_lib/invHelpers';
 
 const GARANTIA_ICON = { green: IconShieldCheck, amber: IconShieldExclamation, red: IconShieldOff, gray: IconShield };
@@ -45,9 +46,14 @@ export function InvCard({ item, onOpenSimilar, onLoan, onReturn, onEdit, onDelet
         title="Ver equipos similares"
         className="-m-1 flex cursor-pointer items-start gap-3 rounded-[10px] p-1 transition-colors hover:bg-admin-light dark:hover:bg-admin-dark-alt"
       >
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-admin-blue-light to-blue-100 text-admin-blue">
-          <IconPackage size={22} />
-        </div>
+        {item.foto ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={uploadUrl(item.foto)} alt="" className="h-11 w-11 shrink-0 rounded-xl object-cover" />
+        ) : (
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-admin-blue-light to-blue-100 text-admin-blue">
+            <IconPackage size={22} />
+          </div>
+        )}
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-bold">
             {item.marca}

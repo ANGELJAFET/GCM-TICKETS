@@ -32,6 +32,13 @@ app.use(cors({ origin: true }));
 app.use(helmet({
   contentSecurityPolicy: false,
   crossOriginResourcePolicy: { policy: 'cross-origin' },
+  // Esta app se sirve por HTTP puro en la red local (sin certificado TLS).
+  // El HSTS por defecto de helmet le dice al navegador "usa siempre HTTPS
+  // con este host de ahora en adelante" — como no hay HTTPS, cualquier
+  // dispositivo que reciba ese header queda incapaz de volver a conectarse
+  // por HTTP hasta que expire o se borre manualmente (esto rompió el QR de
+  // subida desde celular). Desactivado a propósito.
+  hsts: false,
 }));
 app.use(express.json());
 app.use('/uploads', express.static(UPLOADS));

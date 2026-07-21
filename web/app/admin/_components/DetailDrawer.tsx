@@ -21,6 +21,7 @@ import {
 } from '@tabler/icons-react';
 import { Drawer, Tabs } from '@/components/ui';
 import type { AdminUser, Ticket, TicketComment } from '@/lib/types';
+import { uploadUrl } from '@/lib/api';
 import { StatusBadge, PrioBadge, SlaBadge } from './badges';
 
 const TEMPLATES = [
@@ -203,9 +204,9 @@ export function DetailDrawer({ ticket: t, open, now, onClose, admins, onReassign
                   if (isImage(a.path)) {
                     return (
                       <div key={i} className="mb-1.5 overflow-hidden rounded-xl border border-admin-border dark:border-white/10">
-                        <a href={a.path} target="_blank" rel="noreferrer" className="group relative block cursor-zoom-in bg-admin-light dark:bg-admin-dark-alt">
+                        <a href={uploadUrl(a.path)} target="_blank" rel="noreferrer" className="group relative block cursor-zoom-in bg-admin-light dark:bg-admin-dark-alt">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={a.path} alt={a.name} className="block max-h-65 w-full object-contain transition-transform group-hover:scale-102" />
+                          <img src={uploadUrl(a.path)} alt={a.name} className="block max-h-65 w-full object-contain transition-transform group-hover:scale-102" />
                           <div className="absolute inset-0 flex items-center justify-center bg-black/30 text-white opacity-0 transition-opacity group-hover:opacity-100">
                             <IconZoomIn size={28} />
                           </div>
@@ -224,7 +225,7 @@ export function DetailDrawer({ ticket: t, open, now, onClose, admins, onReassign
                   if (isVideo(a.path)) {
                     return (
                       <div key={i} className="mb-1.5 overflow-hidden rounded-xl border border-admin-border dark:border-white/10">
-                        <video src={a.path} controls playsInline preload="metadata" className="block max-h-70 w-full bg-black" />
+                        <video src={uploadUrl(a.path)} controls playsInline preload="metadata" className="block max-h-70 w-full bg-black" />
                         <div className="flex items-center justify-between border-t border-admin-border bg-admin-light px-3 py-2 dark:border-white/10 dark:bg-admin-dark-alt">
                           <span className="flex items-center gap-1 text-[11px] font-semibold">
                             <IconVideo size={12} /> {a.name}
@@ -239,7 +240,7 @@ export function DetailDrawer({ ticket: t, open, now, onClose, admins, onReassign
                   return (
                     <div key={i} className="mb-1.5 flex items-center gap-2.5 rounded-[10px] border border-admin-border bg-admin-light px-3 py-2 text-xs dark:border-white/10 dark:bg-admin-dark-alt">
                       <IconFileTypePdf size={18} className="text-admin-blue" />
-                      <a href={a.path} target="_blank" rel="noreferrer" className="flex-1 font-semibold text-admin-blue hover:underline">
+                      <a href={uploadUrl(a.path)} target="_blank" rel="noreferrer" className="flex-1 font-semibold text-admin-blue hover:underline">
                         {a.name}
                       </a>
                       <span className="text-[10px] text-admin-gray">{fmtSize(a.size)}</span>

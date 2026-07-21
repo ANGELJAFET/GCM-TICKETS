@@ -2,20 +2,24 @@
 
 import { useState } from 'react';
 import { IconArrowBackUp, IconCheck, IconLoader2, IconPackage, IconUser, IconCalendar } from '@tabler/icons-react';
-import { Modal } from '@/components/ui';
-import type { InventoryItem, Loan } from '@/lib/types';
+import { Modal, FormField, Select, Textarea } from '@/components/ui';
+import type { InvCondicion, InventoryItem, Loan } from '@/lib/types';
 
 interface ReturnConfirmModalProps {
   open: boolean;
   loan: Loan | null;
   item: InventoryItem | undefined;
   onClose: () => void;
-  onConfirm: (loanId: string) => Promise<void>;
+  onConfirm: (loanId: string, condicionDevolucion: InvCondicion, notaDevolucion: string) => Promise<void>;
 }
 
 export function ReturnConfirmModal({ open, loan, item, onClose, onConfirm }: ReturnConfirmModalProps) {
   // El padre remonta este componente (key en base a loan?.id) cada vez que
   // se abre, así que estos estados ya nacen limpios sin necesitar un efecto.
+  // La condición parte de la que ya tenía el equipo — normalmente no cambia,
+  // así que devolver sigue siendo casi un solo clic salvo que algo esté distinto.
+  const [condicion, setCondicion] = useState<InvCondicion>(item?.condicion || 'bueno');
+  const [nota, setNota] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -42,7 +46,7 @@ export function ReturnConfirmModal({ open, loan, item, onClose, onConfirm }: Ret
             onClick={async () => {
               setSaving(true);
               try {
-                await onConfirm(loan.id);
+                await onConfirm(loan.id, condicion, nota.trim());
               } catch {
                 setError('Error al registrar. Verifica la conexión.');
                 setSaving(false);
@@ -73,6 +77,18 @@ export function ReturnConfirmModal({ open, loan, item, onClose, onConfirm }: Ret
         <div className="flex items-center gap-1.75 text-xs text-admin-gray">
           <IconCalendar size={14} /> Desde: {loan.fechaPrestamo}
         </div>
+        <FormField label="Condición al devolver">
+          <Select value={condicion} onChange={(e) => setCondicion(e.target.value as InvCondicion)}>
+            <option value="nuevo">Nuevo</option>
+            <option value="excelente">Excelente</option>
+            <option value="bueno">Bueno</option>
+            <option value="regular">Regular</option>
+            <option value="danado">Dañado</option>
+          </Select>
+        </FormField>
+        <FormField label="Nota (opcional)">
+          <Textarea rows={2} value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Observaciones sobre el estado del equipo…" />
+        </FormField>
         {error && <div className="rounded-lg border border-admin-red/20 bg-admin-red-light px-3.5 py-2.5 text-xs font-semibold text-red-800">{error}</div>}
       </div>
     </Modal>
@@ -84,7 +100,7 @@ interface PartialReturnModalProps {
   loan: Loan | null;
   item: InventoryItem | undefined;
   onClose: () => void;
-  onConfirm: (loanId: string, cantidad: number) => Promise<void>;
+  onConfirm: (loanId: string, cantidad: number, condicionDevolucion: InvCondicion, notaDevolucion: string) => Promise<void>;
 }
 
 export function PartialReturnModal({ open, loan, item, onClose, onConfirm }: PartialReturnModalProps) {
@@ -92,6 +108,8 @@ export function PartialReturnModal({ open, loan, item, onClose, onConfirm }: Par
   // El padre remonta este componente (key en base a loan?.id) cada vez que
   // se abre, así que estos estados ya nacen limpios sin necesitar un efecto.
   const [qty, setQty] = useState(restante);
+  const [condicion, setCondicion] = useState<InvCondicion>(item?.condicion || 'bueno');
+  const [nota, setNota] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -106,7 +124,7 @@ export function PartialReturnModal({ open, loan, item, onClose, onConfirm }: Par
     setError('');
     setSaving(true);
     try {
-      await onConfirm(loan!.id, qty);
+      await onConfirm(loan!.id, qty, condicion, nota.trim());
     } catch {
       setError('Error al registrar. Verifica la conexión.');
       setSaving(false);
@@ -165,6 +183,18 @@ export function PartialReturnModal({ open, loan, item, onClose, onConfirm }: Par
             className="w-full rounded-[10px] border-[1.5px] border-admin-border bg-admin-light px-3.5 py-2.5 text-[15px] outline-none focus:border-admin-blue dark:border-white/10 dark:bg-admin-dark-bg"
           />
         </div>
+        <FormField label="Condición al devolver">
+          <Select value={condicion} onChange={(e) => setCondicion(e.target.value as InvCondicion)}>
+            <option value="nuevo">Nuevo</option>
+            <option value="excelente">Excelente</option>
+            <option value="bueno">Bueno</option>
+            <option value="regular">Regular</option>
+            <option value="danado">Dañado</option>
+          </Select>
+        </FormField>
+        <FormField label="Nota (opcional)">
+          <Textarea rows={2} value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Observaciones sobre el estado del equipo…" />
+        </FormField>
         {error && <div className="rounded-lg border border-admin-red/20 bg-admin-red-light px-3.5 py-2.5 text-xs font-semibold text-red-800">{error}</div>}
       </div>
     </Modal>

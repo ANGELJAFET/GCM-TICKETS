@@ -68,6 +68,7 @@ export interface InventoryItem {
   cantidadPrestada: number;
   ubicacion: string;
   responsable: string;
+  foto: string | null;
   notas: string;
   garantia: Garantia | null;
   fechaIngreso: string;
@@ -90,6 +91,8 @@ export interface Loan {
   cantidadDevuelta: number;
   autorizadoPor: string;
   notas: string;
+  condicionDevolucion: InvCondicion | null;
+  notaDevolucion: string | null;
   equipoDesc: string;
 }
 
