@@ -47,9 +47,15 @@ if not exist "node_modules" (
     echo.
 )
 
-:: Liberar puerto 3001 si ya esta en uso
-for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":3001 " ^| findstr "LISTENING"') do (
-    echo  Puerto 3001 ocupado. Cerrando proceso anterior ^(PID %%p^)...
+:: Leer el puerto real desde ..\api\.env (WEB_PORT) en vez de asumir uno fijo
+set WEB_PORT_VAL=8081
+for /f "usebackq tokens=1,2 delims==" %%a in ("..\api\.env") do (
+    if "%%a"=="WEB_PORT" set WEB_PORT_VAL=%%b
+)
+
+:: Liberar el puerto del frontend si ya esta en uso
+for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":%WEB_PORT_VAL% " ^| findstr "LISTENING"') do (
+    echo  Puerto %WEB_PORT_VAL% ocupado. Cerrando proceso anterior ^(PID %%p^)...
     taskkill /PID %%p /F >nul 2>&1
     timeout /t 2 /nobreak >nul
 )
@@ -68,10 +74,13 @@ if %errorlevel% neq 0 (
 )
 echo.
 
-:: Iniciar frontend
-echo  Frontend iniciando en el puerto 3001...
+:: Iniciar frontend — PORT como variable de entorno real: Next.js no lee
+:: .env.local para elegir su propio puerto (se carga despues de que el CLI
+:: ya escogio), asi que hay que exportarla aqui.
+echo  Frontend iniciando en el puerto %WEB_PORT_VAL%...
 echo  NO cierres esta ventana mientras uses el sistema.
 echo.
+set PORT=%WEB_PORT_VAL%
 call npm run start
 if %errorlevel% neq 0 (
     color 0C

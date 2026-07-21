@@ -57,9 +57,15 @@ if not exist "node_modules" (
     echo.
 )
 
-:: Liberar puerto 3000 si ya esta en uso
-for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":3000 " ^| findstr "LISTENING"') do (
-    echo  Puerto 3000 ocupado. Cerrando proceso anterior ^(PID %%p^)...
+:: Leer el puerto real desde .env (PORT) en vez de asumir uno fijo
+set API_PORT=8080
+for /f "usebackq tokens=1,2 delims==" %%a in (".env") do (
+    if "%%a"=="PORT" set API_PORT=%%b
+)
+
+:: Liberar el puerto de la API si ya esta en uso
+for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":%API_PORT% " ^| findstr "LISTENING"') do (
+    echo  Puerto %API_PORT% ocupado. Cerrando proceso anterior ^(PID %%p^)...
     taskkill /PID %%p /F >nul 2>&1
     timeout /t 2 /nobreak >nul
 )

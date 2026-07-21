@@ -8,10 +8,10 @@ import path from 'path';
 const ROOT    = process.cwd();
 const UPLOADS = path.join(ROOT, 'uploads');
 const ASSETS  = path.join(ROOT, 'assets');
-const PORT    = parseInt(process.env.PORT || '3000');
+const PORT    = parseInt(process.env.PORT || '8080');
 // Puerto del frontend Next.js (web/) — usado solo como fallback para armar la
 // URL del QR de subida desde celular cuando no hay WEB_APP_URL configurado.
-const WEB_PORT = parseInt(process.env.WEB_PORT || '3001');
+const WEB_PORT = parseInt(process.env.WEB_PORT || '8081');
 
 const rawSessionSecret = process.env.SESSION_SECRET;
 if (!rawSessionSecret) throw new Error('SESSION_SECRET no está configurado en .env');

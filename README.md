@@ -79,10 +79,10 @@ Edita `api\.env` con los datos de tu servidor:
 | `DB_USER` | Usuario de SQL Server | `sa` |
 | `DB_PASSWORD` | Contraseña de SQL Server | `MiPassword@2024` |
 | `DB_NAME` | Nombre de la base de datos | `gcm_tickets` |
-| `PORT` | Puerto del backend (API) | `3000` |
+| `PORT` | Puerto del backend (API) | `8080` |
 | `SESSION_SECRET` | Cadena secreta para firmar los tokens de sesión (cámbiala) | `cadena_aleatoria_larga` |
 | `ADMIN_PASSWORD` | Contraseña inicial del usuario `admin` | `admin123` |
-| `WEB_PORT` | Puerto donde corre `web/` (Next.js) | `3001` |
+| `WEB_PORT` | Puerto donde corre `web/` (Next.js) | `8081` |
 | `WEB_APP_URL` | URL pública del frontend (opcional) — usada por el QR de "subir desde celular" y los links de los correos de notificación. Si se deja vacío, se detecta la IP de red automáticamente | *(vacío)* |
 
 ### 3. Ejecutar
@@ -90,7 +90,7 @@ Edita `api\.env` con los datos de tu servidor:
 ```
 start.bat
 ```
-Arranca el **backend** (API), en `http://localhost:3000`. La primera vez:
+Arranca el **backend** (API), en `http://localhost:8080`. La primera vez:
 - Instala las dependencias de Node.js automáticamente
 - Crea la base de datos, tablas, roles y stored procedures en SQL Server
 - Crea el usuario `admin` (superadmin) si no existe
@@ -99,7 +99,7 @@ Arranca el **backend** (API), en `http://localhost:3000`. La primera vez:
 ```
 start-web.bat
 ```
-Arranca el **frontend** (Next.js), en `http://localhost:3001`. Requiere que `start.bat` esté corriendo a la vez (usa la misma API).
+Arranca el **frontend** (Next.js), en `http://localhost:8081`. Requiere que `start.bat` esté corriendo a la vez (usa la misma API).
 
 **De ahí en adelante** solo doble clic en ambos — no necesitas SSMS ni ejecutar SQL manualmente.
 
@@ -107,8 +107,8 @@ Arranca el **frontend** (Next.js), en `http://localhost:3001`. Requiere que `sta
 
 Ejecuta `start.bat` y `start-web.bat` (cada uno en su propia ventana), luego abre el navegador en:
 
-- `http://localhost:3001/admin` — panel TI / administración
-- `http://localhost:3001/portal` — portal de empleados
+- `http://localhost:8081/admin` — panel TI / administración
+- `http://localhost:8081/portal` — portal de empleados
 
 ## Acceso inicial
 

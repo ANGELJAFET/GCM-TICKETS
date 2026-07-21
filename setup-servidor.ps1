@@ -6,9 +6,19 @@
 
 $RepoRoot    = "C:\Users\Administrador\SistemaApp"
 $BackendPath = "$RepoRoot\api"
-$AppPort     = 3000
 $WebPath     = "$RepoRoot\web"
-$WebPort     = 3001
+
+# Puertos leidos de api\.env (PORT, WEB_PORT) en vez de fijos aqui — asi solo
+# hay que cambiarlos en un lugar si llegan a chocar con algo en el servidor.
+$envFile = "$BackendPath\.env"
+$AppPort = 8080
+$WebPort = 8081
+if (Test-Path $envFile) {
+    Get-Content $envFile | ForEach-Object {
+        if ($_ -match '^\s*PORT\s*=\s*(\d+)\s*$')     { $script:AppPort = [int]$Matches[1] }
+        if ($_ -match '^\s*WEB_PORT\s*=\s*(\d+)\s*$') { $script:WebPort = [int]$Matches[1] }
+    }
+}
 
 Write-Host ""
 Write-Host "================================================" -ForegroundColor Cyan

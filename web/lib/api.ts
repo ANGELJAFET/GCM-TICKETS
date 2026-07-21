@@ -4,7 +4,7 @@
 // este mismo frontend se accede desde otros equipos de la LAN por IP (ej. el
 // celular que escanea el QR de "subir evidencia"), y "localhost" ahí
 // apuntaría al propio celular en vez de al servidor.
-const API_PORT = process.env.NEXT_PUBLIC_API_PORT || '3000';
+const API_PORT = process.env.NEXT_PUBLIC_API_PORT || '8080';
 
 function resolveApiUrl(): string {
   if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
