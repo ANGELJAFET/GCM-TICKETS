@@ -1,3 +1,11 @@
+/**
+ * Configuración de PM2 para producción (Windows Server, ver
+ * setup-servidor.ps1): define los dos procesos persistentes del sistema
+ * (backend API y frontend Next.js), cada uno como proceso `fork` propio
+ * (no cluster) con auto-reinicio y límite de memoria. Requiere que ambos
+ * proyectos (`api/`, `web/`) ya estén compilados (`npm run build`) antes de
+ * `pm2 start ecosystem.config.js`.
+ */
 module.exports = {
   apps: [
     {

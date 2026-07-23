@@ -1,4 +1,12 @@
 @echo off
+:: ============================================================
+::  Arranque del backend (API) en Windows, para uso manual (doble
+::  clic). En la primera ejecucion instala dependencias npm y
+::  configura la base de datos (node setup.js); en las siguientes
+::  solo compila (npm run build) y arranca node dist\server.js.
+::  Libera automaticamente el puerto de la API si ya esta en uso
+::  (ej. una instancia anterior que quedo colgada).
+:: ============================================================
 :: Ir a la carpeta de la API (junto a este archivo)
 cd /d "%~dp0\api"
 

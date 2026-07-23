@@ -1,4 +1,12 @@
 @echo off
+:: ============================================================
+::  Arranque del frontend (Next.js) en Windows, para uso manual
+::  (doble clic). Requiere que start.bat (backend) ya este
+::  corriendo en otra ventana. En la primera ejecucion instala
+::  dependencias npm; en las siguientes compila (npm run build)
+::  y arranca con npm run start en el puerto WEB_PORT (leido de
+::  api\.env). Libera automaticamente ese puerto si ya esta en uso.
+:: ============================================================
 :: Ir a la carpeta donde esta este archivo
 cd /d "%~dp0\web"
 
