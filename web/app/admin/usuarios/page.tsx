@@ -3,7 +3,8 @@
 import { useMemo, useState } from 'react';
 import useSWR from 'swr';
 import { useRouter } from 'next/navigation';
-import { IconUsers } from '@tabler/icons-react';
+import Link from 'next/link';
+import { IconUsers, IconArrowLeft } from '@tabler/icons-react';
 import { useAdminAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { useToast } from '@/components/ui';
@@ -87,8 +88,13 @@ function UsuariosApp() {
       <Header />
       <div className="flex-1 overflow-y-auto px-6 py-5">
         <div className="flex flex-col gap-4">
-          <div className="flex items-center gap-1.5 text-[15px] font-bold">
-            <IconUsers size={17} className="text-indigo-500" /> Gestión de usuarios
+          <div className="flex items-center gap-2.5">
+            <Link href="/admin" className="flex items-center gap-1.5 rounded-lg border-[1.5px] border-admin-border bg-admin-light px-4 py-1.75 text-[13px] font-semibold text-admin-text-sec hover:bg-admin-border/40 dark:border-white/10 dark:bg-admin-dark-surface dark:hover:bg-admin-dark-alt">
+              <IconArrowLeft size={15} /> Volver a tickets
+            </Link>
+            <span className="flex items-center gap-1.5 text-[15px] font-bold">
+              <IconUsers size={17} className="text-indigo-500" /> Gestión de usuarios
+            </span>
           </div>
 
           <UsrStatsRow usuarios={usuariosList} solicitudes={solicitudesList} />

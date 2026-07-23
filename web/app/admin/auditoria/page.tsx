@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import useSWR from 'swr';
+import Link from 'next/link';
 import {
   IconHistory,
   IconX,
@@ -12,6 +13,7 @@ import {
   IconUserCheck,
   IconUserCircle,
   IconPoint,
+  IconArrowLeft,
 } from '@tabler/icons-react';
 import { useAdminAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
@@ -72,6 +74,11 @@ function AuditoriaApp() {
     <div className="flex h-screen flex-col">
       <Header />
       <div className="flex-1 overflow-y-auto px-6 py-5">
+        <div className="mb-4 flex items-center gap-2.5">
+          <Link href="/admin" className="flex items-center gap-1.5 rounded-lg border-[1.5px] border-admin-border bg-admin-light px-4 py-1.75 text-[13px] font-semibold text-admin-text-sec hover:bg-admin-border/40 dark:border-white/10 dark:bg-admin-dark-surface dark:hover:bg-admin-dark-alt">
+            <IconArrowLeft size={15} /> Volver a tickets
+          </Link>
+        </div>
         <div className="rounded-2xl border border-admin-border bg-white p-6 shadow-[var(--shadow-adm-sm)] dark:border-white/10 dark:bg-admin-dark-surface">
           <div className="mb-4.5 flex flex-wrap items-start justify-between gap-3">
             <div className="flex items-center gap-2 text-lg font-bold">
