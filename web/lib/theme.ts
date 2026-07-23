@@ -1,3 +1,4 @@
+/** Modo oscuro/claro, persistido en `localStorage` y reflejado como `data-theme="dark"` en `<html>`. */
 const STORAGE_KEY = 'gcm_dark';
 
 // Script inyectado inline en <head> (ver app/layout.tsx) para fijar
@@ -10,11 +11,17 @@ try {
 } catch (e) {}
 `;
 
+/** @returns `true` si el documento actual tiene el modo oscuro activo (`data-theme="dark"`). */
 export function isDarkMode(): boolean {
   if (typeof document === 'undefined') return false;
   return document.documentElement.getAttribute('data-theme') === 'dark';
 }
 
+/**
+ * Activa o desactiva el modo oscuro, actualizando el atributo `data-theme`
+ * del documento y persistiendo la preferencia en `localStorage`.
+ * @param enabled `true` para activar el modo oscuro, `false` para desactivarlo.
+ */
 export function setDarkMode(enabled: boolean): void {
   if (typeof document === 'undefined') return;
   if (enabled) {
@@ -30,6 +37,7 @@ export function setDarkMode(enabled: boolean): void {
   }
 }
 
+/** Invierte el modo oscuro actual. @returns El nuevo estado (`true` = oscuro activado). */
 export function toggleDarkMode(): boolean {
   const next = !isDarkMode();
   setDarkMode(next);

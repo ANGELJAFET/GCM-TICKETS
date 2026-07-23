@@ -1,3 +1,4 @@
+/** Punto de entrada único para los componentes de UI compartidos (`import { X } from '@/components/ui'`). */
 export { Spinner } from './Spinner';
 export { Pill } from './Pill';
 export { Modal } from './Modal';

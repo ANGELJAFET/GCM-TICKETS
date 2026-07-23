@@ -17,6 +17,11 @@ interface TicketCardProps {
   onClick: () => void;
 }
 
+/**
+ * Tarjeta resumen de un ticket para el listado del panel admin: prioridad,
+ * SLA (calculado con `now`), estado, comentarios/adjuntos y técnico asignado.
+ * @param now Timestamp actual (ver `useNow`), usado para calcular el badge de SLA sin recalcular en cada render.
+ */
 export function TicketCard({ ticket: t, selected, now, onClick }: TicketCardProps) {
   const desc = t.desc || '';
   const truncated = desc.length > 100 ? desc.substring(0, 100) + '...' : desc;

@@ -5,6 +5,7 @@ import { IconQrcode, IconCircleCheck, IconRefresh, IconX, IconCheck } from '@tab
 import { Modal } from '@/components/ui';
 import { api, API_URL } from '@/lib/api';
 
+/** Archivo recibido a través de una sesión de subida móvil (adjunto de ticket). */
 export interface MobileFile {
   name: string;
   size: number;
@@ -17,10 +18,21 @@ interface QRModalProps {
   onConfirm: (token: string, file: MobileFile) => void;
 }
 
+/**
+ * Estado del flujo de subida por QR: `loading` (creando sesión) → `pending`
+ * (esperando que el celular suba el archivo, con polling cada 2s) → `ready`
+ * (archivo recibido) o `expired` (venció el tiempo de la sesión, 5 min).
+ */
 type QRState = 'loading' | 'pending' | 'ready' | 'expired';
 
+/** Duración de la sesión de subida móvil, debe coincidir con `SESSION_TTL` del backend (`mobileSessions.ts`). */
 const SESSION_MS = 5 * 60 * 1000;
 
+/**
+ * Modal que genera un QR para adjuntar evidencia (foto/video) al ticket
+ * desde el celular sin iniciar sesión ahí (ver `api/src/routes/mobileUpload.ts`).
+ * @param onConfirm Se llama con el token de sesión y el archivo recibido al confirmar "Usar esta foto"; el padre lo pasa como `mobileToken` al crear el ticket.
+ */
 export function QRModal({ open, onClose, onConfirm }: QRModalProps) {
   const [state, setState] = useState<QRState>('loading');
   const [token, setToken] = useState<string | null>(null);

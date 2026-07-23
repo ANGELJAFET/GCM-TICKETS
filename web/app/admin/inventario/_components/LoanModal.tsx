@@ -6,6 +6,7 @@ import { Modal, FormField, Input, Select, Textarea, Autocomplete } from '@/compo
 import type { AdminUser, InventoryItem, UsuarioListado } from '@/lib/types';
 import { invDisponible } from '../_lib/invHelpers';
 
+/** Valores del formulario de registro de un préstamo. */
 export interface LoanFormValues {
   inventoryId: string;
   cantidad: string;
@@ -28,6 +29,13 @@ interface LoanModalProps {
   onSave: (values: LoanFormValues) => Promise<void>;
 }
 
+/**
+ * Modal de registro de préstamo. Solo ofrece equipos disponibles
+ * (`invDisponible(i) > 0`) en el autocompletado; si el equipo elegido es de
+ * tipo `'cantidad'`, muestra un campo adicional para elegir cuántas
+ * unidades prestar (acotado a lo disponible).
+ * @param preselectedItemId Id de equipo preseleccionado (ej. al presionar "Prestar" desde una tarjeta de inventario).
+ */
 export function LoanModal({ open, preselectedItemId, inventory, usuarios, admins, onClose, onSave }: LoanModalProps) {
   // El padre remonta este componente (key en base a open/preselectedItemId)
   // cada vez que se abre, así que el estado se inicializa perezosamente a

@@ -34,6 +34,13 @@ const inputClass =
   'rounded-[10px] border-[1.5px] border-slate-200 bg-slate-50 px-3.25 py-2.5 text-[13px] text-slate-900 outline-none transition-colors focus:border-portal-navy focus:bg-white';
 const labelClass = 'text-[11px] font-bold tracking-wide text-slate-700 uppercase';
 
+/**
+ * Página `/registro`: formulario de solicitud de acceso de empleados
+ * (`POST /api/auth/register`). No crea la cuenta directamente — queda
+ * pendiente hasta que un administrador la aprueba desde `/admin/usuarios`.
+ * `finca` es una de las fincas fijas de la empresa (o `'No aplica'`); el
+ * resto de campos de ubicación (`departamento`, `area`) son texto libre.
+ */
 export default function RegistroPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');

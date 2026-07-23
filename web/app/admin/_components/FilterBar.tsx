@@ -10,6 +10,7 @@ export interface Filters {
   dateTo: string;
 }
 
+/** Estado inicial/"sin filtros" de {@link Filters}, usado al montar la página y al presionar "limpiar filtros". */
 export const EMPTY_FILTERS: Filters = { search: '', prioridad: '', categoria: '', asignado: '', dateFrom: '', dateTo: '' };
 
 interface FilterBarProps {
@@ -22,6 +23,12 @@ interface FilterBarProps {
 const selectClass =
   'h-9.5 rounded-[10px] border-[1.5px] border-admin-border bg-admin-light px-3 text-[13px] outline-none focus:border-admin-blue dark:border-white/10 dark:bg-admin-dark-bg dark:text-admin-dark-text';
 
+/**
+ * Barra de filtros del listado de tickets del panel admin: búsqueda de
+ * texto, prioridad, categoría, técnico asignado y rango de fechas; más el
+ * botón de exportar a Excel. Es un componente controlado — no mantiene
+ * estado propio de filtros, solo emite `onChange` con el `Filters` actualizado.
+ */
 export function FilterBar({ filters, onChange, admins, onExport }: FilterBarProps) {
   const set = (patch: Partial<Filters>) => onChange({ ...filters, ...patch });
 

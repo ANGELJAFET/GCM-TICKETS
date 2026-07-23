@@ -1,3 +1,9 @@
+/**
+ * Cliente HTTP hacia la API (Express). Resuelve la URL base dinámicamente
+ * según el host desde el que se sirvió el frontend, serializa el body,
+ * adjunta el JWT y normaliza errores en {@link ApiError}. También expone
+ * {@link fileUrl} para resolver rutas de adjuntos servidas por el backend.
+ */
 // NEXT_PUBLIC_API_URL es un override explícito (ej. dominio de API distinto
 // en producción). Si no está definida, la URL se arma en base al host desde
 // el que el navegador cargó la página — "localhost" fijo no sirve porque
@@ -30,6 +36,7 @@ export function fileUrl(p: string): string {
   return `${API_ORIGIN}${p.startsWith('/') ? '' : '/'}${p}`;
 }
 
+/** Error lanzado por {@link api} cuando la respuesta HTTP no es `ok`; conserva el `status` para que el caller decida cómo manejarlo (ej. 404 vs 500). */
 export class ApiError extends Error {
   status: number;
   constructor(message: string, status: number) {
@@ -65,6 +72,16 @@ function errorMessage(data: unknown): string | undefined {
   return undefined;
 }
 
+/**
+ * Realiza una petición a la API y retorna el cuerpo ya parseado (JSON si
+ * aplica). Adjunta el header `Authorization` si se pasa `token`, y emite
+ * {@link UNAUTHORIZED_EVENT} si la respuesta es `401` para que el
+ * `AuthProvider` activo cierre sesión.
+ * @param path Ruta relativa a `/api` (ej. `'/tickets'`, `'/auth/login'`).
+ * @param opts Método, body y token de sesión (ver {@link ApiOptions}).
+ * @returns El cuerpo de la respuesta ya parseado, tipado como `T`.
+ * @throws {@link ApiError} si la respuesta no es exitosa (`res.ok === false`).
+ */
 export async function api<T = unknown>(path: string, opts: ApiOptions = {}): Promise<T> {
   const { method = 'GET', body, token, isFormData } = opts;
 

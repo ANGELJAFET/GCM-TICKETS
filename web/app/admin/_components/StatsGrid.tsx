@@ -2,6 +2,7 @@ import { IconTicket, IconCircleDot, IconLoader, IconCircleCheck, IconUserOff, Ic
 import { StatCard } from '@/components/ui';
 import type { Ticket } from '@/lib/types';
 
+/** Fila de tarjetas de estadísticas del panel admin: totales de tickets por estado, sin asignar y críticos activos, derivados en cliente a partir de la lista de tickets ya cargada. */
 export function StatsGrid({ tickets }: { tickets: Ticket[] }) {
   const counts = { abierto: 0, en_progreso: 0, cerrado: 0 };
   tickets.forEach((t) => {

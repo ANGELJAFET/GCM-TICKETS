@@ -28,6 +28,13 @@ const TABS: { value: TabValue; label: string; icon: typeof IconLayoutList }[] = 
   { value: 'cerrado', label: 'Cerrados', icon: IconCircleCheck },
 ];
 
+/**
+ * Contenido autenticado del panel admin (bandeja de tickets): tabs por
+ * estado, filtros, stats, gráficos, listado paginado y drawer de detalle.
+ * Refresca los tickets cada 10s vía SWR (`refreshInterval`) y usa ese mismo
+ * refresco para alimentar el centro de notificaciones ({@link useNotifications})
+ * y el indicador de alerta de SLA en el header.
+ */
 function AdminApp() {
   const { user, token } = useAdminAuth();
   const { showToast } = useToast();
@@ -230,6 +237,12 @@ function AdminApp() {
   );
 }
 
+/**
+ * Página `/admin` (bandeja de tickets, ruta raíz del panel). Muestra
+ * {@link LoginScreen} si no hay sesión; si la hay, monta {@link AdminApp}
+ * dentro de un `Suspense` (requerido por `useSearchParams`, usado para el
+ * deep-link `?ticket=ID` que abre un ticket específico al llegar desde otra página).
+ */
 export default function AdminPage() {
   const { user, loading } = useAdminAuth();
   if (loading || !user) return <LoginScreen />;

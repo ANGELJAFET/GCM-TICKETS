@@ -28,6 +28,7 @@ interface UsuariosListProps {
   onDelete: (id: number) => Promise<void>;
 }
 
+/** Fila de un usuario en el listado, con acciones de ver detalle, activar/desactivar y eliminar (ocultas para la propia cuenta vía `isSelf`). */
 function UsrRow({ u, isSelf, onView, onToggleActivo, onDelete }: { u: Usuario; isSelf: boolean; onView: (id: number) => void; onToggleActivo: (id: number, activo: boolean) => Promise<void>; onDelete: (id: number) => Promise<void> }) {
   const { confirm } = useConfirm();
   return (
@@ -109,6 +110,11 @@ function UsrRow({ u, isSelf, onView, onToggleActivo, onDelete }: { u: Usuario; i
   );
 }
 
+/**
+ * Listado "Usuarios registrados": filtro de búsqueda en cliente y
+ * agrupación en "Usuarios del sistema" (staff, `nivel >= 2`) vs "Empleados"
+ * (`nivel < 2`).
+ */
 export function UsuariosList({ usuarios, currentUsername, onView, onToggleActivo, onDelete }: UsuariosListProps) {
   const [search, setSearch] = useState('');
 

@@ -1,6 +1,7 @@
 import clsx from 'clsx';
 import { IconChartBar, IconPackage, IconExchange, IconUsers, IconPlus } from '@tabler/icons-react';
 
+/** Vista activa del módulo de inventario. */
 export type InvView = 'dashboard' | 'equipos' | 'prestamos' | 'asignaciones';
 
 interface InvToolbarProps {
@@ -12,6 +13,11 @@ interface InvToolbarProps {
   onAdd: () => void;
 }
 
+/**
+ * Barra de navegación entre las vistas del módulo de inventario (solo
+ * muestra las pestañas para las que el usuario tiene permiso) y botón de
+ * acción principal contextual ("Nuevo equipo"/"Nuevo préstamo" según la vista activa).
+ */
 export function InvToolbar({ view, onChange, canEquipos, canPrestamos, activosCount, onAdd }: InvToolbarProps) {
   const tabBtn = (v: InvView, icon: React.ReactNode, label: string, badge?: number) => (
     <button

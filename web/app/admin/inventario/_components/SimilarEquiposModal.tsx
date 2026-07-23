@@ -15,6 +15,12 @@ interface SimilarEquiposModalProps {
   onDelete: (id: string) => void;
 }
 
+/**
+ * Modal que muestra todos los equipos "iguales" (mismo tipo+marca+modelo,
+ * ver `invGroupKey`) al que se abrió desde una tarjeta de inventario —
+ * útil para ver de un vistazo cuántas unidades del mismo modelo hay y su
+ * estado individual.
+ */
 export function SimilarEquiposModal({ open, items, nombre, onClose, onOpenSimilar, onLoan, onReturn, onEdit, onDelete }: SimilarEquiposModalProps) {
   return (
     <Modal

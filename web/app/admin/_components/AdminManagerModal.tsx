@@ -23,6 +23,14 @@ interface AdminManagerModalProps {
   onClose: () => void;
 }
 
+/**
+ * Modal de gestión del personal del sistema ("Usuarios administradores"):
+ * lista técnicos/admins/superadmins, permite al superadmin otorgar/revocar
+ * permisos de módulo por chip, crear nuevos usuarios técnicos y eliminarlos
+ * (bloqueado si es el único administrador restante o la propia cuenta).
+ * Usa SWR con `open && token` como key para no pedir datos mientras el modal
+ * está cerrado.
+ */
 export function AdminManagerModal({ open, onClose }: AdminManagerModalProps) {
   const { user, token, isSuperAdmin } = useAdminAuth();
   const { showToast } = useToast();

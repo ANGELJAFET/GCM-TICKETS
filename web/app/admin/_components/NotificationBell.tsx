@@ -4,6 +4,12 @@ import { useEffect, useRef } from 'react';
 import { IconBell, IconBellOff, IconTrash, IconTicket } from '@tabler/icons-react';
 import { useNotifications } from './NotificationsContext';
 
+/**
+ * Ícono de campana con contador de no leídas y panel desplegable de
+ * notificaciones (consume {@link useNotifications}). Se cierra al hacer
+ * click fuera del componente.
+ * @param forceDot Fuerza a mostrar el punto/badge de notificación aunque `unread` sea 0 (usado para indicar estado sin depender del contador).
+ */
 export function NotificationBell({ forceDot = false }: { forceDot?: boolean }) {
   const { notifList, unread, open, setOpen, clearNotifs } = useNotifications();
   const rootRef = useRef<HTMLDivElement>(null);

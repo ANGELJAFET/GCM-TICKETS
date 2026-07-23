@@ -6,6 +6,7 @@ interface InvStatsRowProps {
   onGoTo: (estado: string) => void;
 }
 
+/** Fila de tarjetas clicables (navegan a la vista "Equipos" filtrada por estado) con conteos del inventario. */
 export function InvStatsRow({ items, onGoTo }: InvStatsRowProps) {
   const total = items.length;
   // Los equipos "por cantidad" (lotes) mantienen estado 'disponible' aunque

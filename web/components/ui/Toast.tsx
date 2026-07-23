@@ -9,8 +9,10 @@ interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
+/** Tiempo que un toast permanece visible antes de ocultarse automáticamente. */
 const AUTO_HIDE_MS = 3000;
 
+/** Provee `showToast()` (ver {@link useToast}) y renderiza el toast flotante compartido en la esquina inferior de la pantalla. */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [message, setMessage] = useState<string | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -36,6 +38,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/** Hook para mostrar notificaciones toast breves. @throws Si se usa fuera de {@link ToastProvider}. */
 export function useToast(): ToastContextValue {
   const ctx = useContext(ToastContext);
   if (!ctx) throw new Error('useToast debe usarse dentro de un ToastProvider');

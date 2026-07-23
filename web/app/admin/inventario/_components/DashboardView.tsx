@@ -15,10 +15,19 @@ interface DashboardViewProps {
 }
 
 const chartDefaults = {
+  responsive: true,
+  maintainAspectRatio: false,
   plugins: { legend: { position: 'bottom' as const, labels: { font: { size: 11 }, padding: 12, usePointStyle: true } } },
   animation: { duration: 500 },
 };
 
+/**
+ * Vista de resumen del inventario: gráficos por estado, tipo y condición
+ * (clicables, navegan a la vista "Equipos" filtrada) y lista de últimos
+ * ingresos. Para ítems por lote (`'cantidad'`), el "estado efectivo" en el
+ * gráfico de estados se recalcula como `'en_prestamo'` si hay unidades
+ * prestadas, ya que `item.estado` en sí no lo refleja.
+ */
 export function DashboardView({ items, canEquipos, onAddFirst, onGoTo }: DashboardViewProps) {
   const { estadoData, tipoData, condData, recent } = useMemo(() => {
     const byEstado: Record<string, number> = { disponible: 0, en_uso: 0, en_prestamo: 0, en_reparacion: 0, de_baja: 0 };
@@ -84,7 +93,7 @@ export function DashboardView({ items, canEquipos, onAddFirst, onGoTo }: Dashboa
           <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold text-admin-text-sec">
             <IconChartDonut size={14} /> Estado de equipos
           </div>
-          <div className="relative h-47.5">
+          <div className="relative h-47.5 overflow-hidden">
             <Doughnut
               data={estadoData.data}
               options={{
@@ -99,7 +108,7 @@ export function DashboardView({ items, canEquipos, onAddFirst, onGoTo }: Dashboa
           <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold text-admin-text-sec">
             <IconChartBar size={14} /> Por tipo
           </div>
-          <div className="relative h-47.5">
+          <div className="relative h-47.5 overflow-hidden">
             {tipoData.keys.length > 0 && (
               <Bar
                 data={tipoData.data}
@@ -118,7 +127,7 @@ export function DashboardView({ items, canEquipos, onAddFirst, onGoTo }: Dashboa
           <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold text-admin-text-sec">
             <IconChartPie size={14} /> Condición general
           </div>
-          <div className="relative h-47.5">
+          <div className="relative h-47.5 overflow-hidden">
             <Doughnut
               data={condData.data}
               options={{

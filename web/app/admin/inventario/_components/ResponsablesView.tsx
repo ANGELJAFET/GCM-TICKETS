@@ -8,6 +8,7 @@ const ESTADO_LABEL: Record<string, string> = { disponible: 'Disponible', en_uso:
 const ESTADO_COLOR: Record<string, string> = { disponible: '#22c55e', en_uso: '#3b82f6', en_prestamo: '#f59e0b', en_reparacion: '#f97316', de_baja: '#ef4444' };
 const SIN_UBICACION = 'Sin ubicación registrada';
 
+/** Un grupo de equipos agrupados por responsable asignado (`'persona'`) o, si no tienen responsable, por ubicación física (`'ubicacion'`). */
 interface Grupo {
   tipo: 'persona' | 'ubicacion';
   nombre: string;
@@ -19,6 +20,12 @@ interface ResponsablesViewProps {
   onEdit: (id: string) => void;
 }
 
+/**
+ * Vista "Responsables": agrupa el inventario por persona responsable
+ * (alfabético) y, para los equipos sin responsable, por ubicación física
+ * (los sin ubicación quedan al final). Incluye buscador en cliente sobre
+ * nombre de grupo y campos del equipo.
+ */
 export function ResponsablesView({ items, onEdit }: ResponsablesViewProps) {
   const [query, setQuery] = useState('');
 

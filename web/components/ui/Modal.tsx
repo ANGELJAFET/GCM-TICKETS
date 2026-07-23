@@ -12,8 +12,12 @@ interface ModalProps {
   className?: string;
 }
 
-// Estructura .modal-backdrop > .modal > header/body/footer que ya usan los 7
-// modales de admin.js, portada como un solo componente reutilizable.
+/**
+ * Modal centrado con backdrop, header opcional (título + botón cerrar),
+ * cuerpo con scroll propio y footer opcional (normalmente botones de acción).
+ * Se cierra con click en el backdrop o con la tecla `Escape`. Retorna `null`
+ * mientras `open` es `false` (no queda montado en el DOM).
+ */
 export function Modal({ open, onClose, title, children, footer, className }: ModalProps) {
   useEffect(() => {
     if (!open) return;

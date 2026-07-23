@@ -10,8 +10,13 @@ interface DrawerProps {
   className?: string;
 }
 
-// Panel deslizante desde la derecha (usado hoy para el detalle de ticket) +
-// overlay de fondo (.overlay-dim en admin.js).
+/**
+ * Panel deslizante desde el borde derecho de la pantalla, con overlay de
+ * fondo semitransparente. Usado para el detalle de ticket. Se cierra con
+ * click en el overlay o con la tecla `Escape`.
+ * @param props.open Controla si el panel está visible (anima entrada/salida).
+ * @param props.onClose Se llama al cerrar (click en overlay o tecla Escape).
+ */
 export function Drawer({ open, onClose, children, className }: DrawerProps) {
   useEffect(() => {
     if (!open) return;

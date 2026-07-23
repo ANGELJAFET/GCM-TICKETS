@@ -3,6 +3,7 @@ import clsx from 'clsx';
 import type { Ticket } from '@/lib/types';
 import { TicketCard } from './TicketCard';
 
+/** Tickets mostrados por página en el listado del panel admin. */
 const PAGE_SIZE = 10;
 
 interface TicketListProps {
@@ -32,6 +33,15 @@ function GroupHeader({ title, icon: Icon, count, mine }: { title: string; icon: 
   );
 }
 
+/**
+ * Listado paginado de tickets. Fuera de la pestaña "todos", agrupa la página
+ * actual en "Mis tickets" (asignados al admin autenticado) y "Otros
+ * técnicos", mostrando el conteo total de cada grupo (no solo el de la
+ * página visible).
+ * @param currentTab Pestaña activa; distinto de `'todos'` activa el agrupado por asignado.
+ * @param adminNombre Nombre del admin autenticado, usado para separar "mis tickets" del resto.
+ * @param now Timestamp actual (ver `useNow`), pasado a cada `TicketCard` para el badge de SLA.
+ */
 export function TicketList({ list, currentTab, adminNombre, selectedId, currentPage, now, onPageChange, onSelect }: TicketListProps) {
   if (!list.length) {
     return (

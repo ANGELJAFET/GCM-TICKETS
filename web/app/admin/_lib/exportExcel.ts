@@ -3,6 +3,12 @@ import type { Ticket } from '@/lib/types';
 
 const STATUS_LABEL: Record<string, string> = { abierto: 'Abierto', en_progreso: 'En progreso', cerrado: 'Cerrado' };
 
+/**
+ * Genera y descarga (vía `XLSX.writeFile`) un libro de Excel con el listado
+ * completo de tickets (hoja "Tickets") y un resumen agregado por estado,
+ * prioridad, categoría y técnico asignado (hoja "Resumen").
+ * @param tickets Tickets a exportar (normalmente ya filtrados según lo visible en pantalla).
+ */
 export function exportTicketsToExcel(tickets: Ticket[]) {
   const wb = XLSX.utils.book_new();
 

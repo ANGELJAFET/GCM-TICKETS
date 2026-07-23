@@ -1,5 +1,12 @@
+/**
+ * Helpers puros compartidos por las vistas del módulo de inventario:
+ * etiquetas/colores de estado y condición, cálculo de disponibilidad
+ * (unidad vs. lote por cantidad), filtrado de equipos/préstamos por texto
+ * libre + estado, y estado de garantía.
+ */
 import type { InventoryItem, InvEstado, InvCondicion, Loan } from '@/lib/types';
 
+/** Etiqueta legible por estado de inventario. */
 export const INV_ESTADO_LABEL: Record<InvEstado, string> = {
   disponible: 'Disponible',
   en_uso: 'En uso',
@@ -8,6 +15,7 @@ export const INV_ESTADO_LABEL: Record<InvEstado, string> = {
   de_baja: 'De baja',
 };
 
+/** Clases de color (badge) por estado de inventario. */
 export const INV_ESTADO_CLS: Record<InvEstado, string> = {
   disponible: 'bg-admin-green-light text-emerald-800',
   en_uso: 'bg-admin-blue-light text-blue-700',
@@ -16,6 +24,7 @@ export const INV_ESTADO_CLS: Record<InvEstado, string> = {
   de_baja: 'bg-admin-light text-admin-gray',
 };
 
+/** Etiqueta legible por condición física del equipo. */
 export const CONDICION_LABEL: Record<InvCondicion, string> = {
   nuevo: 'Nuevo',
   excelente: 'Excelente',
@@ -24,6 +33,7 @@ export const CONDICION_LABEL: Record<InvCondicion, string> = {
   danado: 'Dañado',
 };
 
+/** Clases de color (badge) por condición física del equipo. */
 export const CONDICION_CLS: Record<InvCondicion, string> = {
   nuevo: 'bg-admin-purple-light text-violet-700',
   excelente: 'bg-admin-green-light text-emerald-800',
@@ -32,20 +42,23 @@ export const CONDICION_CLS: Record<InvCondicion, string> = {
   danado: 'bg-admin-red-light text-red-800',
 };
 
-// Cuántas unidades quedan libres — 1 para equipos "por unidad" (o 0 si ya
-// están prestados), o el remanente del lote para equipos "por cantidad".
+/**
+ * Cuántas unidades quedan libres: 1 para equipos "por unidad" (o 0 si ya
+ * están prestados), o el remanente del lote (`cantidadTotal - cantidadPrestada`)
+ * para equipos "por cantidad".
+ */
 export function invDisponible(i: InventoryItem): number {
   if (i.tipoManejo === 'cantidad') return Math.max((i.cantidadTotal || 0) - (i.cantidadPrestada || 0), 0);
   return i.estado === 'disponible' ? 1 : 0;
 }
 
+/** `true` si el equipo/lote tiene al menos una unidad disponible para prestar. */
 export function puedePrestar(i: InventoryItem): boolean {
   if (i.tipoManejo === 'cantidad') return i.estado === 'disponible' && invDisponible(i) > 0;
   return i.estado === 'disponible';
 }
 
-// Clave para agrupar equipos "iguales" (mismo tipo+marca+modelo) sin importar
-// el N° de serie — usada para el modal de "equipos similares".
+/** Clave para agrupar equipos "iguales" (mismo tipo+marca+modelo) sin importar el N° de serie — usada por el modal de "equipos similares". */
 export function invGroupKey(item: InventoryItem): string {
   return [item.tipo, item.marca, item.modelo].map((v) => (v || '').trim().toLowerCase()).join('|');
 }
@@ -75,6 +88,16 @@ function invSearchText(i: InventoryItem): string {
     .toLowerCase();
 }
 
+/**
+ * Filtra equipos por texto libre (todos los términos deben aparecer, en
+ * cualquier orden, sobre un texto de búsqueda que concatena todos los
+ * campos relevantes) y por `estado` exacto. Para ítems de tipo `'cantidad'`,
+ * los estados `'en_prestamo'`/`'disponible'` se derivan de `cantidadPrestada`
+ * en vez de comparar contra `item.estado` directamente.
+ * @param items Equipos a filtrar.
+ * @param query Texto de búsqueda libre (vacío = sin filtro de texto).
+ * @param estado Estado exacto a filtrar (vacío = todos los estados).
+ */
 export function filterInventory(items: InventoryItem[], query: string, estado: string): InventoryItem[] {
   const q = normalize(query.trim());
   return items.filter((i) => {
@@ -117,10 +140,11 @@ function loanSearchText(l: Loan): string {
     .toLowerCase();
 }
 
-// Mismo criterio que filterInventory: texto libre (todos los términos deben
-// aparecer, en cualquier orden) + filtro exacto de estado. `estado` es
-// 'activo' | 'devuelto' | '' — a diferencia del de inventario, no hay que
-// derivar nada (Loan.estado ya es exactamente eso).
+/**
+ * Mismo criterio que {@link filterInventory}: texto libre (todos los
+ * términos deben aparecer, en cualquier orden) + filtro exacto de estado.
+ * @param estado `'activo' | 'devuelto' | ''` — a diferencia del de inventario, no hay que derivar nada (`Loan.estado` ya es exactamente eso).
+ */
 export function filterLoans(loans: Loan[], query: string, estado: string): Loan[] {
   const q = normalize(query.trim());
   return loans.filter((l) => {
@@ -134,12 +158,19 @@ export function filterLoans(loans: Loan[], query: string, estado: string): Loan[
   });
 }
 
+/** Resultado de {@link garantiaInfo}: color, etiqueta y proveedor a mostrar. */
 export interface GarantiaInfo {
   tone: 'green' | 'amber' | 'red' | 'gray';
   label: string;
   proveedor?: string;
 }
 
+/**
+ * Calcula el estado visual de la garantía de un equipo según su fecha de
+ * vencimiento: sin `vence` → gris genérico; vencida → rojo; vence en ≤30
+ * días → ámbar con conteo de días; si no, verde ("activa").
+ * @returns `null` si el equipo no tiene datos de garantía.
+ */
 export function garantiaInfo(garantia: InventoryItem['garantia']): GarantiaInfo | null {
   if (!garantia) return null;
   if (!garantia.vence) return { tone: 'gray', label: 'Con garantía', proveedor: garantia.proveedor };

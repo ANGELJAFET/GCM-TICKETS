@@ -8,6 +8,7 @@ import type { InventoryItem, InvCondicion, InvEstado, InvTipoManejo, UsuarioList
 import { INV_ESTADO_LABEL } from '../_lib/invHelpers';
 import { QRPhotoModal, type MobilePhoto } from './QRPhotoModal';
 
+/** Valores del formulario de alta/edición de un equipo de inventario. */
 export interface InventoryFormValues {
   tipoManejo: InvTipoManejo;
   tipo: string;
@@ -42,6 +43,7 @@ const EMPTY_FORM: InventoryFormValues = {
   mobileToken: null,
 };
 
+/** Convierte un `InventoryItem` existente a los valores iniciales del formulario de edición. */
 function itemToForm(item: InventoryItem): InventoryFormValues {
   return {
     tipoManejo: item.tipoManejo,
@@ -69,6 +71,12 @@ interface InventoryModalProps {
   onSave: (id: string | null, values: InventoryFormValues) => Promise<void>;
 }
 
+/**
+ * Modal de alta/edición de un equipo de inventario. El modo de manejo
+ * (`tipoManejo`: por unidad o por cantidad) solo es editable al crear —
+ * queda bloqueado una vez guardado. Incluye captura de foto vía
+ * {@link QRPhotoModal} (QR + celular) y una sección opcional de garantía.
+ */
 export function InventoryModal({ open, editingItem, usuarios, onClose, onSave }: InventoryModalProps) {
   // El padre remonta este componente (key en base a open/editingItem) cada
   // vez que se abre, así que el estado se puede inicializar de forma

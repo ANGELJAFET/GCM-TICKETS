@@ -13,6 +13,11 @@ interface ReturnConfirmModalProps {
   onConfirm: (loanId: string, condicionDevolucion: InvCondicion, notaDevolucion: string) => Promise<void>;
 }
 
+/**
+ * Modal de devolución total de un préstamo (equipos de tipo `'unidad'`, o
+ * confirmación explícita del total restante). Pide la condición del equipo
+ * al devolver (pre-cargada con la condición actual) y una nota opcional.
+ */
 export function ReturnConfirmModal({ open, loan, item, onClose, onConfirm }: ReturnConfirmModalProps) {
   // El padre remonta este componente (key en base a loan?.id) cada vez que
   // se abre, así que estos estados ya nacen limpios sin necesitar un efecto.
@@ -103,6 +108,11 @@ interface PartialReturnModalProps {
   onConfirm: (loanId: string, cantidad: number, condicionDevolucion: InvCondicion, notaDevolucion: string) => Promise<void>;
 }
 
+/**
+ * Modal de devolución parcial de un préstamo por lote (`loan.cantidad > 1`):
+ * permite indicar cuántas unidades se devuelven (entre 1 y lo pendiente),
+ * junto con condición y nota.
+ */
 export function PartialReturnModal({ open, loan, item, onClose, onConfirm }: PartialReturnModalProps) {
   const restante = loan ? loan.cantidad - loan.cantidadDevuelta : 0;
   // El padre remonta este componente (key en base a loan?.id) cada vez que

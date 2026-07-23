@@ -6,6 +6,7 @@ import { IconMoon, IconSun, IconLogout, IconUserCircle } from '@tabler/icons-rea
 import { toggleDarkMode, isDarkMode } from '@/lib/theme';
 import { usePortalAuth } from '@/lib/auth';
 
+/** Barra superior del portal de empleados: marca, toggle de tema, cierre de sesión y nombre del usuario autenticado. */
 export function Header() {
   const { user, logout } = usePortalAuth();
   const [dark, setDark] = useState(false);

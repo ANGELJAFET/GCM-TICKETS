@@ -8,6 +8,7 @@ interface PillProps {
   icon?: ReactNode;
 }
 
+/** Etiqueta pequeña en forma de píldora, usada para estados/roles/badges cortos. El color lo define `className` (el componente no trae colores propios). */
 export function Pill({ children, className, icon }: PillProps) {
   return (
     <span

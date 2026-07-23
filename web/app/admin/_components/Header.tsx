@@ -20,6 +20,12 @@ import { toggleDarkMode, isDarkMode } from '@/lib/theme';
 import { NotificationBell } from './NotificationBell';
 import { AdminManagerModal } from './AdminManagerModal';
 
+/**
+ * Barra superior del panel admin: navegación entre secciones (mostrando solo
+ * las que el usuario tiene permiso de ver, vía `hasPermiso`), campana de
+ * notificaciones, toggle de tema y cierre de sesión.
+ * @param hasSlaAlert Fuerza el indicador de alerta en la campana de notificaciones (ver `NotificationBell`) cuando hay tickets con SLA vencido, sin depender del contador de no leídas.
+ */
 export function Header({ hasSlaAlert = false }: { hasSlaAlert?: boolean }) {
   const { user, hasPermiso, logout } = useAdminAuth();
   const pathname = usePathname();

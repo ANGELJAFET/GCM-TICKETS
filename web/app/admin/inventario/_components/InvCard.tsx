@@ -32,6 +32,13 @@ interface InvCardProps {
   onDelete: (id: string) => void;
 }
 
+/**
+ * Tarjeta de un equipo/lote del inventario: foto o ícono, badge de
+ * estado/disponibilidad (distinto para ítems por lote), datos clave (serie
+ * o cantidad, ubicación, responsable, condición, garantía) y acciones
+ * (prestar/devolver según {@link puedePrestar}, editar, eliminar). El header
+ * es clicable y abre el modal de "equipos similares".
+ */
 export function InvCard({ item, onOpenSimilar, onLoan, onReturn, onEdit, onDelete }: InvCardProps) {
   const isCant = item.tipoManejo === 'cantidad';
   const disponible = isCant ? invDisponible(item) : null;

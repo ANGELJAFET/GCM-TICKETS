@@ -5,6 +5,7 @@ import { IconQrcode, IconCircleCheck, IconRefresh, IconX, IconCheck } from '@tab
 import { Modal } from '@/components/ui';
 import { api, API_URL } from '@/lib/api';
 
+/** Archivo recibido a través de una sesión de subida móvil (foto del equipo). */
 export interface MobilePhoto {
   name: string;
   size: number;
@@ -17,13 +18,24 @@ interface QRPhotoModalProps {
   onConfirm: (token: string, file: MobilePhoto) => void;
 }
 
+/**
+ * Estado del flujo de captura de foto por QR:
+ * `loading` (creando sesión) → `pending` (esperando que el celular suba el
+ * archivo, con polling cada 2s) → `ready` (foto recibida, lista para
+ * confirmar) o `expired` (venció el tiempo de la sesión, 5 min).
+ */
 type QRState = 'loading' | 'pending' | 'ready' | 'expired';
 
+/** Duración de la sesión de subida móvil, debe coincidir con `SESSION_TTL` del backend (`mobileSessions.ts`). */
 const SESSION_MS = 5 * 60 * 1000;
 
-// Adaptado de portal/_components/QRModal.tsx (mismo mecanismo de sesión
-// temporal + QR que usan los tickets), con estilos del panel admin y texto
-// genérico de "foto del equipo" en vez de "evidencia del ticket".
+/**
+ * Modal que genera un QR para tomar una foto del equipo desde el celular sin
+ * iniciar sesión ahí (mismo mecanismo de sesión temporal que usan los
+ * adjuntos de tickets, ver `portal/_components/QRModal.tsx` y
+ * `api/src/routes/mobileUpload.ts`), adaptado con estilos del panel admin.
+ * @param onConfirm Se llama con el token de sesión y el archivo recibido cuando el usuario confirma "Usar esta foto"; el padre guarda el token como `mobileToken` para asociarlo al guardar el equipo.
+ */
 export function QRPhotoModal({ open, onClose, onConfirm }: QRPhotoModalProps) {
   const [state, setState] = useState<QRState>('loading');
   const [token, setToken] = useState<string | null>(null);

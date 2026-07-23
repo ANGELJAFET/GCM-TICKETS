@@ -23,6 +23,12 @@ interface SolicitudesCardProps {
   onRechazar: (id: number, motivo: string | null) => Promise<void>;
 }
 
+/**
+ * Tarjeta de solicitudes de registro de empleados, con tabs de estado
+ * (pendiente/aprobado/rechazado). Si `canView` es `false` (usuario sin el
+ * permiso de módulo `'solicitudes'` otorgado), muestra un aviso de acceso
+ * restringido en vez del contenido.
+ */
 export function SolicitudesCard({ canView, solicitudes, onAprobar, onRechazar }: SolicitudesCardProps) {
   const { confirm, prompt } = useConfirm();
   const [filter, setFilter] = useState<SolicitudEstado>('pendiente');

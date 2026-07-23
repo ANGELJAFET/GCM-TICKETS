@@ -6,6 +6,11 @@ import Image from 'next/image';
 import { IconLogin, IconLoader2, IconShieldCheck } from '@tabler/icons-react';
 import { usePortalAuth } from '@/lib/auth';
 
+/**
+ * Pantalla de login del portal de empleados. Envía las credenciales vía
+ * {@link usePortalAuth}, que llama a `POST /api/auth/login` con
+ * `portal: 'empleado'`; enlaza a `/registro` para quien aún no tiene cuenta.
+ */
 export function IdentScreen() {
   const { login } = usePortalAuth();
   const [username, setUsername] = useState('');

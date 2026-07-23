@@ -31,6 +31,13 @@ const FILTERS: { value: FilterValue; label: string; icon: typeof IconLayoutList 
   { value: 'cerrado', label: 'Cerrados', icon: IconCircleCheck },
 ];
 
+/**
+ * Contenido autenticado del portal de empleados: hero de bienvenida,
+ * filtros por estado y listado de "mis tickets" (solo los propios,
+ * `reporterId === user.id`). Refresca cada 15s vía SWR. Crear un ticket con
+ * adjunto acepta dos rutas: subida directa (`file`) o vía sesión móvil por
+ * QR (`mobileToken`, ver {@link QRModal}).
+ */
 function PortalApp() {
   const { user, token } = usePortalAuth();
   const { showToast } = useToast();
@@ -203,6 +210,7 @@ function PortalApp() {
   );
 }
 
+/** Página `/portal`. Muestra {@link IdentScreen} si no hay sesión (o mientras se restaura), o {@link PortalApp} si la hay. */
 export default function PortalPage() {
   const { user, loading } = usePortalAuth();
 

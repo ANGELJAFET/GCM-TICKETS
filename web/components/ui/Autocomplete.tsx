@@ -18,9 +18,20 @@ interface AutocompleteProps<T> {
   inputClassName?: string;
 }
 
-// Generaliza el patrón hand-rolled de position/show/filter/select que admin.js
-// repetía para responsable/empleado/ítem de préstamo (_usuariosDdRender, etc.)
-// en un único componente reutilizable.
+/**
+ * Campo de texto con lista desplegable filtrada en cliente (máx. 30
+ * resultados), pensado para seleccionar una entidad (usuario, equipo, etc.)
+ * por nombre. Genérico en `T`: el consumidor decide qué es cada ítem y cómo
+ * mostrarlo vía `getLabel`/`getDetail`/`getBadge`. Cierra la lista al hacer
+ * click fuera o al seleccionar un ítem.
+ * @param props.items Universo de ítems a filtrar y mostrar.
+ * @param props.value Texto actual del input (controlado por el consumidor).
+ * @param props.onChange Se llama con el nuevo texto en cada tecleo.
+ * @param props.onSelect Se llama con el ítem elegido al hacer click en una opción.
+ * @param props.getLabel Texto principal a mostrar/filtrar por cada ítem.
+ * @param props.getDetail Texto secundario opcional (línea gris debajo del label).
+ * @param props.getBadge Etiqueta corta opcional junto al label (ej. distinguir portal vs panel admin).
+ */
 export function Autocomplete<T>({
   items,
   value,

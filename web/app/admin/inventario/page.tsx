@@ -24,6 +24,15 @@ import { filterInventory, filterLoans, invGroupKey } from './_lib/invHelpers';
 import { generateLoanWord } from './_lib/generateLoanWord';
 import { generateReturnWord } from './_lib/generateReturnWord';
 
+/**
+ * Página `/admin/inventario`: orquesta las cuatro vistas del módulo
+ * (dashboard, equipos, préstamos, responsables/asignaciones) y todos los
+ * modales asociados (alta/edición de equipo, registro de préstamo, equipos
+ * similares, devolución total/parcial). Requiere el permiso `'inventario'`
+ * y/o `'prestamos'`; sin ninguno de los dos, muestra un aviso de acceso
+ * restringido en vez del contenido. Los comprobantes de préstamo/devolución
+ * se generan en cliente como `.docx` vía `generateLoanWord`/`generateReturnWord`.
+ */
 function InventarioApp() {
   const { user, token, hasPermiso } = useAdminAuth();
   const { showToast } = useToast();
@@ -391,6 +400,7 @@ function InventarioApp() {
   );
 }
 
+/** Página `/admin/inventario`. Muestra {@link LoginScreen} si no hay sesión, o {@link InventarioApp} si la hay. */
 export default function InventarioPage() {
   const { user, loading } = useAdminAuth();
   if (loading || !user) return <LoginScreen />;

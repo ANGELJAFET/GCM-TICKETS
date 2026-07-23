@@ -15,6 +15,13 @@ import { SolicitudesCard } from './_components/SolicitudesCard';
 import { UsuariosList } from './_components/UsuariosList';
 import { UserDetailModal } from './_components/UserDetailModal';
 
+/**
+ * Página `/admin/usuarios` (gestión de usuarios): estadísticas, solicitudes
+ * de registro pendientes/aprobadas/rechazadas (visible solo con el permiso
+ * `'solicitudes'`), listado de usuarios (separado en "sistema" vs
+ * "empleados") y modal de detalle con historial de tickets y cambio de
+ * contraseña (solo superadmin).
+ */
 function UsuariosApp() {
   const { user, token, hasPermiso } = useAdminAuth();
   const { showToast } = useToast();
@@ -109,6 +116,7 @@ function UsuariosApp() {
   );
 }
 
+/** Página `/admin/usuarios`. Muestra {@link LoginScreen} si no hay sesión, o {@link UsuariosApp} si la hay. */
 export default function UsuariosPage() {
   const { user, loading } = useAdminAuth();
   if (loading || !user) return <LoginScreen />;

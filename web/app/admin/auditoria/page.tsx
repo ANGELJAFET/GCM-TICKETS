@@ -43,6 +43,12 @@ interface AuditFilters {
 
 const EMPTY_FILTERS: AuditFilters = { actor: '', entidad: '', desde: '', hasta: '' };
 
+/**
+ * Página `/admin/auditoria` (bitácora del sistema): tabla de acciones
+ * administrativas registradas, con filtros por usuario (autocompletado vía
+ * `<datalist>`), área/entidad y rango de fechas. Consulta `GET /api/auditoria`
+ * con un límite fijo de 300 filas.
+ */
 function AuditoriaApp() {
   const { token } = useAdminAuth();
   const [filters, setFilters] = useState<AuditFilters>(EMPTY_FILTERS);
@@ -186,6 +192,7 @@ function AuditoriaApp() {
   );
 }
 
+/** Página `/admin/auditoria`. Muestra {@link LoginScreen} si no hay sesión, o {@link AuditoriaApp} si la hay. */
 export default function AuditoriaPage() {
   const { user, loading } = useAdminAuth();
   if (loading || !user) return <LoginScreen />;

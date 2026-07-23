@@ -12,6 +12,9 @@ import {
 import { Pill } from '@/components/ui';
 import type { Ticket, TicketPrioridad, TicketStatus } from '@/lib/types';
 
+/** Badges e iconografía reutilizados por las vistas de tickets del panel admin. */
+
+/** Píldora de color según el estado del ticket (abierto/en progreso/cerrado). */
 export function StatusBadge({ status }: { status: TicketStatus }) {
   const map: Record<TicketStatus, { label: string; icon: typeof IconCircleDot; cls: string }> = {
     abierto: { label: 'Abierto', icon: IconCircleDot, cls: 'bg-admin-blue-light text-blue-700' },
@@ -34,6 +37,7 @@ const PRIO_MAP: Record<TicketPrioridad, { icon: typeof IconArrowUp; cls: string 
   Baja: { icon: IconArrowDown, cls: 'bg-admin-light text-admin-gray' },
 };
 
+/** Píldora de color según la prioridad del ticket (Crítica/Alta/Media/Baja). */
 export function PrioBadge({ prioridad }: { prioridad: TicketPrioridad }) {
   const m = PRIO_MAP[prioridad] || PRIO_MAP.Baja;
   return (
@@ -43,6 +47,7 @@ export function PrioBadge({ prioridad }: { prioridad: TicketPrioridad }) {
   );
 }
 
+/** Avatar circular con las iniciales del nombre; gris y "?" si `name` es `'Sin asignar'`. */
 export function Avatar({ name }: { name: string }) {
   const isUnassigned = name === 'Sin asignar';
   const initials = isUnassigned ? '?' : (name || '?').substring(0, 2).toUpperCase();
@@ -58,6 +63,12 @@ export function Avatar({ name }: { name: string }) {
   );
 }
 
+/**
+ * Badge de alerta de SLA según antigüedad del ticket: sin badge si está
+ * cerrado o tiene menos de 24h; ámbar entre 24-48h; rojo (con pulso CSS)
+ * a partir de 48h sin resolver.
+ * @param now Timestamp actual (ver `useNow`) usado para calcular la antigüedad.
+ */
 export function SlaBadge({ ticket, now }: { ticket: Ticket; now: number }) {
   if (ticket.status === 'cerrado' || !ticket.fechaTs || !now) return null;
   const h = (now - ticket.fechaTs) / 3600000;

@@ -5,6 +5,11 @@ import Image from 'next/image';
 import { IconLogin, IconLoader2, IconShieldLock, IconLock, IconAlertCircle } from '@tabler/icons-react';
 import { useAdminAuth } from '@/lib/auth';
 
+/**
+ * Pantalla de login del panel admin (mostrada por `admin/page.tsx` cuando no
+ * hay sesión activa). Envía las credenciales vía {@link useAdminAuth}, que
+ * llama a `POST /api/auth/login` con `portal: 'admin'`.
+ */
 export function LoginScreen() {
   const { login } = useAdminAuth();
   const [username, setUsername] = useState('');

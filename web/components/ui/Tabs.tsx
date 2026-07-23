@@ -16,6 +16,14 @@ interface TabsProps<T extends string> {
   className?: string;
 }
 
+/**
+ * Barra de pestañas controlada, genérica en el tipo de valor `T` (union de
+ * strings) para que el consumidor tenga autocompletado/type-safety sobre
+ * sus propios valores de pestaña.
+ * @param props.items Pestañas a mostrar, en orden.
+ * @param props.value Valor de la pestaña activa (controlado por el consumidor).
+ * @param props.onChange Se llama con el `value` de la pestaña clickeada.
+ */
 export function Tabs<T extends string>({
   items,
   value,

@@ -17,6 +17,12 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * Layout raíz de Next.js (App Router), envuelve tanto el portal de empleados
+ * como el panel admin. Inyecta la fuente `Inter`, el script anti-FOUC que
+ * fija el tema oscuro antes del primer paint (ver `lib/theme.ts`), y los
+ * metadatos globales de la app (título, ícono).
+ */
 export default function RootLayout({
   children,
 }: Readonly<{

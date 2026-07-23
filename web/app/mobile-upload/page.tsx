@@ -5,10 +5,22 @@ import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { API_URL } from '@/lib/api';
 
+/** Duración máxima permitida para un video de evidencia, validada en cliente antes de enviarlo. */
 const MAX_VIDEO_SECONDS = 15;
 
+/** Pantalla activa del flujo de subida móvil: selección de archivo, envío en curso, éxito o sesión expirada. */
 type PanelId = 'select' | 'sending' | 'ok' | 'err';
 
+/**
+ * Página `/mobile-upload?session=<token>&type=<inventario?>`: el destino al
+ * que apunta el QR generado por `QRModal`/`QRPhotoModal`. Se abre en el
+ * celular sin necesidad de iniciar sesión — el `session` de la URL identifica
+ * la sesión temporal a la que se sube el archivo (ver
+ * `api/src/mobileSessions.ts` y `api/src/routes/mobileUpload.ts`).
+ * `type=inventario` ajusta el texto/opciones mostradas (solo foto, sin
+ * video) para el flujo de foto de equipo; cualquier otro valor asume el
+ * flujo de evidencia de ticket (foto o video corto).
+ */
 function MobileUploadInner() {
   const params = useSearchParams();
   const session = params.get('session');
@@ -253,6 +265,7 @@ function MobileUploadInner() {
   );
 }
 
+/** Página `/mobile-upload`. Envuelta en `Suspense` porque {@link MobileUploadInner} usa `useSearchParams`. */
 export default function MobileUploadPage() {
   return (
     <Suspense fallback={null}>

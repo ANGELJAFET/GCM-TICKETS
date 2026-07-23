@@ -1,16 +1,24 @@
 import type { InventoryItem, Loan } from '@/lib/types';
 
+/** Etiqueta legible por condición física, usada en el comprobante impreso. */
 const CONDICION_MAP: Record<string, string> = { nuevo: 'Nuevo', excelente: 'Excelente', bueno: 'Bueno', regular: 'Regular', danado: 'Dañado' };
 
+/** Escapa caracteres especiales de HTML para interpolar texto de usuario de forma segura en la plantilla. */
 function escapeHtml(str: unknown): string {
   return String(str ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string);
 }
 
-// Hermano de generateLoanWord.ts — mismo truco HTML→Word y mismo membrete,
-// pero documenta el evento de devolución (fecha real, condición al
-// regresar, quién recibe en TI) en vez de la entrega original. Antes de esto
-// el botón "Comprobante" de un préstamo ya devuelto regeneraba el mismo
-// comprobante de préstamo, sin dejar constancia de la devolución.
+/**
+ * Hermano de {@link generateLoanWord} — mismo truco HTML→Word y mismo
+ * membrete, pero documenta el evento de devolución (fecha real, condición
+ * al regresar, días de atraso si aplica, quién recibe en TI) en vez de la
+ * entrega original. Antes de esto, el botón "Comprobante" de un préstamo ya
+ * devuelto regeneraba el mismo comprobante de préstamo, sin dejar
+ * constancia de la devolución.
+ * @param loan Préstamo ya devuelto (usa `fechaDevolucionReal`, `condicionDevolucion`, `notaDevolucion`).
+ * @param item Datos del equipo devuelto (puede venir parcial/`undefined`).
+ * @param adminNombre Nombre de quien recibe el equipo en TI (aparece en la firma "Recibí Conforme").
+ */
 export function generateReturnWord(loan: Loan, item: Partial<InventoryItem> | undefined, adminNombre: string) {
   const it = item || {};
   const now = loan.fechaDevolucionReal ? new Date(loan.fechaDevolucionReal) : new Date();

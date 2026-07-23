@@ -2,9 +2,14 @@
 
 import { useEffect, useState } from 'react';
 
-// Los cálculos de SLA necesitan "la hora actual", que es impura y no puede
-// leerse directamente durante el render (regla react-hooks/purity). Se
-// sincroniza como estado vía efecto — se actualiza sola, sin recargar tickets.
+/**
+ * Hook que expone "la hora actual" como estado reactivo, refrescado cada
+ * `intervalMs`. Los cálculos de SLA necesitan la hora actual, que es impura
+ * y no puede leerse directamente durante el render (regla
+ * `react-hooks/purity`) — se sincroniza vía efecto en vez de recargar tickets.
+ * @param intervalMs Frecuencia de refresco en milisegundos (default 60000, 1 minuto).
+ * @returns El timestamp actual (`Date.now()`); `0` durante el primer render, antes de que el efecto corra.
+ */
 export function useNow(intervalMs = 60000): number {
   const [now, setNow] = useState(0);
   useEffect(() => {

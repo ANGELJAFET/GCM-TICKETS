@@ -23,6 +23,7 @@ import type { MobileFile } from './QRModal';
 const CATEGORIAS: TicketCategoria[] = ['Hardware', 'Software', 'Red', 'Acceso', 'Otro'];
 const PRIORIDADES: TicketPrioridad[] = ['Baja', 'Media', 'Alta', 'Crítica'];
 
+/** Datos capturados por el formulario de nuevo ticket, listos para enviar al padre (`portal/page.tsx`). */
 export interface NewTicketData {
   title: string;
   desc: string;
@@ -42,6 +43,12 @@ interface NewTicketModalProps {
   onClearMobileFile: () => void;
 }
 
+/**
+ * Modal de creación de ticket: título, descripción, categoría, prioridad y
+ * un adjunto opcional, con dos formas mutuamente excluyentes de aportarlo
+ * (elegir un archivo local, o subirlo desde el celular vía {@link QRModal});
+ * elegir un archivo local limpia el adjunto móvil pendiente y viceversa.
+ */
 export function NewTicketModal({ open, onClose, onSubmit, onOpenQR, mobileToken, mobileFile, onClearMobileFile }: NewTicketModalProps) {
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');

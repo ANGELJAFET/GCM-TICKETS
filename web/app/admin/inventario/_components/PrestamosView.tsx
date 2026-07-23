@@ -14,6 +14,7 @@ interface PrestamosViewProps {
   onGenerateWord: (loanId: string) => void;
 }
 
+/** Fila de un préstamo: resaltada en rojo si está activo y venció su fecha estimada de devolución. Ofrece devolución total o parcial (según `loan.cantidad`) y generación del comprobante Word. */
 function LoanRow({ loan, onReturnFull, onReturnPartial, onGenerateWord }: { loan: Loan; onReturnFull: (id: string) => void; onReturnPartial: (id: string) => void; onGenerateWord: (id: string) => void }) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -101,6 +102,7 @@ function LoanRow({ loan, onReturnFull, onReturnPartial, onGenerateWord }: { loan
   );
 }
 
+/** Vista "Préstamos": buscador + filtro de estado, y listado separado en "Activos" e "Historial" (devueltos). */
 export function PrestamosView({ allCount, loans, query, estado, onQueryChange, onEstadoChange, onReturnFull, onReturnPartial, onGenerateWord }: PrestamosViewProps) {
   const toolbar = (
     <div className="flex flex-wrap items-center gap-2.5">

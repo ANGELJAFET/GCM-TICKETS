@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import { IconBeach, IconPlus, IconClockBolt, IconShieldCheck, IconEye } from '@tabler/icons-react';
 
+/** Banner de bienvenida del portal con el botón principal "Nuevo ticket"; las olas SVG del fondo son puramente decorativas. */
 export function Hero({ onNuevoTicket }: { onNuevoTicket: () => void }) {
   return (
     <div className="relative mb-8 overflow-hidden rounded-3xl bg-linear-to-br from-portal-navy-dark via-portal-navy to-portal-navy-mid px-9 pt-9 text-white shadow-[0_20px_60px_rgba(26,46,107,0.42),0_4px_16px_rgba(26,46,107,0.22)] max-[768px]:px-7 max-[600px]:rounded-[20px] max-[600px]:px-5.5">

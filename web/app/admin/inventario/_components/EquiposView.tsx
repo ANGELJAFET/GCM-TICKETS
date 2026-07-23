@@ -17,6 +17,7 @@ interface EquiposViewProps {
   onDelete: (id: string) => void;
 }
 
+/** Vista "Equipos": buscador + filtro de estado y grilla de tarjetas ({@link InvCard}). Es un componente controlado; el filtrado real ocurre en el padre (`invHelpers.filterInventory`). */
 export function EquiposView({ allCount, items, query, estado, onQueryChange, onEstadoChange, onAdd, onOpenSimilar, onLoan, onReturn, onEdit, onDelete }: EquiposViewProps) {
   return (
     <div className="flex flex-col gap-3.5">

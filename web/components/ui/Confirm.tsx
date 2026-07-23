@@ -25,6 +25,11 @@ interface ConfirmContextValue {
   prompt: (opts: PromptOptions) => Promise<string | null>;
 }
 
+/**
+ * Reemplazo de `window.confirm`/`window.prompt` basado en un modal propio
+ * (necesario porque los diálogos nativos del navegador no se pueden estilizar
+ * ni tematizar). Ver {@link ConfirmProvider} y {@link useConfirm}.
+ */
 const ConfirmContext = createContext<ConfirmContextValue | null>(null);
 
 interface DialogState {
@@ -33,6 +38,11 @@ interface DialogState {
   resolve: (value: boolean | string | null) => void;
 }
 
+/**
+ * Provee `confirm()`/`prompt()` (ver {@link useConfirm}) a través de un único
+ * modal compartido, renderizado una vez en el árbol y reutilizado para
+ * cualquier confirmación o prompt de texto de la aplicación.
+ */
 export function ConfirmProvider({ children }: { children: ReactNode }) {
   const [dialog, setDialog] = useState<DialogState | null>(null);
   const [inputValue, setInputValue] = useState('');
@@ -128,6 +138,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/** Hook para pedir confirmación o texto al usuario vía modal. @throws Si se usa fuera de {@link ConfirmProvider}. */
 export function useConfirm(): ConfirmContextValue {
   const ctx = useContext(ConfirmContext);
   if (!ctx) throw new Error('useConfirm debe usarse dentro de un ConfirmProvider');

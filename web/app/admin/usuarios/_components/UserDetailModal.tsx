@@ -49,6 +49,7 @@ interface UserDetailModalProps {
   onOpenTicket: (ticketId: string) => void;
 }
 
+/** Fila de dato de perfil; no se renderiza si `value` es falsy (oculta campos vacíos en vez de mostrarlos en blanco). */
 function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string | null }) {
   if (!value) return null;
   return (
@@ -61,6 +62,7 @@ function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string;
   );
 }
 
+/** Formulario de cambio de contraseña de otro usuario; solo se monta cuando quien ve el modal es superadmin (ver `UserDetailModal`). */
 function PasswordSection({ userId }: { userId: number }) {
   const { token } = useAdminAuth();
   const [pass, setPass] = useState('');
@@ -118,6 +120,7 @@ function PasswordSection({ userId }: { userId: number }) {
   );
 }
 
+/** Pestaña "Tickets" del detalle de usuario: resumen por estado y listado clicable que navega a `/admin?ticket=ID` vía `onOpenTicket`. */
 function TicketsTab({ userId, onOpenTicket }: { userId: number; onOpenTicket: (ticketId: string) => void }) {
   const { token } = useAdminAuth();
   const { data } = useSWR<{ nombre: string; tickets: UsuarioTicketSummary[] }>(token ? [`/usuarios/${userId}/tickets`, token] : null, ([url]: [string]) => api(url, { token }));
@@ -194,6 +197,11 @@ function TicketsTab({ userId, onOpenTicket }: { userId: number; onOpenTicket: (t
   );
 }
 
+/**
+ * Modal de detalle de un usuario: pestaña "Perfil" (datos personales y,
+ * si quien lo ve es superadmin, cambio de contraseña) y pestaña "Tickets"
+ * (historial de tickets reportados por él).
+ */
 export function UserDetailModal({ open, usuario, onClose, onOpenTicket }: UserDetailModalProps) {
   const { isSuperAdmin } = useAdminAuth();
   const [tab, setTab] = useState<'perfil' | 'tickets'>('perfil');

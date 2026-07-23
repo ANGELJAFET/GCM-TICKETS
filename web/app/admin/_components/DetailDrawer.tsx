@@ -24,6 +24,7 @@ import { fileUrl } from '@/lib/api';
 import type { AdminUser, Ticket, TicketComment } from '@/lib/types';
 import { StatusBadge, PrioBadge, SlaBadge } from './badges';
 
+/** Plantillas de respuesta rápida ofrecidas en el textarea de comentario del ticket. */
 const TEMPLATES = [
   { label: 'Acuse de recibo', text: 'Hemos recibido su solicitud y la estamos atendiendo. Le mantendremos informado del avance.' },
   { label: 'Solicitar más info', text: 'Para continuar con la atención, necesitamos información adicional. ¿Podría darnos más detalles sobre el problema?' },
@@ -44,6 +45,7 @@ function fmtSize(bytes: number) {
   return (bytes / 1048576).toFixed(1) + ' MB';
 }
 
+/** Una entrada del historial de mensajes del ticket; estilo distinto según si el autor es el empleado (`rolNivel < 2`) o staff. */
 function CommentItem({ c }: { c: TicketComment }) {
   const isUser = c.rolNivel < 2;
   return (
@@ -67,6 +69,18 @@ interface DetailDrawerProps {
   onAddNote: (id: string, text: string) => Promise<void>;
 }
 
+/**
+ * Panel de detalle de un ticket (drawer lateral), con tres pestañas:
+ * - `info`: descripción, datos generales, reasignación, acciones de estado
+ *   (tomar/cerrar/reabrir/eliminar), adjuntos (con preview de imagen/video) y
+ *   el hilo de comentarios visible para el empleado, con plantillas rápidas.
+ * - `notes`: notas internas de staff, nunca visibles para el empleado.
+ * - `history`: historial de cambios del ticket, más reciente primero.
+ *
+ * Es un componente controlado: todas las mutaciones (`onReassign`,
+ * `onChangeStatus`, `onDelete`, `onAddComment`, `onAddNote`) las resuelve el
+ * padre (`admin/page.tsx`), que llama a la API y revalida los datos.
+ */
 export function DetailDrawer({ ticket: t, open, now, onClose, admins, onReassign, onChangeStatus, onDelete, onAddComment, onAddNote }: DetailDrawerProps) {
   const { confirm } = useConfirm();
   const [tab, setTab] = useState<'info' | 'notes' | 'history'>('info');

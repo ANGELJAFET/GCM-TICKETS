@@ -1,5 +1,13 @@
 'use client';
 
+/**
+ * Autenticación del frontend: sesión guardada en `sessionStorage` (no
+ * cookies), login contra `/api/auth/login`, y helpers de autorización por
+ * rol/módulo que reflejan las reglas del backend (`middleware/auth.ts`).
+ * Genera dos contextos independientes vía {@link makeAuthContext} — uno para
+ * el panel admin y otro para el portal de empleados — cada uno con su propia
+ * clave de almacenamiento, para que iniciar sesión en un portal no afecte al otro.
+ */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api, ApiError, UNAUTHORIZED_EVENT } from './api';
 
@@ -48,6 +56,13 @@ const MODULO_A_CAMPO = {
   usuarios: 'acceso_usuarios',
 } as const;
 
+/**
+ * Genera un par `{ AuthProvider, useAuth }` aislado, con su propia clave de
+ * `sessionStorage` y su propio React Context.
+ * @param namespace Prefijo de la clave de `sessionStorage` (`'admin' | 'portal'`).
+ * @param portalParam Valor enviado como `portal` en el body de `POST /auth/login`, usado por el backend para validar que el rol corresponde al portal.
+ * @returns `{ AuthProvider, useAuth }` — el provider de contexto y el hook para consumirlo.
+ */
 function makeAuthContext(namespace: 'admin' | 'portal', portalParam: 'admin' | 'empleado') {
   const STORAGE_KEY = `gcm_${namespace}_session`;
   const Ctx = createContext<AuthContextValue | null>(null);
@@ -151,6 +166,7 @@ function makeAuthContext(namespace: 'admin' | 'portal', portalParam: 'admin' | '
     return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
   }
 
+  /** Hook para consumir el contexto de autenticación. @throws Si se usa fuera de su `AuthProvider` correspondiente. */
   function useAuth(): AuthContextValue {
     const ctx = useContext(Ctx);
     if (!ctx) throw new Error(`useAuth debe usarse dentro de un AuthProvider (${namespace})`);

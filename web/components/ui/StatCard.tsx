@@ -10,6 +10,7 @@ interface StatCardProps {
   className?: string;
 }
 
+/** Tarjeta compacta de estadística: ícono con color de acento, valor destacado y etiqueta descriptiva. Usada en los "stats grid/row" del panel admin. */
 export function StatCard({ icon, value, label, colorClassName, className }: StatCardProps) {
   return (
     <div

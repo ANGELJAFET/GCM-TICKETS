@@ -23,6 +23,13 @@ interface NotificationsContextValue {
 
 const NotificationsContext = createContext<NotificationsContextValue | null>(null);
 
+/**
+ * Provee el centro de notificaciones en memoria del panel admin (últimas 50,
+ * ver {@link useNotifications}). {@link NotificationsContextValue.checkNewTickets}
+ * se llama tras cada recarga de tickets: compara los IDs actuales contra los
+ * de la carga anterior para detectar altas nuevas y generar una notificación
+ * (in-app y, si el usuario lo autorizó, del sistema vía `Notification` API).
+ */
 export function NotificationsProvider({ children }: { children: ReactNode }) {
   const [notifList, setNotifList] = useState<NotifItem[]>([]);
   const [unread, setUnread] = useState(0);
@@ -76,6 +83,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/** Hook para leer/gestionar el centro de notificaciones del panel admin. @throws Si se usa fuera de {@link NotificationsProvider}. */
 export function useNotifications(): NotificationsContextValue {
   const ctx = useContext(NotificationsContext);
   if (!ctx) throw new Error('useNotifications debe usarse dentro de NotificationsProvider');

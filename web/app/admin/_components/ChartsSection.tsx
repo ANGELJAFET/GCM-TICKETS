@@ -6,6 +6,11 @@ import { IconChartDonut, IconChartBar, IconChartPie } from '@tabler/icons-react'
 import '@/lib/chartSetup';
 import type { Ticket } from '@/lib/types';
 
+/**
+ * Sección de gráficos del dashboard admin (Chart.js vía `react-chartjs-2`):
+ * distribución de tickets por estado (dona), por técnico asignado (barras) y
+ * por categoría (pie). No renderiza nada si `tickets` está vacío.
+ */
 export function ChartsSection({ tickets }: { tickets: Ticket[] }) {
   const { statusData, techData, catData } = useMemo(() => {
     const statusCounts: Record<string, number> = { Abierto: 0, 'En progreso': 0, Cerrado: 0 };

@@ -2,6 +2,7 @@ import { IconUsers, IconUserCheck, IconUserOff, IconMailOpened } from '@tabler/i
 import { StatCard } from '@/components/ui';
 import type { Solicitud, Usuario } from '@/lib/types';
 
+/** Fila de estadísticas de la página de usuarios: total, activos, inactivos y solicitudes pendientes. */
 export function UsrStatsRow({ usuarios, solicitudes }: { usuarios: Usuario[]; solicitudes: Solicitud[] }) {
   const activos = usuarios.filter((u) => u.activo).length;
   const inactivos = usuarios.filter((u) => !u.activo).length;

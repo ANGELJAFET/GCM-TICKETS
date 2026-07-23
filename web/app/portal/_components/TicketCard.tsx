@@ -51,6 +51,7 @@ function isVideo(name: string) {
   return /\.(mp4|mov|avi|webm|3gp)$/i.test(name);
 }
 
+/** Una entrada del historial de mensajes visto por el empleado; el autor de staff siempre se muestra como "Soporte Técnico" (nunca su nombre real). */
 function CommentItem({ c }: { c: TicketComment }) {
   const isUser = c.rolNivel < 2;
   return (
@@ -75,6 +76,12 @@ interface TicketCardProps {
   onReply: (id: string, text: string) => Promise<void>;
 }
 
+/**
+ * Tarjeta de "mis tickets" en el portal de empleados: categoría, estado,
+ * descripción, adjuntos (preview de imagen/video), barra de progreso
+ * visual según estado, hilo de mensajes y un campo de respuesta (oculto si
+ * el ticket ya está cerrado).
+ */
 export function TicketCard({ ticket: t, onReply }: TicketCardProps) {
   const [replyText, setReplyText] = useState('');
   const [replyError, setReplyError] = useState(false);

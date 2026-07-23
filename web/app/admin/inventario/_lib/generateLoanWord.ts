@@ -1,13 +1,27 @@
+/**
+ * Genera el comprobante de préstamo de equipo, imprimible/editable en Word:
+ * un documento HTML descargado con extensión `.doc` (Word lo abre e
+ * interpreta el HTML como si fuera su propio formato), sin depender de
+ * ninguna librería de generación de `.docx`.
+ */
 import type { InventoryItem, Loan } from '@/lib/types';
 
+/** Etiqueta legible por condición física, usada en el comprobante impreso. */
 const CONDICION_MAP: Record<string, string> = { nuevo: 'Nuevo', excelente: 'Excelente', bueno: 'Bueno', regular: 'Regular', danado: 'Dañado' };
 
+/** Escapa caracteres especiales de HTML para interpolar texto de usuario de forma segura en la plantilla. */
 function escapeHtml(str: unknown): string {
   return String(str ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string);
 }
 
-// Genera un comprobante .doc (truco HTML→Word, sin librería) idéntico al de
-// admin.js — se descarga directo desde el navegador vía Blob.
+/**
+ * Genera y descarga el comprobante de préstamo (`prestamo_<id>_<inventoryId>.doc`)
+ * con los datos del equipo, el empleado y la cláusula de responsabilidad,
+ * listo para imprimir y firmar.
+ * @param loan Préstamo a documentar.
+ * @param item Datos del equipo prestado (puede venir parcial/`undefined` si ya no existe en inventario).
+ * @param adminNombre Nombre de quien entrega el equipo (aparece en la firma "Entregado por").
+ */
 export function generateLoanWord(loan: Loan, item: Partial<InventoryItem> | undefined, adminNombre: string) {
   const it = item || {};
   const now = new Date();
