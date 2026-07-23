@@ -1,3 +1,9 @@
+/**
+ * Notificaciones por correo (opcionales). Si no hay credenciales SMTP en
+ * `.env`, el módulo queda deshabilitado (`enabled = false`) y `send()` se
+ * limita a loggear que el correo fue omitido — el resto del sistema sigue
+ * funcionando sin email configurado.
+ */
 import 'dotenv/config';
 import nodemailer from 'nodemailer';
 import path from 'path';
@@ -45,6 +51,13 @@ interface SendArgs {
   html: string;
 }
 
+/**
+ * Envía un correo HTML, agregando automáticamente el logo embebido (`cid`) y
+ * los destinatarios en copia configurados en `SMTP_CC` (excluyendo al propio
+ * destinatario si aparece duplicado).
+ * @param args Destinatario, asunto y cuerpo HTML del correo.
+ * @returns La info de envío de `nodemailer`, o `undefined` si SMTP no está configurado o el envío falla (los errores se loggean, no se relanzan).
+ */
 async function send({ to, subject, html }: SendArgs) {
   if (!transporter) {
     console.warn('[mailer] SMTP no configurado, email omitido:', subject);
@@ -64,6 +77,12 @@ async function send({ to, subject, html }: SendArgs) {
 
 // ── Plantilla base ────────────────────────────────────────────────
 
+/**
+ * Envuelve el HTML de contenido en la plantilla visual común a todos los
+ * correos (encabezado con logo, tarjeta blanca y pie de página con link al sistema).
+ * @param contenido Fragmento HTML específico de cada tipo de notificación.
+ * @returns El documento HTML completo listo para enviar.
+ */
 function baseHtml(contenido: string): string {
   const logoHtml = logoAttachment.length
     ? `<img src="cid:${LOGO_CID}" alt="GCM" style="height:52px;display:block;">`
@@ -123,6 +142,10 @@ interface EmailNuevoRegistroArgs {
   area?: string | null;
 }
 
+/**
+ * Notificación al administrador cuando un empleado envía una solicitud de registro.
+ * @returns `{ subject, html }` listo para pasar a {@link send}.
+ */
 function emailNuevoRegistro({ nombre, username, departamento, finca, area }: EmailNuevoRegistroArgs) {
   return {
     subject: '📋 Nueva solicitud de registro — GCM Tickets',
@@ -149,6 +172,10 @@ interface EmailTicketNuevoArgs {
   departamento?: string | null;
 }
 
+/**
+ * Notificación al administrador cuando se crea un nuevo ticket de soporte.
+ * @returns `{ subject, html }` listo para pasar a {@link send}.
+ */
 function emailTicketNuevo({ folio, titulo, prioridad, nombre, departamento }: EmailTicketNuevoArgs) {
   const colorPrioridad: Record<string, string> = { alta: '#dc2626', critica: '#dc2626', media: '#d97706', baja: '#16a34a' };
   const color = colorPrioridad[prioridad?.toLowerCase() || ''] || '#2563eb';
@@ -178,6 +205,10 @@ interface EmailCambioEstadoArgs {
   comentario?: string | null;
 }
 
+/**
+ * Notificación al empleado cuando cambia el estado de su ticket.
+ * @returns `{ subject, html }` listo para pasar a {@link send}.
+ */
 function emailCambioEstado({ folio, titulo, estadoAnterior, estadoNuevo, nombre, comentario }: EmailCambioEstadoArgs) {
   const colorEstado: Record<string, string> = { 'en_progreso': '#d97706', 'en proceso': '#d97706', resuelto: '#16a34a', cerrado: '#64748b', abierto: '#2563eb' };
   const color = colorEstado[estadoNuevo?.toLowerCase() || ''] || '#2563eb';

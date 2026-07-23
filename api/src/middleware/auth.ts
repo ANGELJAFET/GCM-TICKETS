@@ -1,9 +1,22 @@
+/**
+ * Middlewares de autenticación y autorización.
+ *
+ * - {@link requireAuth}: valida el JWT del header `Authorization: Bearer <token>`.
+ * - {@link requireRole}: exige además un nivel mínimo de rol (1-4).
+ * - {@link requireSuperadminOrAcceso}: exige ser superadmin o tener el permiso
+ *   de módulo específico otorgado (columna `acceso_*` en `usuarios`).
+ */
 import { Request, Response, NextFunction, RequestHandler } from 'express';
 import jwt from 'jsonwebtoken';
 import { SESSION_SECRET } from '../config';
 import db from '../db';
 import { JwtUser } from '../types';
 
+/**
+ * Verifica el JWT de sesión y, si es válido, adjunta el usuario decodificado
+ * a `req.user` para que los handlers siguientes lo usen sin volver a decodificar.
+ * @returns `401` con `{ error }` si no hay token, o si el token es inválido/expiró.
+ */
 function requireAuth(req: Request, res: Response, next: NextFunction) {
   const header = req.headers.authorization || '';
   const token  = header.startsWith('Bearer ') ? header.slice(7) : null;
@@ -21,6 +34,13 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+/**
+ * Compone {@link requireAuth} con una verificación de nivel de rol mínimo.
+ * Pensado para usarse como spread de middlewares en una ruta: `router.get('/x', ...requireRole(3), handler)`.
+ * @param minNivel Nivel mínimo requerido (1 empleado, 2 técnico, 3 admin, 4 superadmin).
+ * @returns Tupla de dos middlewares: `[requireAuth, checkNivel]`.
+ * @returns (en el segundo middleware) `403` con `{ error }` si el rol del usuario es menor al requerido.
+ */
 function requireRole(minNivel: number): [RequestHandler, RequestHandler] {
   return [requireAuth, (req: Request, res: Response, next: NextFunction) => {
     if (req.user!.rol_nivel < minNivel)
@@ -44,6 +64,16 @@ const MODULOS_ACCESO: Record<string, string> = {
 // superadmin le haya otorgado el permiso del módulo correspondiente.
 // Se consulta la BD en cada request (no se confía en el JWT) para que una
 // revocación surta efecto de inmediato, sin esperar a que expire el token.
+/**
+ * Compone {@link requireAuth} con una verificación de permiso de módulo:
+ * el superadmin (nivel 4) siempre pasa; cualquier otro usuario necesita que
+ * el superadmin le haya otorgado el acceso a ese módulo específico
+ * (columna `acceso_*` en `usuarios`).
+ * @param modulo Clave del módulo (`'inventario' | 'prestamos' | 'bitacora' | 'solicitudes' | 'usuarios'`).
+ * @returns Tupla de dos middlewares: `[requireAuth, checkAcceso]`.
+ * @throws Si `modulo` no está en {@link MODULOS_ACCESO} (error de programación, no de request).
+ * @returns (en el segundo middleware) `403` si no tiene el permiso otorgado, `500` si falla la consulta a BD.
+ */
 function requireSuperadminOrAcceso(modulo: string): [RequestHandler, RequestHandler] {
   const columna = MODULOS_ACCESO[modulo];
   if (!columna) throw new Error(`Módulo de acceso desconocido: ${modulo}`);

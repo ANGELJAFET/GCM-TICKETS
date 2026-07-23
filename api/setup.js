@@ -1,3 +1,17 @@
+/**
+ * Script de configuración inicial (y de actualización) de la base de datos.
+ * Se ejecuta automáticamente desde `start.bat`, o manualmente con
+ * `npm run setup` tras actualizar `schema.sql` / `procedimientos.sql`.
+ *
+ * Pasos que realiza (ver {@link main}):
+ * 1. Crea la base de datos si no existe.
+ * 2. Ejecuta `schema.sql` (tablas, roles, seeds, migraciones).
+ * 3. Ejecuta `procedimientos.sql` (stored procedures).
+ * 4. Crea el usuario `admin` (superadmin) inicial si aún no existe.
+ *
+ * Es idempotente: correrlo varias veces no duplica datos ni sobreescribe
+ * al usuario `admin` si ya existe.
+ */
 require('dotenv').config();
 const sql    = require('mssql');
 const bcrypt = require('bcrypt');
@@ -21,8 +35,14 @@ const baseConfig = {
   options:  { trustServerCertificate: true, encrypt: false }
 };
 
-// Divide el archivo .sql en batches separados por GO
-// Omite USE y CREATE DATABASE — la conexión ya apunta a la BD correcta
+/**
+ * Lee un archivo .sql y lo divide en batches separados por `GO` (convención
+ * de SSMS que `mssql` no interpreta de forma nativa). Omite bloques `USE` y
+ * `CREATE DATABASE`, ya que la conexión abierta apunta directamente a la BD
+ * de destino.
+ * @param {string} file Nombre del archivo .sql, relativo a este directorio (ej. `'schema.sql'`).
+ * @returns {string[]} Los batches de SQL a ejecutar en orden, sin bloques vacíos.
+ */
 function readBatches(file) {
   return fs
     .readFileSync(path.join(__dirname, file), 'utf8')
@@ -32,6 +52,15 @@ function readBatches(file) {
     .filter(b => !/^\s*(USE\b|CREATE\s+DATABASE\b)/i.test(b));
 }
 
+/**
+ * Ejecuta una lista de batches SQL en orden sobre el pool dado. Se detiene y
+ * relanza el error en el primer batch que falle (identificando su índice),
+ * para que quede claro qué sentencia del archivo causó el problema.
+ * @param {import('mssql').ConnectionPool} pool Pool de conexión activo.
+ * @param {string[]} batches Batches a ejecutar (ver {@link readBatches}).
+ * @param {string} label Nombre descriptivo del archivo, usado solo en los mensajes de consola.
+ * @throws Si algún batch falla al ejecutarse.
+ */
 async function runBatches(pool, batches, label) {
   for (let i = 0; i < batches.length; i++) {
     try {
@@ -45,6 +74,12 @@ async function runBatches(pool, batches, label) {
   console.log(`  ✓ ${label} — ${batches.length} bloques ejecutados`);
 }
 
+/**
+ * Crea el usuario `admin` (rol superadmin) si aún no existe en la BD. No
+ * modifica ni resetea la contraseña de un `admin` ya existente — la
+ * variable `ADMIN_PASSWORD` solo aplica en la primera creación.
+ * @param {import('mssql').ConnectionPool} pool Pool de conexión activo.
+ */
 async function createAdminIfNotExists(pool) {
   const exists = await pool.request().query(
     `SELECT 1 FROM usuarios WHERE username = 'admin'`
@@ -69,6 +104,11 @@ async function createAdminIfNotExists(pool) {
   console.log(`   ✓ Usuario admin creado (contraseña: ${ADMIN_PASSWORD})`);
 }
 
+/**
+ * Orquesta el setup completo de la base de datos: crea la BD si falta,
+ * ejecuta schema y stored procedures, y asegura el usuario admin inicial.
+ * Ver el resumen del módulo para el detalle de cada paso.
+ */
 async function main() {
   console.log('\n=== GCM Tickets — Setup de base de datos ===\n');
 

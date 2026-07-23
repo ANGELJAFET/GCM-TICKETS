@@ -1,3 +1,9 @@
+/**
+ * CRUD de tickets de soporte técnico: listado/consulta, creación, edición de
+ * campos con historial, comentarios (visibles al empleado), notas internas
+ * (solo staff) y adjuntos (subida directa o vía sesión móvil por QR).
+ * Montado en `server.ts` bajo el prefijo `/api/tickets`.
+ */
 import express, { Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
@@ -21,11 +27,26 @@ const ESTADOS     = ['abierto', 'en_progreso', 'cerrado'];
 // notas internas de staff; técnicos/admins/superadmin (nivel >= 2) ven todo.
 const isStaff = (user: { rol_nivel: number }) => user.rol_nivel >= 2;
 
+/** Oculta las notas internas de staff a un ticket cuando quien lo consulta no es staff. */
 function sanitizeForRequester(ticket: Ticket, user: { rol_nivel: number }): Ticket {
   return isStaff(user) ? ticket : { ...ticket, notes: [] };
 }
 
-// GET /api/tickets
+/**
+ * GET /api/tickets
+ * Lista tickets. Un empleado (rol_nivel 1) solo ve sus propios tickets (por
+ * `reporterId`) y nunca las notas internas; staff (rol_nivel >= 2) ve todos
+ * los tickets completos.
+ *
+ * Auth: requiere sesión (cualquier rol).
+ *
+ * Respuesta 200: `Ticket[]` (ver `types.ts`).
+ *
+ * Códigos de estado:
+ * - 200 — listado cargado correctamente.
+ * - 401 — sin sesión válida.
+ * - 500 — error al cargar tickets.
+ */
 router.get('/', requireAuth, async (req: Request, res: Response) => {
   try {
     let tickets = await loadAllTickets();
@@ -41,7 +62,28 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/tickets
+/**
+ * POST /api/tickets
+ * Crea un ticket nuevo, asignado al usuario autenticado como `reporter`.
+ * Genera el folio con `db.nextId('tickets', 'TK')` (ej. `TK-001`) y registra
+ * la creación en el historial del ticket. Notifica por correo al
+ * administrador (best-effort: un fallo de envío no afecta la respuesta ya enviada).
+ *
+ * Auth: requiere sesión (cualquier rol).
+ *
+ * Body: `{ title: string, desc?: string, status?: string, prioridad?: string, categoria?: string, asignado?: string }`
+ * - `status`: uno de `'abierto' | 'en_progreso' | 'cerrado'` (default `'abierto'`).
+ * - `prioridad`: uno de `'Baja' | 'Media' | 'Alta' | 'Crítica'` (default `'Media'`).
+ * - `categoria`: uno de `'Hardware' | 'Software' | 'Red' | 'Acceso' | 'Otro'` (default `'Otro'`).
+ * - `asignado`: nombre completo o username del técnico a asignar (resuelto vía `db.findUserByNombre`); se ignora si no coincide con nadie.
+ *
+ * Respuesta 201: el `Ticket` creado, ya ensamblado con sus relaciones (vacías).
+ *
+ * Códigos de estado:
+ * - 201 — ticket creado.
+ * - 400 — falta `title`, o `status`/`prioridad`/`categoria` no son valores válidos.
+ * - 500 — error al crear el ticket.
+ */
 router.post('/', requireAuth, async (req: Request, res: Response) => {
   const { title, desc, status, prioridad, categoria, asignado } = req.body;
   if (!title) return res.status(400).json({ error: 'El título es requerido' });
@@ -90,7 +132,22 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/tickets/:id
+/**
+ * GET /api/tickets/:id
+ * Consulta un ticket individual. Un empleado que no es dueño del ticket
+ * recibe `404` (no `403`), para no confirmarle que un ticket ajeno existe.
+ *
+ * Auth: requiere sesión (cualquier rol).
+ *
+ * Parámetros de ruta: `id` — folio del ticket (ej. `TK-001`).
+ *
+ * Respuesta 200: el `Ticket` (sin `notes` si quien consulta no es staff).
+ *
+ * Códigos de estado:
+ * - 200 — ticket encontrado.
+ * - 404 — el ticket no existe, o pertenece a otro empleado que no es staff.
+ * - 500 — error al cargar el ticket.
+ */
 router.get('/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const ticket = await loadTicket(req.params.id);
@@ -104,7 +161,31 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-// PATCH /api/tickets/:id — solo staff (técnico/admin/superadmin) gestiona tickets
+/**
+ * PATCH /api/tickets/:id
+ * Actualiza uno o más campos del ticket (edición parcial). Solo staff
+ * (técnico/admin/superadmin) puede gestionar tickets. Cada campo que
+ * realmente cambia queda registrado en `historial_tickets`. Si notifica al
+ * `status`, envía un correo de cambio de estado al reporter y al admin
+ * (best-effort).
+ *
+ * Auth: requiere `rol_nivel >= 2`.
+ *
+ * Parámetros de ruta: `id` — folio del ticket.
+ *
+ * Body (todos opcionales, se aplican solo los presentes): `{ title?, desc?, status?, prioridad?, categoria?, asignado?, comentario? }`
+ * - `asignado`: nombre completo o username del técnico, o `'Sin asignar'`.
+ * - `comentario`: texto opcional incluido en el correo de cambio de estado (no se guarda en el ticket).
+ *
+ * Respuesta 200: el `Ticket` actualizado.
+ *
+ * Códigos de estado:
+ * - 200 — actualizado correctamente.
+ * - 400 — `status`/`prioridad`/`categoria` con un valor no permitido.
+ * - 403 — el usuario autenticado no es staff.
+ * - 404 — el ticket no existe.
+ * - 500 — error al actualizar.
+ */
 router.patch('/:id', ...requireRole(2), async (req: Request, res: Response) => {
   const id  = req.params.id;
   let row: any = null;
@@ -192,7 +273,22 @@ router.patch('/:id', ...requireRole(2), async (req: Request, res: Response) => {
   }
 });
 
-// DELETE /api/tickets/:id — solo staff
+/**
+ * DELETE /api/tickets/:id
+ * Elimina un ticket, sus adjuntos en disco y registra la acción en la
+ * bitácora de auditoría.
+ *
+ * Auth: requiere `rol_nivel >= 2`.
+ *
+ * Parámetros de ruta: `id` — folio del ticket.
+ *
+ * Respuesta 200: `{ ok: true }`
+ *
+ * Códigos de estado:
+ * - 200 — eliminado correctamente.
+ * - 403 — el usuario autenticado no es staff.
+ * - 500 — error al eliminar.
+ */
 router.delete('/:id', ...requireRole(2), async (req: Request, res: Response) => {
   try {
     const id   = req.params.id;
@@ -212,7 +308,24 @@ router.delete('/:id', ...requireRole(2), async (req: Request, res: Response) => 
   }
 });
 
-// POST /api/tickets/:id/comments — el dueño del ticket o cualquier miembro de staff
+/**
+ * POST /api/tickets/:id/comments
+ * Agrega un comentario visible para el empleado (canal público del ticket).
+ * Puede comentar el dueño del ticket o cualquier miembro de staff.
+ *
+ * Auth: requiere sesión (cualquier rol).
+ *
+ * Parámetros de ruta: `id` — folio del ticket.
+ * Body: `{ text: string }`
+ *
+ * Respuesta 200: el `Ticket` actualizado (con el nuevo comentario incluido).
+ *
+ * Códigos de estado:
+ * - 200 — comentario agregado.
+ * - 400 — falta `text`.
+ * - 404 — el ticket no existe, o pertenece a otro empleado que no es staff.
+ * - 500 — error al agregar el comentario.
+ */
 router.post('/:id/comments', requireAuth, async (req: Request, res: Response) => {
   try {
     const id = req.params.id;
@@ -240,7 +353,25 @@ router.post('/:id/comments', requireAuth, async (req: Request, res: Response) =>
   }
 });
 
-// POST /api/tickets/:id/notes — solo staff (canal interno, no visible al empleado)
+/**
+ * POST /api/tickets/:id/notes
+ * Agrega una nota interna, visible solo para staff (nunca para el empleado
+ * dueño del ticket).
+ *
+ * Auth: requiere `rol_nivel >= 2`.
+ *
+ * Parámetros de ruta: `id` — folio del ticket.
+ * Body: `{ text: string }`
+ *
+ * Respuesta 200: el `Ticket` actualizado (con la nueva nota incluida).
+ *
+ * Códigos de estado:
+ * - 200 — nota agregada.
+ * - 400 — falta `text`.
+ * - 403 — el usuario autenticado no es staff.
+ * - 404 — el ticket no existe.
+ * - 500 — error al agregar la nota.
+ */
 router.post('/:id/notes', ...requireRole(2), async (req: Request, res: Response) => {
   try {
     const id = req.params.id;
@@ -262,7 +393,25 @@ router.post('/:id/notes', ...requireRole(2), async (req: Request, res: Response)
   }
 });
 
-// POST /api/tickets/:id/attachments — el dueño del ticket o cualquier miembro de staff
+/**
+ * POST /api/tickets/:id/attachments
+ * Sube un adjunto (imagen/video/documento, máx. 50 MB) directamente al
+ * ticket usando `multipart/form-data`. Puede subir el dueño del ticket o
+ * cualquier miembro de staff.
+ *
+ * Auth: requiere sesión (cualquier rol).
+ *
+ * Parámetros de ruta: `id` — folio del ticket.
+ * Body: `multipart/form-data` con campo `file` (ver `middleware/upload.ts`).
+ *
+ * Respuesta 200: el `Ticket` actualizado (con el nuevo adjunto incluido).
+ *
+ * Códigos de estado:
+ * - 200 — archivo adjuntado.
+ * - 400 — no se recibió archivo (`req.file` vacío o extensión no permitida).
+ * - 404 — el ticket no existe, o pertenece a otro empleado que no es staff.
+ * - 500 — error al adjuntar el archivo.
+ */
 router.post('/:id/attachments', requireAuth, upload.single('file'), async (req: Request, res: Response) => {
   try {
     const id = req.params.id;
@@ -292,7 +441,26 @@ router.post('/:id/attachments', requireAuth, upload.single('file'), async (req: 
   }
 });
 
-// POST /api/tickets/:id/attachments/from-mobile
+/**
+ * POST /api/tickets/:id/attachments/from-mobile
+ * Adjunta al ticket un archivo que ya fue subido por celular a través del
+ * flujo de sesión móvil por QR (ver `mobileSessions.ts` y `routes/mobileUpload.ts`).
+ * La sesión debe existir y estar en estado `'ready'` (archivo ya recibido).
+ *
+ * Auth: requiere sesión (cualquier rol) — quien confirma el adjunto desde el
+ * navegador ya tiene sesión iniciada; el celular que subió el archivo no la necesitó.
+ *
+ * Parámetros de ruta: `id` — folio del ticket.
+ * Body: `{ token: string }` — token de la sesión móvil generada al crear el QR.
+ *
+ * Respuesta 200: el `Ticket` actualizado (con el nuevo adjunto incluido).
+ *
+ * Códigos de estado:
+ * - 200 — archivo adjuntado y sesión móvil consumida (se borra del mapa en memoria).
+ * - 400 — la sesión no existe o el archivo aún no ha sido recibido.
+ * - 404 — el ticket no existe, o pertenece a otro empleado que no es staff.
+ * - 500 — error al adjuntar el archivo.
+ */
 router.post('/:id/attachments/from-mobile', requireAuth, async (req: Request, res: Response) => {
   try {
     const { token } = req.body;

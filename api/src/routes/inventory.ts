@@ -1,3 +1,20 @@
+/**
+ * Inventario de equipos, préstamos y bitácora de auditoría. También incluye
+ * la recepción de dispositivos externos para reparación ("devices"), que
+ * crea a la vez un ticket de soporte asociado.
+ *
+ * Un equipo de inventario se maneja en uno de dos modos, fijado al crearlo:
+ * - `'unidad'`: equipo físico con número de serie, solo puede prestarse a una
+ *   persona a la vez (su `estado` refleja disponibilidad real).
+ * - `'cantidad'`: lote sin serie individual, admite préstamos parciales
+ *   simultáneos mientras haya stock (ver {@link getCantidadPrestada}).
+ *
+ * Todas las rutas de este archivo están protegidas por el permiso de módulo
+ * correspondiente (`inventario`, `prestamos` o `bitacora`), otorgado por el
+ * superadmin — ver `middleware/auth.ts`.
+ * Montado en `server.ts` bajo el prefijo `/api` (rutas ya incluyen su propio
+ * segmento, ej. `/inventory`, `/loans`, `/devices`, `/auditoria`).
+ */
 import express, { Request, Response } from 'express';
 import db from '../db';
 import { fmtDate, logAudit } from '../helpers';
@@ -5,10 +22,14 @@ import { loadTicket } from '../ticketLoader';
 import { requireSuperadminOrAcceso } from '../middleware/auth';
 import { mobileSessions } from '../mobileSessions';
 
-// Resuelve un mobileToken (sesión de subida por QR) a la ruta del archivo ya
-// guardado en /uploads. No borra el archivo, solo la sesión en memoria —
-// así el barrido periódico de mobileSessions ya no la considera "huérfana"
-// y no elimina la foto que acabamos de asociar a un equipo.
+/**
+ * Resuelve un `mobileToken` (sesión de subida por QR, ver `mobileSessions.ts`)
+ * a la ruta del archivo ya guardado en `/uploads`. Solo borra la sesión en
+ * memoria (no el archivo): así el barrido periódico de `mobileSessions` ya
+ * no la considera "huérfana" y no elimina la foto recién asociada al equipo.
+ * @param mobileToken Token de sesión móvil recibido en el body, o `undefined`/valor no-string.
+ * @returns La ruta pública del archivo (`/uploads/...`), o `null` si el token no es válido o el archivo no está listo.
+ */
 function resolveMobilePhoto(mobileToken: unknown): string | null {
   if (typeof mobileToken !== 'string' || !mobileToken) return null;
   const s = mobileSessions.get(mobileToken);
@@ -23,8 +44,12 @@ const CONDICIONES   = ['nuevo', 'excelente', 'bueno', 'regular', 'danado'];
 const ESTADOS_INV   = ['disponible', 'en_uso', 'en_prestamo', 'en_reparacion', 'de_baja'];
 const TIPOS_MANEJO  = ['unidad', 'cantidad'];
 
-// Cuánto de un ítem 'cantidad' está prestado ahora mismo (préstamos activos,
-// descontando lo ya devuelto parcialmente).
+/**
+ * Calcula cuánto de un ítem de tipo `'cantidad'` está prestado ahora mismo:
+ * suma `cantidad - cantidad_devuelta` de todos sus préstamos activos.
+ * @param inventarioId Id del ítem de inventario (ej. `"INV-001"`).
+ * @returns Unidades actualmente prestadas (0 si no hay préstamos activos).
+ */
 async function getCantidadPrestada(inventarioId: string): Promise<number> {
   const row = await db.queryOne<any>(
     `SELECT ISNULL(SUM(cantidad - cantidad_devuelta), 0) AS prestado
@@ -34,7 +59,20 @@ async function getCantidadPrestada(inventarioId: string): Promise<number> {
   return row?.prestado || 0;
 }
 
-// GET /api/devices
+/**
+ * GET /api/devices
+ * Lista los dispositivos externos recibidos para diagnóstico/reparación
+ * (equipos de clientes, no del inventario propio).
+ *
+ * Auth: superadmin, o acceso al módulo `'inventario'`.
+ *
+ * Respuesta 200: `Array<{ id, tipo, marca, modelo, serie, estadoFisico, fallaCliente, accesorios, clienteNombre, clienteTel, tecnico, fecha, fechaTs }>`
+ *
+ * Códigos de estado:
+ * - 200 — listado cargado.
+ * - 403 — sin acceso al módulo.
+ * - 500 — error al cargar dispositivos.
+ */
 router.get('/devices', ...requireSuperadminOrAcceso('inventario'), async (req: Request, res: Response) => {
   try {
     const devices = await db.exec<any>('sp_GetDevices');
@@ -52,7 +90,26 @@ router.get('/devices', ...requireSuperadminOrAcceso('inventario'), async (req: R
   }
 });
 
-// POST /api/devices
+/**
+ * POST /api/devices
+ * Registra un dispositivo externo recibido para reparación y, en la misma
+ * operación (`sp_CrearDispositivoConTicket`), crea el ticket de soporte
+ * asociado con una descripción auto-generada a partir de los datos del equipo.
+ *
+ * Auth: superadmin, o acceso al módulo `'inventario'`.
+ *
+ * Body: `{ tipo, marca, modelo?, serie?, estadoFisico?, fallaCliente, accesorios?: string[], clienteNombre, clienteTel?, tecnico? }`
+ * - `estadoFisico`: uno de `'nuevo' | 'excelente' | 'bueno' | 'regular' | 'danado'`.
+ * - `tecnico`: nombre completo o username del técnico a asignar (resuelto vía `db.findUserByNombre`).
+ *
+ * Respuesta 201: `{ device: <fila de dispositivos>, ticket: Ticket }`
+ *
+ * Códigos de estado:
+ * - 201 — dispositivo y ticket creados.
+ * - 400 — faltan campos requeridos, o `estadoFisico` no es válido.
+ * - 403 — sin acceso al módulo.
+ * - 500 — error al registrar.
+ */
 router.post('/devices', ...requireSuperadminOrAcceso('inventario'), async (req: Request, res: Response) => {
   try {
     const { tipo, marca, modelo, serie, estadoFisico, fallaCliente,
@@ -100,7 +157,20 @@ router.post('/devices', ...requireSuperadminOrAcceso('inventario'), async (req: 
   }
 });
 
-// GET /api/inventory
+/**
+ * GET /api/inventory
+ * Lista los equipos del inventario propio, con la cantidad prestada
+ * calculada para los ítems de tipo `'cantidad'`.
+ *
+ * Auth: superadmin, o acceso al módulo `'inventario'`.
+ *
+ * Respuesta 200: `Array<{ id, tipo, marca, modelo, serie, color, condicion, estado, tipoManejo, cantidadTotal, cantidadPrestada, ubicacion, responsable, foto, notas, garantia, fechaIngreso, fechaTs, historial: [] }>`
+ *
+ * Códigos de estado:
+ * - 200 — listado cargado.
+ * - 403 — sin acceso al módulo.
+ * - 500 — error al cargar inventario.
+ */
 router.get('/inventory', ...requireSuperadminOrAcceso('inventario'), async (req: Request, res: Response) => {
   try {
     const items = await db.exec<any>('sp_GetInventory');
@@ -131,7 +201,26 @@ router.get('/inventory', ...requireSuperadminOrAcceso('inventario'), async (req:
   }
 });
 
-// POST /api/inventory
+/**
+ * POST /api/inventory
+ * Registra un nuevo equipo o lote en el inventario. El modo de manejo
+ * (`tipoManejo`) queda fijo desde la creación: `'unidad'` exige número de
+ * serie; `'cantidad'` exige `cantidadTotal` (entero >= 1) y no lleva serie.
+ *
+ * Auth: superadmin, o acceso al módulo `'inventario'`.
+ *
+ * Body: `{ tipo, marca, modelo?, serie?, color?, condicion?, estado?, ubicacion?, responsable?, notas?, garantia?, tipoManejo?: 'unidad'|'cantidad', cantidadTotal?, mobileToken? }`
+ * - `condicion`: uno de `'nuevo' | 'excelente' | 'bueno' | 'regular' | 'danado'`.
+ * - `mobileToken`: token de una sesión de subida de foto por QR (ver `resolveMobilePhoto`).
+ *
+ * Respuesta 201: el equipo creado, con `historial: []`.
+ *
+ * Códigos de estado:
+ * - 201 — equipo registrado.
+ * - 400 — faltan campos requeridos, o `condicion`/`tipoManejo` inválidos, o falta serie/cantidad según el modo.
+ * - 403 — sin acceso al módulo.
+ * - 500 — error al registrar.
+ */
 router.post('/inventory', ...requireSuperadminOrAcceso('inventario'), async (req: Request, res: Response) => {
   try {
     const { tipo, marca, modelo, serie, color, condicion, estado, ubicacion, responsable, notas, garantia,
@@ -188,7 +277,30 @@ router.post('/inventory', ...requireSuperadminOrAcceso('inventario'), async (req
   }
 });
 
-// PATCH /api/inventory/:id
+/**
+ * PATCH /api/inventory/:id
+ * Actualiza uno o más campos de un equipo del inventario (edición parcial).
+ * No permite cambiar el `estado` mientras el equipo está `'en_prestamo'`
+ * (debe gestionarse desde la devolución del préstamo). Cada cambio de
+ * `estado` queda registrado en `historial_inventario`.
+ *
+ * Auth: superadmin, o acceso al módulo `'inventario'`.
+ *
+ * Parámetros de ruta: `id` — id del equipo (ej. `INV-001`).
+ *
+ * Body (todos opcionales, se aplican solo los presentes): `{ tipo?, marca?, modelo?, serie?, color?, condicion?, estado?, ubicacion?, notas?, garantia?, cantidadTotal?, responsable?, mobileToken? }`
+ * - Si es tipo `'cantidad'`, `cantidadTotal` no puede bajar por debajo de lo ya prestado.
+ *
+ * Respuesta 200: el equipo actualizado, con `historial: []`.
+ *
+ * Códigos de estado:
+ * - 200 — actualizado correctamente.
+ * - 400 — algún valor no es válido (condición, estado, serie vacía, cantidad no entera).
+ * - 403 — sin acceso al módulo.
+ * - 404 — el equipo no existe.
+ * - 409 — se intentó cambiar el estado de un equipo prestado, o bajar `cantidadTotal` por debajo de lo prestado.
+ * - 500 — error al actualizar.
+ */
 router.patch('/inventory/:id', ...requireSuperadminOrAcceso('inventario'), async (req: Request, res: Response) => {
   try {
     const id   = req.params.id;
@@ -276,7 +388,23 @@ router.patch('/inventory/:id', ...requireSuperadminOrAcceso('inventario'), async
   }
 });
 
-// DELETE /api/inventory/:id
+/**
+ * DELETE /api/inventory/:id
+ * Elimina un equipo del inventario junto con su historial y sus préstamos.
+ * No permite eliminar un equipo con un préstamo activo.
+ *
+ * Auth: superadmin, o acceso al módulo `'inventario'`.
+ *
+ * Parámetros de ruta: `id` — id del equipo.
+ *
+ * Respuesta 200: `{ ok: true }`
+ *
+ * Códigos de estado:
+ * - 200 — eliminado correctamente.
+ * - 403 — sin acceso al módulo.
+ * - 409 — el equipo tiene un préstamo activo.
+ * - 500 — error al eliminar.
+ */
 router.delete('/inventory/:id', ...requireSuperadminOrAcceso('inventario'), async (req: Request, res: Response) => {
   try {
     const id = req.params.id;
@@ -302,7 +430,19 @@ router.delete('/inventory/:id', ...requireSuperadminOrAcceso('inventario'), asyn
   }
 });
 
-// GET /api/loans
+/**
+ * GET /api/loans
+ * Lista todos los préstamos de equipo/inventario.
+ *
+ * Auth: superadmin, o acceso al módulo `'prestamos'`.
+ *
+ * Respuesta 200: `Array<{ id, inventoryId, empleado, departamento, fechaPrestamo, fechaPrestamoTs, fechaDevolucionEstimada, fechaDevolucionReal, estado, cantidad, cantidadDevuelta, autorizadoPor, notas, condicionDevolucion, notaDevolucion, equipoDesc }>`
+ *
+ * Códigos de estado:
+ * - 200 — listado cargado.
+ * - 403 — sin acceso al módulo.
+ * - 500 — error al cargar préstamos.
+ */
 router.get('/loans', ...requireSuperadminOrAcceso('prestamos'), async (req: Request, res: Response) => {
   try {
     const loans = await db.exec<any>('sp_GetLoans');
@@ -330,7 +470,29 @@ router.get('/loans', ...requireSuperadminOrAcceso('prestamos'), async (req: Requ
   }
 });
 
-// POST /api/loans
+/**
+ * POST /api/loans
+ * Registra un préstamo de un equipo/lote de inventario a un empleado. En
+ * modo `'unidad'`, marca el equipo como `'en_prestamo'` y rechaza el
+ * préstamo si ya está prestado; en modo `'cantidad'`, valida que haya
+ * suficiente stock disponible (`cantidadTotal - getCantidadPrestada`).
+ *
+ * Auth: superadmin, o acceso al módulo `'prestamos'`.
+ *
+ * Body: `{ inventoryId, empleado, departamento?, fechaDevolucion?, autorizadoPorId?, notas?, cantidad? }`
+ * - `empleado`: nombre completo o username (resuelto vía `db.findUserByNombre`).
+ * - `cantidad`: requerida y validada solo si el equipo es de tipo `'cantidad'`.
+ *
+ * Respuesta 201: `{ loan: <fila de préstamos>, item: <fila de inventario actualizada> }`
+ *
+ * Códigos de estado:
+ * - 201 — préstamo registrado.
+ * - 400 — faltan `inventoryId`/`empleado`, o `cantidad` inválida.
+ * - 403 — sin acceso al módulo.
+ * - 404 — el equipo no existe en inventario.
+ * - 409 — el equipo (modo `'unidad'`) ya está prestado, o no hay stock suficiente (modo `'cantidad'`).
+ * - 500 — error al registrar el préstamo.
+ */
 router.post('/loans', ...requireSuperadminOrAcceso('prestamos'), async (req: Request, res: Response) => {
   try {
     const { inventoryId, empleado, departamento, fechaDevolucion, autorizadoPorId, notas, cantidad } = req.body;
@@ -394,7 +556,33 @@ router.post('/loans', ...requireSuperadminOrAcceso('prestamos'), async (req: Req
   }
 });
 
-// PATCH /api/loans/:id
+/**
+ * PATCH /api/loans/:id
+ * Gestiona la devolución (total o parcial) de un préstamo, y/o actualiza
+ * sus notas. Dos formas de indicar devolución (mutuamente compatibles, ver
+ * cuerpo): `estado: 'devuelto'` devuelve todo lo pendiente de una vez;
+ * `cantidadDevuelta` permite devolución parcial (ej. devolver 1 de 2
+ * unidades prestadas de un lote). Si el equipo es de tipo `'unidad'` y la
+ * devolución queda completa, el equipo pasa a `'disponible'`, o a
+ * `'en_reparacion'` si `condicionDevolucion` es `'danado'`.
+ *
+ * Auth: superadmin, o acceso al módulo `'prestamos'`.
+ *
+ * Parámetros de ruta: `id` — id del préstamo (ej. `PREST-001`).
+ *
+ * Body: `{ estado?: 'devuelto', cantidadDevuelta?: number, condicionDevolucion?, notaDevolucion?, notas? }`
+ * - `condicionDevolucion`: uno de `'nuevo' | 'excelente' | 'bueno' | 'regular' | 'danado'`.
+ *
+ * Respuesta 200: la fila de `prestamos` actualizada.
+ *
+ * Códigos de estado:
+ * - 200 — actualizado correctamente.
+ * - 400 — `cantidadDevuelta` inválida, o mayor a lo restante por devolver, o `condicionDevolucion` inválida.
+ * - 403 — sin acceso al módulo.
+ * - 404 — el préstamo no existe.
+ * - 409 — el préstamo ya fue devuelto por completo.
+ * - 500 — error al actualizar.
+ */
 router.patch('/loans/:id', ...requireSuperadminOrAcceso('prestamos'), async (req: Request, res: Response) => {
   try {
     const id   = req.params.id;
@@ -475,7 +663,23 @@ router.patch('/loans/:id', ...requireSuperadminOrAcceso('prestamos'), async (req
   }
 });
 
-// GET /api/auditoria
+/**
+ * GET /api/auditoria
+ * Consulta la bitácora de auditoría del sistema (acciones administrativas
+ * registradas vía `logAudit`), con filtros opcionales.
+ *
+ * Auth: superadmin, o acceso al módulo `'bitacora'`.
+ *
+ * Query: `{ actor?, entidad?, desde?, hasta?, limit? }`
+ * - `limit`: máximo de filas a retornar, tope 500 (default 200).
+ *
+ * Respuesta 200: filas de `sp_GetAuditoria`.
+ *
+ * Códigos de estado:
+ * - 200 — resultados cargados.
+ * - 403 — sin acceso al módulo.
+ * - 500 — error al cargar la auditoría.
+ */
 router.get('/auditoria', ...requireSuperadminOrAcceso('bitacora'), async (req: Request, res: Response) => {
   try {
     const { actor, entidad, desde, hasta } = req.query;

@@ -4,6 +4,39 @@
 --  Uso   : Ejecutar en SSMS DESPUÉS de schema.sql
 --          Puede ejecutarse varias veces (DROP IF EXISTS + CREATE)
 -- ============================================================
+--
+--  Índice de procedimientos (ver detalle y parámetros en cada bloque):
+--    Autenticación y registro:
+--      sp_GetUserForLogin(@username)                — credenciales + rol para login
+--      sp_UpdateLastLogin(@username)                — timestamp de último acceso
+--      sp_InsertSolicitudRegistro(...)              — crea solicitud de acceso (50409 si duplicada)
+--      sp_GetSolicitudes()                          — lista solicitudes de acceso
+--      sp_AprobarSolicitud(@solicitud_id,@requestedBy)  — aprueba y crea el usuario (transacción)
+--      sp_RechazarSolicitud(@solicitud_id,@requestedBy,@motivo)
+--    Usuarios:
+--      sp_GetUsuarios()                             — listado completo con rol/departamento
+--      sp_GetAdmins()                               — solo staff (técnico/admin/superadmin) activo
+--    Tickets:
+--      sp_GetTickets() / sp_GetTicket(@id)           — ticket(s) con nombre de asignado/reporter
+--      sp_GetComentarios(@ticket_id,@es_interno)     — comentarios públicos o notas internas
+--      sp_GetHistorialTicket(@ticket_id)             — historial de cambios
+--      sp_GetAdjuntos(@ticket_id)                    — adjuntos del ticket
+--    Dispositivos (taller) e inventario:
+--      sp_GetDevices()                               — equipos externos en reparación
+--      sp_CrearDispositivoConTicket(...)             — alta de dispositivo + ticket (transacción)
+--      sp_GetInventory()                             — inventario con nombre del responsable
+--      sp_GetLoans()                                 — préstamos con descripción de equipo/empleado
+--    Catálogos y auditoría:
+--      sp_GetDepartamentos()                         — departamentos activos (para selects)
+--      sp_LogAudit(@actor,@accion,@entidad,@entidad_id,@detalle)  — inserta en bitácora
+--      sp_GetAuditoria(@actor,@entidad,@desde,@hasta,@limit)      — consulta bitácora con filtros
+--
+--  Convención de errores: los SPs que validan reglas de negocio (aprobar/
+--  rechazar solicitud) usan THROW con números custom que las rutas
+--  interpretan explícitamente: 50404 → recurso no encontrado (404),
+--  50409 → conflicto de estado/duplicado (409). Ver `err.number` en
+--  api/src/routes/usuarios.ts.
+-- ============================================================
 
 USE [gcm_tickets];
 GO

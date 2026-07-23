@@ -11,6 +11,31 @@
 --      node server.js
 --  El usuario admin se crea automáticamente al primer arranque.
 -- ============================================================
+--
+--  Modelo de datos — resumen de entidades y relaciones (FK):
+--
+--    roles 1───* usuarios *───1 departamentos
+--    usuarios 1───* tickets (reporter_id, asignado_id)
+--    tickets 1───* comentarios / historial_tickets / adjuntos  (ON DELETE CASCADE)
+--    tickets 1───1 dispositivos (device_id — equipo recibido en taller)
+--    usuarios 1───* dispositivos (tecnico_id)
+--    usuarios 1───* inventario (responsable_id)
+--    inventario 1───* historial_inventario
+--    inventario 1───* prestamos *───1 usuarios (empleado_id, autorizado_por_id)
+--    solicitudes_registro *───1 usuarios (revisado_por) — se aprueba/rechaza
+--      y, si se aprueba, genera una fila nueva en usuarios (no hay FK directa
+--      solicitud→usuario porque la cuenta aún no existe al crear la solicitud)
+--    contadores — no tiene FKs; solo guarda el último correlativo usado por
+--      db.nextId() para generar IDs legibles (TK-001, INV-001, PREST-001, DEV-001)
+--    auditoria — tabla de bitácora, sin FKs (actor/entidad quedan como texto
+--      para que un registro de auditoría sobreviva aunque el usuario o la
+--      entidad referenciada se elimine después)
+--
+--  Convención de claves: catálogos pequeños (roles, departamentos, contadores)
+--  usan INT/TINYINT autoincremental; las entidades de negocio (tickets,
+--  inventario, prestamos, dispositivos) usan NVARCHAR con folio legible
+--  generado por db.nextId() (ver api/src/db.ts).
+-- ============================================================
 
 -- ============================================================
 -- 1.  Base de datos

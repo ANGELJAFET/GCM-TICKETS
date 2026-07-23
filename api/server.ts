@@ -1,3 +1,16 @@
+/**
+ * Punto de entrada de la API (GCM Tickets).
+ *
+ * Responsabilidades de este archivo:
+ * - Configurar middlewares globales (CORS, seguridad HTTP con helmet, parseo de JSON).
+ * - Servir los adjuntos subidos (`/uploads`) como archivos estáticos.
+ * - Montar los routers de cada dominio bajo sus prefijos `/api/*`.
+ * - Inicializar el pool de conexión a SQL Server (`db.initDB`) y, una vez listo,
+ *   levantar el servidor HTTP en el puerto configurado (`PORT`).
+ *
+ * No contiene lógica de negocio: solo bootstrap/orquestación. La lógica de cada
+ * dominio vive en `src/routes/*.ts`.
+ */
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
@@ -14,6 +27,7 @@ import usuarioRoutes      from './src/routes/usuarios';
 import inventoryRoutes    from './src/routes/inventory';
 import mobileUploadRoutes from './src/routes/mobileUpload';
 
+// Asegura que exista el directorio de adjuntos antes de servirlo/escribir en él.
 if (!fs.existsSync(UPLOADS)) fs.mkdirSync(UPLOADS);
 
 const app = express();
@@ -41,20 +55,29 @@ app.use(helmet({
   hsts: false,
 }));
 app.use(express.json());
+// Expone los archivos subidos (fotos de tickets, evidencias, etc.) como
+// contenido estático servido directamente desde el filesystem.
 app.use('/uploads', express.static(UPLOADS));
 
+// Todas las respuestas de /api quedan sin cachear: el panel admin y el portal
+// muestran datos que cambian constantemente (tickets, inventario), así que no
+// conviene que el navegador o un proxy sirvan una respuesta vieja.
 app.use('/api', (req, res, next) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
   res.set('Pragma', 'no-cache');
   next();
 });
 
-app.use('/api/auth',          authRoutes);
-app.use('/api/tickets',       ticketRoutes);
-app.use('/api',               usuarioRoutes);
-app.use('/api',               inventoryRoutes);
-app.use('/api/mobile-upload', mobileUploadRoutes);
+// Montaje de routers por dominio. Ver cada archivo en src/routes/ para el
+// detalle de endpoints, parámetros y respuestas.
+app.use('/api/auth',          authRoutes);       // login, registro, sesión
+app.use('/api/tickets',       ticketRoutes);     // CRUD de tickets
+app.use('/api',               usuarioRoutes);    // usuarios, solicitudes, permisos
+app.use('/api',               inventoryRoutes);  // inventario, préstamos, bitácora
+app.use('/api/mobile-upload', mobileUploadRoutes); // adjuntos desde celular vía QR
 
+// El servidor HTTP solo arranca una vez que el pool de SQL Server está listo:
+// si la BD no responde, no tiene sentido aceptar peticiones que fallarían todas.
 db.initDB().then(() => {
   app.listen(PORT, '0.0.0.0', () => {
     const localIP = getLocalIP();

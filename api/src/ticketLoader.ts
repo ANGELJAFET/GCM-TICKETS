@@ -1,7 +1,23 @@
+/**
+ * Ensambla la forma completa de un `Ticket` (ver `types.ts`) a partir de las
+ * filas crudas devueltas por los stored procedures: el ticket base más sus
+ * comentarios, notas internas, historial y adjuntos.
+ */
 import db from './db';
 import { fmtDate, fmtTs } from './helpers';
 import { Ticket } from './types';
 
+/**
+ * Combina la fila base de un ticket con sus relaciones (comentarios, notas,
+ * historial, adjuntos) en el objeto `Ticket` que consume el frontend,
+ * aplicando formato de fechas y normalizando nombres para mostrar.
+ * @param row Fila del ticket devuelta por `sp_GetTicket` / `sp_GetTickets`.
+ * @param comments Comentarios visibles para el empleado (`es_interno = 0`).
+ * @param notes Notas internas, solo visibles para staff (`es_interno = 1`).
+ * @param history Entradas del historial de cambios del ticket.
+ * @param attachments Adjuntos subidos al ticket.
+ * @returns El ticket ensamblado, listo para responder al frontend.
+ */
 function shapeTicket(row: any, comments: any[], notes: any[], history: any[], attachments: any[]): Ticket {
   return {
     id:        row.id,
@@ -28,6 +44,11 @@ function shapeTicket(row: any, comments: any[], notes: any[], history: any[], at
   };
 }
 
+/**
+ * Carga un ticket individual con todas sus relaciones.
+ * @param id Folio del ticket (ej. `"TK-001"`).
+ * @returns El ticket ensamblado, o `null` si no existe.
+ */
 async function loadTicket(id: string): Promise<Ticket | null> {
   const row = await db.execOne('sp_GetTicket', { id });
   if (!row) return null;
@@ -42,6 +63,13 @@ async function loadTicket(id: string): Promise<Ticket | null> {
   return shapeTicket(row, comments, notes, history, attachments);
 }
 
+/**
+ * Carga todos los tickets con sus relaciones, evitando el problema N+1: en
+ * vez de una consulta de comentarios/notas/historial/adjuntos por ticket,
+ * trae todas las relaciones de golpe (`WHERE ticket_id IN (...)`) y las
+ * agrupa en memoria por `ticket_id` antes de ensamblar cada ticket.
+ * @returns Todos los tickets del sistema, ensamblados con sus relaciones.
+ */
 async function loadAllTickets(): Promise<Ticket[]> {
   const rows = await db.exec<any>('sp_GetTickets');
   if (!rows.length) return [];

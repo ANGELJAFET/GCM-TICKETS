@@ -1,3 +1,11 @@
+/**
+ * Gestión de usuarios: listado con datos personales, activar/desactivar,
+ * eliminar, cambio de contraseña (solo superadmin), permisos de módulo
+ * (solo superadmin), altas de técnicos/admins ("admins") y aprobación o
+ * rechazo de solicitudes de registro de empleados.
+ * Montado en `server.ts` bajo el prefijo `/api` (rutas ya incluyen su propio
+ * segmento, ej. `/usuarios`, `/admins`, `/solicitudes`).
+ */
 import express, { Request, Response } from 'express';
 import db from '../db';
 import { logAudit } from '../helpers';
@@ -7,9 +15,21 @@ const router = express.Router();
 
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
 
-// GET /api/usuarios
-// Ver el listado (datos personales de otros usuarios) requiere ser
-// superadmin o que el superadmin haya otorgado el módulo 'usuarios'.
+/**
+ * GET /api/usuarios
+ * Lista todos los usuarios con sus datos personales (correo, teléfono,
+ * finca, área). Ver este listado requiere ser superadmin o tener el módulo
+ * `usuarios` otorgado explícitamente.
+ *
+ * Auth: superadmin, o acceso al módulo `'usuarios'`.
+ *
+ * Respuesta 200: filas de `sp_GetUsuarios`.
+ *
+ * Códigos de estado:
+ * - 200 — listado cargado.
+ * - 403 — sin acceso al módulo.
+ * - 500 — error al cargar usuarios.
+ */
 router.get('/usuarios', ...requireSuperadminOrAcceso('usuarios'), async (req: Request, res: Response) => {
   try {
     res.json(await db.exec('sp_GetUsuarios'));
@@ -19,7 +39,23 @@ router.get('/usuarios', ...requireSuperadminOrAcceso('usuarios'), async (req: Re
   }
 });
 
-// GET /api/usuarios/:id/tickets
+/**
+ * GET /api/usuarios/:id/tickets
+ * Lista los tickets reportados por un usuario específico (usado desde el
+ * detalle de usuario en el panel admin).
+ *
+ * Auth: superadmin, o acceso al módulo `'usuarios'`.
+ *
+ * Parámetros de ruta: `id` — id numérico del usuario.
+ *
+ * Respuesta 200: `{ nombre: string, tickets: Array<{ id, titulo, status, prioridad, categoria, created_at }> }`
+ *
+ * Códigos de estado:
+ * - 200 — cargado correctamente.
+ * - 403 — sin acceso al módulo.
+ * - 404 — el usuario no existe.
+ * - 500 — error al cargar los tickets.
+ */
 router.get('/usuarios/:id/tickets', ...requireSuperadminOrAcceso('usuarios'), async (req: Request, res: Response) => {
   try {
     const user = await db.queryOne<any>('SELECT nombre, apellido FROM usuarios WHERE id = ?', [req.params.id]);
@@ -37,7 +73,27 @@ router.get('/usuarios/:id/tickets', ...requireSuperadminOrAcceso('usuarios'), as
   }
 });
 
-// DELETE /api/usuarios/:id
+/**
+ * DELETE /api/usuarios/:id
+ * Elimina un usuario definitivamente. Antes de borrarlo, desvincula (deja en
+ * `NULL`) todas las referencias a su id en tickets, comentarios, historial,
+ * inventario, préstamos y dispositivos, para no dejar foreign keys colgando;
+ * marca sus solicitudes de registro como `'eliminado'`. Un usuario no puede
+ * eliminar su propia cuenta.
+ *
+ * Auth: requiere `rol_nivel >= 3`.
+ *
+ * Parámetros de ruta: `id` — id numérico del usuario a eliminar.
+ *
+ * Respuesta 200: `{ ok: true }`
+ *
+ * Códigos de estado:
+ * - 200 — eliminado correctamente.
+ * - 400 — se intentó eliminar la propia cuenta.
+ * - 403 — el usuario autenticado no tiene rol suficiente.
+ * - 404 — el usuario objetivo no existe.
+ * - 500 — error al eliminar.
+ */
 router.delete('/usuarios/:id', ...requireRole(3), async (req: Request, res: Response) => {
   try {
     if (String(req.user!.id) === String(req.params.id))
@@ -71,8 +127,24 @@ router.delete('/usuarios/:id', ...requireRole(3), async (req: Request, res: Resp
   }
 });
 
-// PATCH /api/usuarios/:id/password
-// Solo el superadmin puede cambiar la contraseña de otro usuario.
+/**
+ * PATCH /api/usuarios/:id/password
+ * Cambia la contraseña de otro usuario. Reservado exclusivamente al
+ * superadmin, sin importar los permisos de módulo que tenga un admin/técnico.
+ *
+ * Auth: requiere `rol_nivel >= 4` (superadmin).
+ *
+ * Parámetros de ruta: `id` — id numérico del usuario objetivo.
+ * Body: `{ newPassword: string }` (mínimo 6 caracteres).
+ *
+ * Respuesta 200: `{ ok: true }`
+ *
+ * Códigos de estado:
+ * - 200 — contraseña actualizada.
+ * - 400 — `newPassword` ausente o demasiado corta.
+ * - 403 — el usuario autenticado no es superadmin.
+ * - 500 — error al cambiar la contraseña.
+ */
 router.patch('/usuarios/:id/password', ...requireRole(4), async (req: Request, res: Response) => {
   try {
     const { newPassword } = req.body;
@@ -91,7 +163,24 @@ router.patch('/usuarios/:id/password', ...requireRole(4), async (req: Request, r
   }
 });
 
-// PATCH /api/usuarios/:id/activo
+/**
+ * PATCH /api/usuarios/:id/activo
+ * Activa o desactiva la cuenta de un usuario. Un usuario no puede
+ * desactivar su propia cuenta.
+ *
+ * Auth: requiere `rol_nivel >= 3`.
+ *
+ * Parámetros de ruta: `id` — id numérico del usuario objetivo.
+ * Body: `{ activo: boolean }`
+ *
+ * Respuesta 200: `{ ok: true }`
+ *
+ * Códigos de estado:
+ * - 200 — estado actualizado.
+ * - 400 — se intentó desactivar la propia cuenta.
+ * - 403 — el usuario autenticado no tiene rol suficiente.
+ * - 500 — error al actualizar.
+ */
 router.patch('/usuarios/:id/activo', ...requireRole(3), async (req: Request, res: Response) => {
   try {
     const { activo } = req.body;
@@ -114,9 +203,7 @@ router.patch('/usuarios/:id/activo', ...requireRole(3), async (req: Request, res
   }
 });
 
-// PATCH /api/usuarios/:id/permisos
-// Body: { inventario?, prestamos?, bitacora?, solicitudes?, usuarios?: boolean } — solo se
-// actualizan los módulos presentes en el body. Solo el superadmin puede otorgar.
+/** Mapa `clave de módulo → { columna en BD, nombre legible }` usado por el endpoint de permisos. */
 const PERMISO_LABELS: Record<string, { columna: string; nombre: string }> = {
   inventario:  { columna: 'acceso_inventario',  nombre: 'Inventario' },
   prestamos:   { columna: 'acceso_prestamos',   nombre: 'Préstamos' },
@@ -125,6 +212,27 @@ const PERMISO_LABELS: Record<string, { columna: string; nombre: string }> = {
   usuarios:    { columna: 'acceso_usuarios',    nombre: 'Usuarios registrados' }
 };
 
+/**
+ * PATCH /api/usuarios/:id/permisos
+ * Otorga o revoca permisos de módulo (inventario, préstamos, bitácora,
+ * solicitudes, usuarios) a un admin/técnico. Solo actualiza los módulos
+ * presentes en el body; un superadmin no puede recibir permisos porque ya
+ * tiene acceso completo.
+ *
+ * Auth: requiere `rol_nivel >= 4` (superadmin).
+ *
+ * Parámetros de ruta: `id` — id numérico del usuario objetivo.
+ * Body: `{ inventario?, prestamos?, bitacora?, solicitudes?, usuarios?: boolean }` (todos opcionales).
+ *
+ * Respuesta 200: `{ ok: true }`
+ *
+ * Códigos de estado:
+ * - 200 — permisos actualizados.
+ * - 400 — el objetivo ya es superadmin, o no se envió ningún módulo en el body.
+ * - 403 — el usuario autenticado no es superadmin.
+ * - 404 — el usuario objetivo no existe.
+ * - 500 — error al actualizar.
+ */
 router.patch('/usuarios/:id/permisos', ...requireRole(4), async (req: Request, res: Response) => {
   try {
     const target = await db.queryOne<any>(
@@ -160,9 +268,27 @@ router.patch('/usuarios/:id/permisos', ...requireRole(4), async (req: Request, r
   }
 });
 
-// GET /api/usuarios/lista  — todos los usuarios activos (para autocompletado)
+/** Etiqueta legible por nivel de rol (staff), usada solo para mostrar en autocompletados. */
 const ROL_LABEL: Record<number, string> = { 2: 'Técnico', 3: 'Admin', 4: 'Superadmin' };
 
+/**
+ * GET /api/usuarios/lista
+ * Lista ligera de todos los usuarios activos (nombre + detalle de
+ * departamento/área o rol), pensada para autocompletados (ej. asignar
+ * ticket, seleccionar responsable de inventario) sin exponer datos
+ * sensibles como correo o teléfono.
+ *
+ * Auth: requiere `rol_nivel >= 2`.
+ *
+ * Respuesta 200: `Array<{ id, nombre, esPortal: boolean, detalle: string }>`
+ * - `esPortal`: `true` si es empleado (rol_nivel 1); `detalle` muestra su departamento/área.
+ * - Si no es empleado, `detalle` muestra la etiqueta de su rol (Técnico/Admin/Superadmin).
+ *
+ * Códigos de estado:
+ * - 200 — listado cargado.
+ * - 403 — el usuario autenticado no es staff.
+ * - 500 — error al cargar la lista.
+ */
 router.get('/usuarios/lista', ...requireRole(2), async (req: Request, res: Response) => {
   try {
     const rows = await db.query<any>(
@@ -194,7 +320,20 @@ router.get('/usuarios/lista', ...requireRole(2), async (req: Request, res: Respo
   }
 });
 
-// GET /api/admins
+/**
+ * GET /api/admins
+ * Lista el personal del sistema (técnicos, admins, superadmins) junto con
+ * sus permisos de módulo otorgados.
+ *
+ * Auth: requiere `rol_nivel >= 2`.
+ *
+ * Respuesta 200: `Array<{ id, username, nombre, rol, nivel, acceso_inventario, acceso_prestamos, acceso_bitacora, acceso_solicitudes, acceso_usuarios }>`
+ *
+ * Códigos de estado:
+ * - 200 — listado cargado.
+ * - 403 — el usuario autenticado no es staff.
+ * - 500 — error al cargar.
+ */
 router.get('/admins', ...requireRole(2), async (req: Request, res: Response) => {
   try {
     const users = await db.exec<any>('sp_GetAdmins');
@@ -216,7 +355,26 @@ router.get('/admins', ...requireRole(2), async (req: Request, res: Response) => 
   }
 });
 
-// POST /api/admins
+/**
+ * POST /api/admins
+ * Da de alta un usuario técnico directamente (sin pasar por el flujo de
+ * solicitud de registro). Queda pre-aprobado, con rol `'tecnico'` y sin
+ * permisos de módulo (se otorgan aparte vía `PATCH /usuarios/:id/permisos`).
+ *
+ * Auth: requiere `rol_nivel >= 3`.
+ *
+ * Body: `{ username: string, password: string, nombre: string }`
+ * - `username`: 3-20 caracteres, letras/números/guión bajo, debe ser único.
+ *
+ * Respuesta 201: `{ ok: true }`
+ *
+ * Códigos de estado:
+ * - 201 — usuario técnico creado.
+ * - 400 — faltan campos requeridos, o `username` no cumple el formato.
+ * - 403 — el usuario autenticado no tiene rol suficiente.
+ * - 409 — el `username` ya existe.
+ * - 500 — error al crear el usuario.
+ */
 router.post('/admins', ...requireRole(3), async (req: Request, res: Response) => {
   try {
     const { username, password, nombre } = req.body;
@@ -245,7 +403,23 @@ router.post('/admins', ...requireRole(3), async (req: Request, res: Response) =>
   }
 });
 
-// DELETE /api/admins/:username
+/**
+ * DELETE /api/admins/:username
+ * Desactiva (no elimina) a un miembro del personal del sistema. No permite
+ * dejar el sistema sin ningún administrador activo.
+ *
+ * Auth: requiere `rol_nivel >= 3`.
+ *
+ * Parámetros de ruta: `username` — username del usuario a desactivar.
+ *
+ * Respuesta 200: `{ ok: true }`
+ *
+ * Códigos de estado:
+ * - 200 — desactivado correctamente.
+ * - 400 — es el único administrador activo restante.
+ * - 403 — el usuario autenticado no tiene rol suficiente.
+ * - 500 — error al desactivar.
+ */
 router.delete('/admins/:username', ...requireRole(3), async (req: Request, res: Response) => {
   try {
     const admins = await db.query<any>(
@@ -264,7 +438,19 @@ router.delete('/admins/:username', ...requireRole(3), async (req: Request, res: 
   }
 });
 
-// GET /api/solicitudes
+/**
+ * GET /api/solicitudes
+ * Lista las solicitudes de registro de empleados pendientes de revisión.
+ *
+ * Auth: superadmin, o acceso al módulo `'solicitudes'`.
+ *
+ * Respuesta 200: filas de `sp_GetSolicitudes`.
+ *
+ * Códigos de estado:
+ * - 200 — listado cargado.
+ * - 403 — sin acceso al módulo.
+ * - 500 — error al cargar solicitudes.
+ */
 router.get('/solicitudes', ...requireSuperadminOrAcceso('solicitudes'), async (req: Request, res: Response) => {
   try {
     res.json(await db.exec('sp_GetSolicitudes'));
@@ -274,7 +460,24 @@ router.get('/solicitudes', ...requireSuperadminOrAcceso('solicitudes'), async (r
   }
 });
 
-// POST /api/solicitudes/:id/aprobar
+/**
+ * POST /api/solicitudes/:id/aprobar
+ * Aprueba una solicitud de registro: crea la cuenta del empleado (vía
+ * `sp_AprobarSolicitud`, que valida estado y unicidad a nivel de BD).
+ *
+ * Auth: superadmin, o acceso al módulo `'solicitudes'`.
+ *
+ * Parámetros de ruta: `id` — id numérico de la solicitud.
+ *
+ * Respuesta 200: `{ ok: true }`
+ *
+ * Códigos de estado:
+ * - 200 — solicitud aprobada y cuenta creada.
+ * - 403 — sin acceso al módulo.
+ * - 404 — la solicitud no existe (`err.number === 50404` desde el SP).
+ * - 409 — conflicto, ej. username/email ya usados (`err.number === 50409` desde el SP).
+ * - 500 — error inesperado al aprobar.
+ */
 router.post('/solicitudes/:id/aprobar', ...requireSuperadminOrAcceso('solicitudes'), async (req: Request, res: Response) => {
   try {
     await db.exec('sp_AprobarSolicitud', {
@@ -291,7 +494,24 @@ router.post('/solicitudes/:id/aprobar', ...requireSuperadminOrAcceso('solicitude
   }
 });
 
-// POST /api/solicitudes/:id/rechazar
+/**
+ * POST /api/solicitudes/:id/rechazar
+ * Rechaza una solicitud de registro, con un motivo opcional.
+ *
+ * Auth: superadmin, o acceso al módulo `'solicitudes'`.
+ *
+ * Parámetros de ruta: `id` — id numérico de la solicitud.
+ * Body: `{ motivo?: string }`
+ *
+ * Respuesta 200: `{ ok: true }`
+ *
+ * Códigos de estado:
+ * - 200 — solicitud rechazada.
+ * - 403 — sin acceso al módulo.
+ * - 404 — la solicitud no existe.
+ * - 409 — la solicitud ya fue procesada previamente.
+ * - 500 — error inesperado al rechazar.
+ */
 router.post('/solicitudes/:id/rechazar', ...requireSuperadminOrAcceso('solicitudes'), async (req: Request, res: Response) => {
   try {
     const { motivo } = req.body;

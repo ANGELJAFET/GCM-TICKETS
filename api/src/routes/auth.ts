@@ -1,3 +1,8 @@
+/**
+ * Rutas de autenticación y registro: login (emite JWT) y alta de solicitudes
+ * de registro (quedan pendientes de aprobación por un administrador).
+ * Montado en `server.ts` bajo el prefijo `/api/auth`.
+ */
 import express, { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
@@ -35,7 +40,26 @@ const FINCAS = [
   'No aplica'
 ];
 
-// POST /api/auth/login
+/**
+ * POST /api/auth/login
+ * Autentica un usuario y, si es válido, emite un JWT de sesión (12h).
+ *
+ * Rate limit: 10 intentos / 15 min por IP (no cuenta logins exitosos).
+ *
+ * Body: `{ username: string, password: string, portal?: 'admin' | otro }`
+ * - `portal`: indica desde qué portal se intenta iniciar sesión. Un empleado
+ *   (rol_nivel 1) no puede entrar por `portal: 'admin'`, y viceversa un
+ *   técnico/admin/superadmin no puede entrar por el portal de empleados.
+ *
+ * Respuesta 200: `{ ok: true, token, id, nombre, rol, rol_nivel, acceso_inventario, acceso_prestamos, acceso_bitacora, acceso_solicitudes, acceso_usuarios }`
+ *
+ * Códigos de estado:
+ * - 200 — login correcto, retorna el token JWT y los permisos de módulo del usuario.
+ * - 400 — falta `username` o `password`.
+ * - 401 — usuario/contraseña incorrectos, o el portal no corresponde al rol de la cuenta (mismo mensaje genérico por seguridad).
+ * - 429 — demasiados intentos fallidos (rate limit).
+ * - 500 — error inesperado del servidor.
+ */
 router.post('/login', loginLimiter, async (req: Request, res: Response) => {
   try {
     const { username, password, portal } = req.body;
@@ -84,7 +108,28 @@ router.post('/login', loginLimiter, async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/auth/register
+/**
+ * POST /api/auth/register
+ * Crea una solicitud de registro de empleado, pendiente de aprobación por
+ * un administrador (no crea la cuenta directamente). Notifica por correo
+ * al administrador (`SMTP_USER`) si el email está configurado.
+ *
+ * Rate limit: 10 solicitudes / hora por IP.
+ *
+ * Body: `{ username, email, password, nombre, apellido?, telefono?, departamento?, finca, area?, mensaje? }`
+ * - `username`: 3-20 caracteres, letras/números/guión bajo.
+ * - `password`: mínimo 6 caracteres.
+ * - `email`: formato de correo válido.
+ * - `finca`: debe ser una de las fincas válidas (o `'No aplica'`).
+ *
+ * Respuesta 201: `{ ok: true }`
+ *
+ * Códigos de estado:
+ * - 201 — solicitud registrada correctamente.
+ * - 400 — validación fallida (campos requeridos, formato de usuario/correo, finca inválida, contraseña corta).
+ * - 409 — ya existe una solicitud o cuenta con ese `username`/`email` (constraint de BD, `err.number === 50409`).
+ * - 500 — error inesperado del servidor.
+ */
 router.post('/register', registerLimiter, async (req: Request, res: Response) => {
   try {
     const { username, email, password, nombre, apellido, telefono, departamento, finca, area, mensaje } = req.body;
