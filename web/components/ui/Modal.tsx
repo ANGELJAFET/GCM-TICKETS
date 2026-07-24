@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import clsx from 'clsx';
 
 interface ModalProps {
@@ -17,8 +18,20 @@ interface ModalProps {
  * cuerpo con scroll propio y footer opcional (normalmente botones de acción).
  * Se cierra con click en el backdrop o con la tecla `Escape`. Retorna `null`
  * mientras `open` es `false` (no queda montado en el DOM).
+ *
+ * Se renderiza en un portal a `document.body`: `position: fixed` deja de
+ * posicionarse respecto al viewport si algún ancestro tiene `transform`
+ * (ej. una tarjeta con `hover:-translate-y-0.5`), lo que rompía el tamaño y
+ * la posición del modal al usarlo dentro de ese tipo de contenedores. El
+ * portal evita depender de en qué parte del árbol se monte este componente.
  */
 export function Modal({ open, onClose, title, children, footer, className }: ModalProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -28,9 +41,9 @@ export function Modal({ open, onClose, title, children, footer, className }: Mod
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
       onClick={(e) => {
@@ -64,6 +77,7 @@ export function Modal({ open, onClose, title, children, footer, className }: Mod
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
