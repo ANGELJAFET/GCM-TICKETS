@@ -40,6 +40,12 @@
 .ident-shrimp-2 { width: 400px; top: -90px; left: -70px; opacity: 0.06; transform: rotate(170deg); }
 .ident-shrimp-3 { width: 320px; bottom: -50px; left: 18%; opacity: 0.05; transform: rotate(-40deg); }
 
+/* Mismo camarón decorativo de la pantalla de login, en versión reducida
+   para el header del portal (68px de alto, recortado con overflow-hidden). */
+.header-shrimp { position: absolute; pointer-events: none; user-select: none; z-index: 0; }
+.header-shrimp-1 { width: 170px; bottom: -50px; left: 24px; opacity: 0.28; transform: rotate(-20deg); }
+.header-shrimp-2 { width: 150px; top: -50px; right: 190px; opacity: 0.24; transform: rotate(158deg); }
+
 /* Olas animadas del hero — 5 capas SVG */
 .hero-waves { position: absolute; bottom: 0; left: 0; right: 0; height: 100px; overflow: hidden; pointer-events: none; }
 .wt { position: absolute; bottom: 0; left: 0; width: 200%; height: 100%; }
