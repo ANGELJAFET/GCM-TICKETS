@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import clsx from 'clsx';
 import {
   IconPackage,
@@ -15,7 +16,10 @@ import {
   IconCheck,
   IconEdit,
   IconTrash,
+  IconZoomIn,
+  IconPhoto,
 } from '@tabler/icons-react';
+import { Modal } from '@/components/ui';
 import type { InventoryItem } from '@/lib/types';
 import { fileUrl } from '@/lib/api';
 import { INV_ESTADO_LABEL, INV_ESTADO_CLS, CONDICION_LABEL, CONDICION_CLS, invDisponible, puedePrestar, garantiaInfo } from '../_lib/invHelpers';
@@ -45,6 +49,7 @@ export function InvCard({ item, onOpenSimilar, onLoan, onReturn, onEdit, onDelet
   const showCantBadge = isCant && item.estado === 'disponible';
   const garantia = garantiaInfo(item.garantia);
   const GarantiaIcon = garantia ? GARANTIA_ICON[garantia.tone] : null;
+  const [photoOpen, setPhotoOpen] = useState(false);
 
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-admin-border bg-white p-4.5 shadow-[var(--shadow-adm-sm)] transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-adm)] dark:border-white/10 dark:bg-admin-dark-surface">
@@ -54,8 +59,21 @@ export function InvCard({ item, onOpenSimilar, onLoan, onReturn, onEdit, onDelet
         className="-m-1 flex cursor-pointer items-start gap-3 rounded-[10px] p-1 transition-colors hover:bg-admin-light dark:hover:bg-admin-dark-alt"
       >
         {item.foto ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={fileUrl(item.foto)} alt="" className="h-11 w-11 shrink-0 rounded-xl object-cover" />
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setPhotoOpen(true);
+            }}
+            title="Ver foto"
+            className="group relative h-11 w-11 shrink-0 cursor-zoom-in overflow-hidden rounded-xl"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={fileUrl(item.foto)} alt="" className="h-full w-full object-cover" />
+            <span className="absolute inset-0 flex items-center justify-center bg-black/35 text-white opacity-0 transition-opacity group-hover:opacity-100">
+              <IconZoomIn size={16} />
+            </span>
+          </button>
         ) : (
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-admin-blue-light to-blue-100 text-admin-blue">
             <IconPackage size={22} />
@@ -137,6 +155,23 @@ export function InvCard({ item, onOpenSimilar, onLoan, onReturn, onEdit, onDelet
           <IconTrash size={13} />
         </button>
       </div>
+
+      {item.foto && (
+        <Modal
+          open={photoOpen}
+          onClose={() => setPhotoOpen(false)}
+          className="max-w-xl"
+          title={
+            <span className="flex items-center gap-2">
+              <IconPhoto size={17} /> {item.marca}
+              {item.modelo ? ` ${item.modelo}` : ''}
+            </span>
+          }
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={fileUrl(item.foto)} alt="" className="w-full rounded-xl object-contain" />
+        </Modal>
+      )}
     </div>
   );
 }
