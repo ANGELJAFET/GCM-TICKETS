@@ -18,13 +18,18 @@ type PanelId = 'select' | 'sending' | 'ok' | 'err';
  * la sesión temporal a la que se sube el archivo (ver
  * `api/src/mobileSessions.ts` y `api/src/routes/mobileUpload.ts`).
  * `type=inventario` ajusta el texto/opciones mostradas (solo foto, sin
- * video) para el flujo de foto de equipo; cualquier otro valor asume el
- * flujo de evidencia de ticket (foto o video corto).
+ * video) para el flujo de foto de equipo; `type=prestamo` es igual pero
+ * multi-foto (permite tomar varias fotos del estado del equipo en la misma
+ * sesión); cualquier otro valor asume el flujo de evidencia de ticket
+ * (foto o video corto).
  */
 function MobileUploadInner() {
   const params = useSearchParams();
   const session = params.get('session');
-  const isInventario = params.get('type') === 'inventario';
+  const type = params.get('type');
+  const isPrestamo = type === 'prestamo';
+  // Ambos flujos de equipo (inventario y préstamo) son solo-foto, sin video.
+  const isInventario = type === 'inventario' || isPrestamo;
   const [panel, setPanel] = useState<PanelId>(session ? 'select' : 'err');
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -32,6 +37,10 @@ function MobileUploadInner() {
   const [durationSec, setDurationSec] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [sendDisabled, setSendDisabled] = useState(false);
+  // En el flujo multi-foto (préstamo) se lleva la cuenta de cuántas ya se subieron.
+  const [uploadedCount, setUploadedCount] = useState(0);
+  // El usuario presionó "Listo, terminé" en el flujo multi-foto → pantalla de cierre.
+  const [finished, setFinished] = useState(false);
 
   const photoInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
@@ -42,6 +51,9 @@ function MobileUploadInner() {
     setKind(null);
     setDurationSec(null);
     setError('');
+    // Rehabilita el botón de envío: tras enviar una foto queda deshabilitado,
+    // y al preparar la siguiente (flujo multi) hay que volver a permitirlo.
+    setSendDisabled(false);
     if (photoInputRef.current) photoInputRef.current.value = '';
     if (videoInputRef.current) videoInputRef.current.value = '';
   }
@@ -104,6 +116,8 @@ function MobileUploadInner() {
         return;
       }
       if (!res.ok) throw new Error('server');
+      setUploadedCount((c) => c + 1);
+      reset();
       setPanel('ok');
     } catch {
       setPanel('select');
@@ -125,7 +139,7 @@ function MobileUploadInner() {
         <div className="text-left">
           <h1 className="text-base font-bold">GCM Tickets</h1>
           <p className="mt-0.5 text-[11px] opacity-82">
-            Grupo Milcien — {isInventario ? 'Foto del equipo para inventario' : 'Adjuntar evidencia al ticket'}
+            Grupo Milcien — {isPrestamo ? 'Fotos del equipo (préstamo)' : isInventario ? 'Foto del equipo para inventario' : 'Adjuntar evidencia al ticket'}
           </p>
         </div>
       </div>
@@ -139,8 +153,13 @@ function MobileUploadInner() {
                 <circle cx="8.5" cy="8.5" r="1.5" />
                 <polyline points="21 15 16 10 5 21" />
               </svg>
-              {isInventario ? 'Toma la foto del equipo' : 'Selecciona el tipo de evidencia'}
+              {isPrestamo ? `Toma una foto del equipo${uploadedCount ? ` (${uploadedCount} ya enviada${uploadedCount === 1 ? '' : 's'})` : ''}` : isInventario ? 'Toma la foto del equipo' : 'Selecciona el tipo de evidencia'}
             </div>
+            {isPrestamo && (
+              <div className="mb-3.5 rounded-[10px] border border-blue-200 bg-blue-50 px-3.5 py-2.5 text-center text-xs text-blue-800">
+                📸 Puedes tomar <strong>varias fotos</strong> del estado del equipo (distintos ángulos). Envía cada una y toma la siguiente.
+              </div>
+            )}
 
             {!file ? (
               <>
@@ -211,7 +230,7 @@ function MobileUploadInner() {
                   disabled={sendDisabled}
                   className="mt-1 w-full rounded-[13px] bg-blue-500 p-4 text-base font-bold text-white active:scale-98 disabled:opacity-50"
                 >
-                  Enviar evidencia
+                  {isInventario ? 'Enviar foto' : 'Enviar evidencia'}
                 </button>
                 <button type="button" onClick={reset} className="mt-2 w-full rounded-[13px] bg-slate-100 p-3.25 text-sm font-bold text-slate-600 active:scale-98">
                   Elegir otra
@@ -238,12 +257,54 @@ function MobileUploadInner() {
         <div className="flex w-full max-w-110 flex-col items-center px-5 pt-6 pb-10">
           <div className="w-full rounded-[18px] bg-white px-5 py-10.5 text-center shadow-[0_4px_24px_rgba(0,0,0,0.09)]">
             <div className="mb-3.5 text-[58px] leading-none">✅</div>
-            <h2 className="mb-2 text-xl font-extrabold">Evidencia enviada</h2>
-            <p className="text-sm leading-relaxed text-slate-500">
-              Puedes cerrar esta pantalla.
-              <br />
-              Aparecerá en la PC automáticamente.
-            </p>
+            {isPrestamo ? (
+              finished ? (
+                <>
+                  <h2 className="mb-2 text-xl font-extrabold">
+                    ¡Listo! {uploadedCount} foto{uploadedCount === 1 ? '' : 's'} enviada{uploadedCount === 1 ? '' : 's'}
+                  </h2>
+                  <p className="text-sm leading-relaxed text-slate-500">
+                    Ya puedes cerrar esta pantalla.
+                    <br />
+                    Las fotos aparecen en la PC automáticamente.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h2 className="mb-2 text-xl font-extrabold">
+                    {uploadedCount} foto{uploadedCount === 1 ? '' : 's'} enviada{uploadedCount === 1 ? '' : 's'}
+                  </h2>
+                  <p className="mb-5 text-sm leading-relaxed text-slate-500">
+                    Toma otra foto del equipo o presiona <strong>Listo</strong> cuando termines.
+                    <br />
+                    Aparecerán en la PC automáticamente.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setPanel('select')}
+                    className="w-full rounded-[13px] bg-blue-500 p-4 text-base font-bold text-white active:scale-98"
+                  >
+                    📷 Tomar otra foto
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFinished(true)}
+                    className="mt-2.5 w-full rounded-[13px] bg-slate-100 p-3.5 text-sm font-bold text-slate-600 active:scale-98"
+                  >
+                    ✓ Listo, terminé
+                  </button>
+                </>
+              )
+            ) : (
+              <>
+                <h2 className="mb-2 text-xl font-extrabold">Evidencia enviada</h2>
+                <p className="text-sm leading-relaxed text-slate-500">
+                  Puedes cerrar esta pantalla.
+                  <br />
+                  Aparecerá en la PC automáticamente.
+                </p>
+              </>
+            )}
           </div>
         </div>
       )}

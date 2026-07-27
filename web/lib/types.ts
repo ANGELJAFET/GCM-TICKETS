@@ -112,6 +112,8 @@ export interface Loan {
   notas: string;
   condicionDevolucion: InvCondicion | null;
   notaDevolucion: string | null;
+  /** Rutas (`/uploads/...`) de las fotos del estado del equipo al entregarlo; se incrustan en el comprobante de préstamo. */
+  fotosEntrega: string[];
   equipoDesc: string;
 }
 

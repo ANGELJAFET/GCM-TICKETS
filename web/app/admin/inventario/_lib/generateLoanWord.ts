@@ -5,6 +5,7 @@
  * ninguna librería de generación de `.docx`.
  */
 import type { InventoryItem, Loan } from '@/lib/types';
+import { fileUrl } from '@/lib/api';
 
 /** Etiqueta legible por condición física, usada en el comprobante impreso. */
 const CONDICION_MAP: Record<string, string> = { nuevo: 'Nuevo', excelente: 'Excelente', bueno: 'Bueno', regular: 'Regular', danado: 'Dañado' };
@@ -15,14 +16,52 @@ function escapeHtml(str: unknown): string {
 }
 
 /**
+ * Descarga una imagen de `/uploads` y la devuelve como data URI JPEG
+ * redimensionado y comprimido, para incrustarla en el `.doc` sin depender del
+ * servidor (el documento queda autocontenido y se ve offline). Requiere que
+ * el backend sirva `/uploads` con CORS (lo hace: `cors({ origin: true })`),
+ * así el canvas no queda "tainted". Si algo falla, devuelve `null` y esa foto
+ * simplemente se omite del comprobante.
+ * @param path Ruta pública de la foto (`/uploads/archivo.jpg`).
+ * @param maxDim Lado máximo (px) tras redimensionar, manteniendo proporción.
+ * @param quality Calidad JPEG (0–1) del data URI resultante.
+ */
+function photoToDataUrl(path: string, maxDim = 520, quality = 0.75): Promise<string | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const scale = Math.min(1, maxDim / Math.max(img.naturalWidth, img.naturalHeight));
+        const w = Math.max(1, Math.round(img.naturalWidth * scale));
+        const h = Math.max(1, Math.round(img.naturalHeight * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve(null);
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      } catch {
+        resolve(null);
+      }
+    };
+    img.onerror = () => resolve(null);
+    img.src = fileUrl(path);
+  });
+}
+
+/**
  * Genera y descarga el comprobante de préstamo (`prestamo_<id>_<inventoryId>.doc`)
  * con los datos del equipo, el empleado y la cláusula de responsabilidad,
  * listo para imprimir y firmar.
  * @param loan Préstamo a documentar.
  * @param item Datos del equipo prestado (puede venir parcial/`undefined` si ya no existe en inventario).
  * @param adminNombre Nombre de quien entrega el equipo (aparece en la firma "Entregado por").
+ * @remarks Es `async`: si el préstamo tiene `fotosEntrega`, las descarga y las
+ * incrusta comprimidas (data URI) en el documento antes de generarlo.
  */
-export function generateLoanWord(loan: Loan, item: Partial<InventoryItem> | undefined, adminNombre: string) {
+export async function generateLoanWord(loan: Loan, item: Partial<InventoryItem> | undefined, adminNombre: string) {
   const it = item || {};
   const now = new Date();
   const dia = now.getDate();
@@ -33,8 +72,21 @@ export function generateLoanWord(loan: Loan, item: Partial<InventoryItem> | unde
   const tipoDesc = [it.tipo, it.marca, it.modelo].filter(Boolean).join(' ');
   const logoUrl = window.location.origin + '/assets/gcm.jpg';
 
+  // Fotos del estado del equipo al entregarlo: se descargan, comprimen y
+  // embeben como data URIs para que el documento quede autocontenido.
+  const fotos = (await Promise.all((loan.fotosEntrega || []).map((p) => photoToDataUrl(p)))).filter((d): d is string => !!d);
+
   const S = 'font-family:Arial,sans-serif;font-size:11pt;color:#000;';
   const SB = 'font-family:Arial,sans-serif;font-size:11pt;color:#000;font-weight:bold;';
+
+  // Bloque de fotos (una por fila, con ancho acotado para no romper la página del .doc).
+  // Word respeta el atributo `width` en píxeles (no `width:100%`, que expande
+  // la imagen al ancho de la página). ~360px ≈ 3.75", tamaño legible sin ocupar
+  // toda la hoja.
+  const fotosHtml = fotos.length
+    ? `<p style="${SB}margin-top:14px;margin-bottom:6px;">ESTADO DEL EQUIPO AL MOMENTO DE LA ENTREGA:</p>
+${fotos.map((d) => `<div style="margin:0 0 8px;"><img src="${d}" width="360" style="width:360px;height:auto;border:1px solid #000;"></div>`).join('\n')}`
+    : '';
 
   const html = `<!DOCTYPE html>
 <html>
@@ -90,6 +142,8 @@ ${loan.notas ? `<p><b>NOTA:</b>&nbsp;${escapeHtml(String(loan.notas).toUpperCase
 <p style="text-align:justify;line-height:1.4;margin-top:10px;margin-bottom:8px;">
 <b>RESPONSABILIDAD:</b>&nbsp;EL RECEPTOR SE COMPROMETE A RESGUARDAR Y UTILIZAR EL EQUIPO UNICAMENTE PARA FINES LABORALES, Y A DEVOLVERLO EN LAS MISMAS CONDICIONES EN QUE LO RECIBIO. EN CASO DE DAÑO, PERDIDA O ROBO OCASIONADO POR NEGLIGENCIA O MAL USO, EL RECEPTOR SE HACE RESPONSABLE DE SU REPARACION O REPOSICION.
 </p>
+
+${fotosHtml}
 
 <table border="0" width="100%" cellspacing="0" cellpadding="3" style="margin-top:34px;">
 <tr>

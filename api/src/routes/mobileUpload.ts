@@ -29,7 +29,7 @@ const router = express.Router();
  */
 router.post('/session', (req: Request, res: Response) => {
   const token = crypto.randomBytes(16).toString('hex');
-  mobileSessions.set(token, { status: 'pending', file: null, filePath: null, expiresAt: Date.now() + SESSION_TTL });
+  mobileSessions.set(token, { status: 'pending', file: null, filePath: null, files: [], filePaths: [], expiresAt: Date.now() + SESSION_TTL });
   res.json({ token });
 });
 
@@ -69,16 +69,18 @@ router.get('/qr/:token', async (req: Request, res: Response) => {
 
 /**
  * POST /api/mobile-upload/:token
- * Recibe el archivo subido desde el celular (`multipart/form-data`) y lo
- * asocia a la sesión. Si la sesión ya tenía un archivo previo, lo reemplaza
- * y borra el anterior del disco.
+ * Recibe un archivo subido desde el celular (`multipart/form-data`) y lo
+ * **acumula** en la sesión: se agrega a `files`/`filePaths` y además queda como
+ * el archivo "actual" (`file`/`filePath`) para los consumidores de una sola
+ * foto. Los flujos de una foto (tickets, inventario) suben una única vez por
+ * sesión; el flujo multi-foto (préstamos) puede subir varias veces.
  *
  * Auth: ninguna (ver nota del módulo).
  *
  * Parámetros de ruta: `token` — token de la sesión.
  * Body: `multipart/form-data` con campo `file` (ver `middleware/upload.ts`, instancia `mobileUpload`).
  *
- * Respuesta 200: `{ ok: true }`
+ * Respuesta 200: `{ ok: true, count: number }` (cantidad de archivos acumulados).
  *
  * Códigos de estado:
  * - 200 — archivo recibido, sesión pasa a estado `'ready'`.
@@ -93,12 +95,13 @@ router.post('/:token', mobileUpload.single('file'), (req: Request, res: Response
   }
   if (!req.file) return res.status(400).json({ error: 'No se recibió archivo' });
 
-  if (s.filePath && fs.existsSync(s.filePath)) fs.unlink(s.filePath, () => {});
-
+  const nuevo = { name: req.file.originalname, size: req.file.size, path: `/uploads/${req.file.filename}` };
+  s.files.push(nuevo);
+  s.filePaths.push(req.file.path);
   s.status   = 'ready';
+  s.file     = nuevo;              // último archivo, para consumidores de una sola foto
   s.filePath = req.file.path;
-  s.file     = { name: req.file.originalname, size: req.file.size, path: `/uploads/${req.file.filename}` };
-  res.json({ ok: true });
+  res.json({ ok: true, count: s.files.length });
 });
 
 /**
@@ -110,7 +113,8 @@ router.post('/:token', mobileUpload.single('file'), (req: Request, res: Response
  *
  * Parámetros de ruta: `token` — token de la sesión.
  *
- * Respuesta 200: `{ status: 'pending' | 'ready', file: MobileSessionFile | null }`
+ * Respuesta 200: `{ status: 'pending' | 'ready', file: MobileSessionFile | null, files: MobileSessionFile[] }`
+ * (`file` es el último archivo, para el flujo de una sola foto; `files` es el arreglo completo, para multi-foto.)
  *
  * Códigos de estado:
  * - 200 — estado actual de la sesión.
@@ -119,7 +123,7 @@ router.post('/:token', mobileUpload.single('file'), (req: Request, res: Response
 router.get('/status/:token', (req: Request, res: Response) => {
   const s = mobileSessions.get(req.params.token);
   if (!s || s.expiresAt < Date.now()) return res.status(410).json({ error: 'Expirada' });
-  res.json({ status: s.status, file: s.file });
+  res.json({ status: s.status, file: s.file, files: s.files });
 });
 
 export default router;

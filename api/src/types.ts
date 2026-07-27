@@ -76,10 +76,20 @@ export interface MobileSessionFile {
 
 /** Estado de una sesión de subida de adjuntos vía QR desde celular. */
 export interface MobileSession {
-  /** `'pending'` mientras se espera el archivo; `'ready'` una vez subido. */
+  /** `'pending'` mientras se espera el primer archivo; `'ready'` una vez subido al menos uno. */
   status: 'pending' | 'ready';
+  /**
+   * Último archivo subido (o `null`). Se mantiene para los consumidores de una
+   * sola foto (tickets, inventario), que solo leen este campo; en una sesión
+   * multi-foto apunta al más reciente de `files`.
+   */
   file: MobileSessionFile | null;
+  /** Ruta en disco del último archivo (par de `file`); ver nota de `file`. */
   filePath: string | null;
+  /** Todos los archivos subidos en la sesión, en orden (flujo multi-foto, ej. préstamos). */
+  files: MobileSessionFile[];
+  /** Rutas en disco de todos los archivos (par de `files`), usadas por el barrido de limpieza. */
+  filePaths: string[];
   /** Timestamp (ms) en el que la sesión expira y deja de aceptar subidas. */
   expiresAt: number;
 }

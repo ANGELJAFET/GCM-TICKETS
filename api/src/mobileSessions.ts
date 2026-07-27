@@ -19,7 +19,11 @@ setInterval(() => {
   const now = Date.now();
   for (const [token, s] of mobileSessions) {
     if (s.expiresAt < now) {
-      if (s.filePath && fs.existsSync(s.filePath)) fs.unlink(s.filePath, () => {});
+      // Borra del disco todos los archivos acumulados (multi-foto). En una
+      // sesión de una sola foto, `filePaths` contiene ese único archivo.
+      for (const p of s.filePaths) {
+        if (p && fs.existsSync(p)) fs.unlink(p, () => {});
+      }
       mobileSessions.delete(token);
     }
   }

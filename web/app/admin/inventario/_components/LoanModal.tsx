@@ -1,10 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { IconExchange, IconCheck, IconLoader2 } from '@tabler/icons-react';
+import { IconExchange, IconCheck, IconLoader2, IconCamera, IconTrash } from '@tabler/icons-react';
 import { Modal, FormField, Input, Select, Textarea, Autocomplete } from '@/components/ui';
 import type { AdminUser, InventoryItem, UsuarioListado } from '@/lib/types';
+import { fileUrl } from '@/lib/api';
 import { invDisponible } from '../_lib/invHelpers';
+import { QRPhotosModal } from './QRPhotosModal';
+import type { MobilePhoto } from './QRPhotoModal';
 
 /** Valores del formulario de registro de un préstamo. */
 export interface LoanFormValues {
@@ -15,9 +18,11 @@ export interface LoanFormValues {
   fechaDevolucion: string;
   autorizadoPorId: string;
   notas: string;
+  /** Tokens de sesiones de subida por QR con las fotos del estado del equipo al entregarlo. */
+  mobileTokens: string[];
 }
 
-const EMPTY_FORM: LoanFormValues = { inventoryId: '', cantidad: '1', empleado: '', departamento: '', fechaDevolucion: '', autorizadoPorId: '', notas: '' };
+const EMPTY_FORM: LoanFormValues = { inventoryId: '', cantidad: '1', empleado: '', departamento: '', fechaDevolucion: '', autorizadoPorId: '', notas: '', mobileTokens: [] };
 
 interface LoanModalProps {
   open: boolean;
@@ -47,6 +52,10 @@ export function LoanModal({ open, preselectedItemId, inventory, usuarios, admins
   });
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  // Fotos del estado del equipo al entregarlo, capturadas por QR. `photos`
+  // guarda los archivos para la vista previa; los tokens viajan en el form.
+  const [photos, setPhotos] = useState<MobilePhoto[]>([]);
+  const [qrOpen, setQrOpen] = useState(false);
 
   const availableItems = inventory.filter((i) => i.estado === 'disponible' && invDisponible(i) > 0);
   const selectedItem = inventory.find((i) => i.id === form.inventoryId) || null;
@@ -168,8 +177,59 @@ export function LoanModal({ open, preselectedItemId, inventory, usuarios, admins
           <Textarea rows={2} value={form.notas} onChange={(e) => set('notas', e.target.value)} placeholder="Condiciones, observaciones…" />
         </FormField>
 
+        <FormField label="Fotos de entrega (opcional)">
+          <div className="flex flex-col gap-2">
+            {photos.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {photos.map((f, i) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={f.path + i}
+                    src={fileUrl(f.path)}
+                    alt={f.name}
+                    className="h-16 w-16 rounded-lg border border-admin-border object-cover"
+                  />
+                ))}
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setQrOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-[10px] border-[1.5px] border-admin-border bg-white px-3.5 py-2 text-[12.5px] font-semibold text-admin-text-sec hover:bg-slate-100 dark:border-white/10 dark:bg-admin-dark-surface dark:text-admin-dark-text-sec dark:hover:bg-admin-dark-bg"
+              >
+                <IconCamera size={15} /> {photos.length ? 'Agregar más fotos' : 'Tomar fotos con el celular'}
+              </button>
+              {photos.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPhotos([]);
+                    set('mobileTokens', []);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-[10px] px-2.5 py-2 text-[12.5px] font-semibold text-admin-red hover:bg-admin-red-light"
+                >
+                  <IconTrash size={14} /> Quitar
+                </button>
+              )}
+            </div>
+            <p className="text-[11px] text-admin-gray">
+              Se generará un QR para fotografiar el estado del equipo desde el celular; las fotos se adjuntan al comprobante de entrega.
+            </p>
+          </div>
+        </FormField>
+
         {error && <div className="rounded-lg border border-admin-red/20 bg-admin-red-light px-3.5 py-2.5 text-xs font-semibold text-red-800">{error}</div>}
       </div>
+
+      <QRPhotosModal
+        open={qrOpen}
+        onClose={() => setQrOpen(false)}
+        onConfirm={(token, files) => {
+          setPhotos((prev) => [...prev, ...files]);
+          set('mobileTokens', [...form.mobileTokens, token]);
+        }}
+      />
     </Modal>
   );
 }

@@ -704,6 +704,18 @@ IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('prestamos'
 GO
 
 -- ============================================================
+-- 13. Fotos de entrega del préstamo
+--     Arreglo JSON de rutas (/uploads/archivo.ext) con las fotos del
+--     estado del equipo al momento de entregarlo en préstamo, tomadas
+--     desde el celular vía el mismo mecanismo de sesión temporal + QR
+--     que la foto de inventario (varias fotos por sesión). Se incrustan
+--     en el comprobante de préstamo (generateLoanWord.ts).
+-- ============================================================
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('prestamos') AND name = 'fotos_entrega')
+  ALTER TABLE prestamos ADD fotos_entrega NVARCHAR(MAX) NULL;
+GO
+
+-- ============================================================
 -- Fin del script
 -- Siguiente paso: ejecutar procedimientos.sql y luego node server.js
 -- ============================================================

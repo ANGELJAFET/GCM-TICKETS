@@ -147,6 +147,7 @@ function InventarioApp() {
         autorizadoPorId: values.autorizadoPorId ? parseInt(values.autorizadoPorId, 10) : null,
         notas: values.notas.trim(),
         cantidad: parseInt(values.cantidad, 10) || 1,
+        mobileTokens: values.mobileTokens,
       },
     });
     showToast('Préstamo registrado ✓');
@@ -188,13 +189,13 @@ function InventarioApp() {
     handleReturnFull(loan.id);
   }
 
-  function handleGenerateWord(loanId: string) {
+  async function handleGenerateWord(loanId: string) {
     const loan = loanList.find((l) => l.id === loanId);
     if (!loan) return showToast('Préstamo no encontrado');
     const item = items.find((i) => i.id === loan.inventoryId);
     try {
       if (loan.estado === 'devuelto') generateReturnWord(loan, item, user?.nombre || '');
-      else generateLoanWord(loan, item, user?.nombre || '');
+      else await generateLoanWord(loan, item, user?.nombre || '');
       showToast('Comprobante generado ✓');
     } catch {
       showToast('Error al generar comprobante');
@@ -215,7 +216,7 @@ function InventarioApp() {
     return (
       <div className="flex h-screen flex-col">
         <Header />
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 text-admin-text-sec">
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 text-admin-text-sec dark:text-admin-dark-text-sec">
           <IconLock size={40} className="opacity-30" />
           <p>No tienes acceso al módulo de inventario.</p>
           <Link href="/admin" className="text-admin-blue hover:underline">
@@ -232,7 +233,7 @@ function InventarioApp() {
       <div className="flex-1 overflow-y-auto px-6 py-5">
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-2.5">
-            <Link href="/admin" className="flex items-center gap-1.5 rounded-lg border-[1.5px] border-admin-border bg-admin-light px-4 py-1.75 text-[13px] font-semibold text-admin-text-sec hover:bg-admin-border/40 dark:border-white/10 dark:bg-admin-dark-surface dark:hover:bg-admin-dark-alt">
+            <Link href="/admin" className="flex items-center gap-1.5 rounded-lg border-[1.5px] border-admin-border bg-admin-light px-4 py-1.75 text-[13px] font-semibold text-admin-text-sec hover:bg-admin-border/40 dark:border-white/10 dark:bg-admin-dark-surface dark:text-admin-dark-text-sec dark:hover:bg-admin-dark-alt">
               <IconArrowLeft size={15} /> Volver a tickets
             </Link>
             <span className="flex items-center gap-1.5 text-[15px] font-bold">

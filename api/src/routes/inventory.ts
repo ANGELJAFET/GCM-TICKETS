@@ -38,6 +38,28 @@ function resolveMobilePhoto(mobileToken: unknown): string | null {
   return s.file.path;
 }
 
+/**
+ * Variante multi-foto de {@link resolveMobilePhoto}: resuelve una lista de
+ * tokens de sesión móvil a las rutas de **todos** los archivos acumulados en
+ * cada sesión (flujo de fotos de entrega de un préstamo). Igual que el helper
+ * de una sola foto, borra la sesión de memoria (no los archivos) para que el
+ * barrido de `mobileSessions` no elimine las fotos recién asociadas.
+ * @param mobileTokens Arreglo de tokens recibido en el body (o valor no-arreglo).
+ * @returns Rutas públicas (`/uploads/...`) de todas las fotos resueltas, sin duplicados.
+ */
+function resolveMobilePhotos(mobileTokens: unknown): string[] {
+  if (!Array.isArray(mobileTokens)) return [];
+  const paths: string[] = [];
+  for (const token of mobileTokens) {
+    if (typeof token !== 'string' || !token) continue;
+    const s = mobileSessions.get(token);
+    if (!s || s.status !== 'ready' || !s.files.length) continue;
+    for (const f of s.files) paths.push(f.path);
+    mobileSessions.delete(token);
+  }
+  return paths;
+}
+
 const router = express.Router();
 
 const CONDICIONES   = ['nuevo', 'excelente', 'bueno', 'regular', 'danado'];
@@ -462,6 +484,7 @@ router.get('/loans', ...requireSuperadminOrAcceso('prestamos'), async (req: Requ
       notas: l.notas,
       condicionDevolucion: l.condicion_devolucion || null,
       notaDevolucion: l.nota_devolucion || null,
+      fotosEntrega: l.fotos_entrega ? JSON.parse(l.fotos_entrega) : [],
       equipoDesc: l.equipoDesc
     })));
   } catch (err) {
@@ -479,9 +502,10 @@ router.get('/loans', ...requireSuperadminOrAcceso('prestamos'), async (req: Requ
  *
  * Auth: superadmin, o acceso al módulo `'prestamos'`.
  *
- * Body: `{ inventoryId, empleado, departamento?, fechaDevolucion?, autorizadoPorId?, notas?, cantidad? }`
+ * Body: `{ inventoryId, empleado, departamento?, fechaDevolucion?, autorizadoPorId?, notas?, cantidad?, mobileTokens? }`
  * - `empleado`: nombre completo o username (resuelto vía `db.findUserByNombre`).
  * - `cantidad`: requerida y validada solo si el equipo es de tipo `'cantidad'`.
+ * - `mobileTokens`: arreglo de tokens de sesiones de subida por QR (ver `resolveMobilePhotos`); sus fotos se guardan como `fotos_entrega` (estado del equipo al entregarlo).
  *
  * Respuesta 201: `{ loan: <fila de préstamos>, item: <fila de inventario actualizada> }`
  *
@@ -495,7 +519,7 @@ router.get('/loans', ...requireSuperadminOrAcceso('prestamos'), async (req: Requ
  */
 router.post('/loans', ...requireSuperadminOrAcceso('prestamos'), async (req: Request, res: Response) => {
   try {
-    const { inventoryId, empleado, departamento, fechaDevolucion, autorizadoPorId, notas, cantidad } = req.body;
+    const { inventoryId, empleado, departamento, fechaDevolucion, autorizadoPorId, notas, cantidad, mobileTokens } = req.body;
     if (!inventoryId || !empleado)
       return res.status(400).json({ error: 'inventoryId y empleado son requeridos' });
 
@@ -523,12 +547,15 @@ router.post('/loans', ...requireSuperadminOrAcceso('prestamos'), async (req: Req
 
     const autorizadoId = autorizadoPorId ? parseInt(autorizadoPorId, 10) || null : null;
 
+    const fotosEntrega = resolveMobilePhotos(mobileTokens);
+    const fotosJson = fotosEntrega.length ? JSON.stringify(fotosEntrega) : null;
+
     await db.query(
       `INSERT INTO prestamos (id, inventario_id, empleado_id, empleado_nombre, departamento,
-                              fecha_prestamo, fecha_devolucion_estimada, estado, autorizado_por_id, notas, cantidad)
-       VALUES (?, ?, ?, ?, ?, NOW(), ?, 'activo', ?, ?, ?)`,
+                              fecha_prestamo, fecha_devolucion_estimada, estado, autorizado_por_id, notas, cantidad, fotos_entrega)
+       VALUES (?, ?, ?, ?, ?, NOW(), ?, 'activo', ?, ?, ?, ?)`,
       [id, inventoryId, empleadoId, empleado, departamento || '',
-       fechaDevolucion || null, autorizadoId, notas || '', cantSolicitada]
+       fechaDevolucion || null, autorizadoId, notas || '', cantSolicitada, fotosJson]
     );
 
     if (item.tipo_manejo === 'unidad') {
