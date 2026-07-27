@@ -63,7 +63,7 @@ export function SolicitudesCard({ canView, solicitudes, onAprobar, onRechazar }:
               type="button"
               onClick={() => setFilter(f.value)}
               className={`flex items-center gap-1.25 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                filter === f.value ? 'border-indigo-500 bg-indigo-500 text-white' : 'border-admin-border text-admin-text-sec hover:border-indigo-400 hover:text-indigo-500'
+                filter === f.value ? 'border-indigo-500 bg-indigo-500 text-white' : 'border-admin-border text-admin-text-sec hover:border-indigo-400 hover:text-indigo-500 dark:text-admin-dark-text-sec'
               }`}
             >
               {f.label}
@@ -116,7 +116,7 @@ export function SolicitudesCard({ canView, solicitudes, onAprobar, onRechazar }:
                     <IconCalendar size={11} /> {fmtDate(s.created_at)}
                   </span>
                 </div>
-                {s.mensaje && <div className="mt-1.5 text-[12px] text-admin-text-sec italic">&quot;{s.mensaje}&quot;</div>}
+                {s.mensaje && <div className="mt-1.5 text-[12px] text-admin-text-sec italic dark:text-admin-dark-text-sec">&quot;{s.mensaje}&quot;</div>}
                 <div className="mt-1.5">
                   <span
                     className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${

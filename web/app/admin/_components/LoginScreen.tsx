@@ -62,10 +62,10 @@ export function LoginScreen() {
           <div className="mb-1.25 text-[27px] font-extrabold tracking-tight text-admin-text max-[620px]:text-[22px] dark:text-admin-dark-text">
             Iniciar sesión
           </div>
-          <div className="mb-7 text-[13px] text-admin-text-sec">Solo personal de TI autorizado</div>
+          <div className="mb-7 text-[13px] text-admin-text-sec dark:text-admin-dark-text-sec">Solo personal de TI autorizado</div>
 
           <div className="mb-3.5 flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold tracking-wide text-admin-text-sec uppercase">Usuario</label>
+            <label className="text-[11px] font-bold tracking-wide text-admin-text-sec uppercase dark:text-admin-dark-text-sec">Usuario</label>
             <input
               type="text"
               value={username}
@@ -79,7 +79,7 @@ export function LoginScreen() {
             />
           </div>
           <div className="mb-3.5 flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold tracking-wide text-admin-text-sec uppercase">Contraseña</label>
+            <label className="text-[11px] font-bold tracking-wide text-admin-text-sec uppercase dark:text-admin-dark-text-sec">Contraseña</label>
             <input
               id="adminLoginPass"
               type="password"

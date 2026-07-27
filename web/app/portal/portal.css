@@ -43,8 +43,15 @@
 /* Mismo camarón decorativo de la pantalla de login, en versión reducida
    para el header del portal (68px de alto, recortado con overflow-hidden). */
 .header-shrimp { position: absolute; pointer-events: none; user-select: none; z-index: 0; }
-.header-shrimp-1 { width: 170px; bottom: -50px; left: 24px; opacity: 0.28; transform: rotate(-20deg); }
-.header-shrimp-2 { width: 150px; top: -50px; right: 190px; opacity: 0.24; transform: rotate(158deg); }
+/* Pareja de simetría puntual (rotación 180°) anclada al eje central del header:
+   ocupan la banda vacía entre el logo+texto y el menú de cuenta, sin pisarlos. */
+.header-shrimp-1 { width: 148px; bottom: -44px; left: 50%; opacity: 0.30; transform: translateX(-168px) rotate(20deg); }
+.header-shrimp-2 { width: 148px; top: -44px; left: 50%; opacity: 0.30; transform: translateX(20px) rotate(200deg); }
+/* En pantallas chicas comprimimos la pareja hacia el centro para no rozar el logo. */
+@media (max-width: 520px) {
+  .header-shrimp-1 { width: 118px; transform: translateX(-118px) rotate(20deg); }
+  .header-shrimp-2 { width: 118px; transform: translateX(0) rotate(200deg); }
+}
 
 /* Olas animadas del hero — 5 capas SVG */
 .hero-waves { position: absolute; bottom: 0; left: 0; right: 0; height: 100px; overflow: hidden; pointer-events: none; }

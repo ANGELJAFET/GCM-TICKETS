@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { IconMoon, IconSun, IconLogout, IconChevronDown } from '@tabler/icons-react';
 import { toggleDarkMode, isDarkMode } from '@/lib/theme';
 import { usePortalAuth } from '@/lib/auth';
+import { NotificationBell } from './NotificationBell';
 
 /** Iniciales (máx. 2 letras) a partir del nombre completo del usuario, para el avatar del menú de cuenta. */
 function initials(nombre: string): string {
@@ -68,7 +69,7 @@ function AccountMenu() {
           <button
             type="button"
             onClick={logout}
-            className="flex w-full items-center gap-2.5 border-t border-black/[0.07] px-4 py-2.75 text-left text-[13px] font-medium text-portal-red hover:bg-red-50 dark:border-white/10 dark:hover:bg-red-500/10"
+            className="flex w-full items-center gap-2.5 border-t border-black/[0.07] px-4 py-2.75 text-left text-[13px] font-medium text-portal-red hover:bg-red-50 dark:border-white/10 dark:text-red-300 dark:hover:bg-red-500/10"
           >
             <IconLogout size={16} />
             Cerrar sesión
@@ -106,7 +107,8 @@ export function Header() {
           </span>
         </div>
       </div>
-      <div className="relative z-10">
+      <div className="relative z-10 flex items-center gap-2.5">
+        <NotificationBell />
         <AccountMenu />
       </div>
     </header>

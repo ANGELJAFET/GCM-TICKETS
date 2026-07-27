@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import useSWR from 'swr';
 import {
   IconListCheck,
@@ -17,6 +17,7 @@ import { useToast } from '@/components/ui';
 import type { Ticket, TicketStatus } from '@/lib/types';
 import { IdentScreen } from './_components/IdentScreen';
 import { Header } from './_components/Header';
+import { usePortalNotifications } from './_components/PortalNotificationsContext';
 import { Hero } from './_components/Hero';
 import { TicketCard } from './_components/TicketCard';
 import { NewTicketModal, type NewTicketData } from './_components/NewTicketModal';
@@ -41,6 +42,7 @@ const FILTERS: { value: FilterValue; label: string; icon: typeof IconLayoutList 
 function PortalApp() {
   const { user, token } = usePortalAuth();
   const { showToast } = useToast();
+  const { checkMyTickets } = usePortalNotifications();
 
   const { data: tickets, mutate } = useSWR<Ticket[]>(
     token ? ['/tickets', token] : null,
@@ -63,6 +65,12 @@ function PortalApp() {
     return c;
   }, [mine]);
   const visible = filter === 'todos' ? mine : mine.filter((t) => t.status === filter);
+
+  // Alimenta el centro de notificaciones tras cada recarga de "mis tickets":
+  // detecta cambios de estado y respuestas de soporte (ver PortalNotificationsProvider).
+  useEffect(() => {
+    checkMyTickets(mine);
+  }, [mine, checkMyTickets]);
 
   async function handleReply(id: string, text: string) {
     try {
@@ -115,7 +123,7 @@ function PortalApp() {
         <Hero onNuevoTicket={() => setModalOpen(true)} />
 
         <div className="mb-4.5 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-[11px] font-extrabold tracking-wide text-portal-text-sec uppercase">
+          <div className="flex items-center gap-2 text-[11px] font-extrabold tracking-wide text-portal-text-sec uppercase dark:text-admin-dark-text-sec">
             <IconListCheck size={15} className="text-portal-navy-mid" />
             Mis tickets
             {mine.length > 0 && (
@@ -140,7 +148,7 @@ function PortalApp() {
                   'flex items-center gap-1.5 rounded-[10px] border-[1.5px] px-4 py-2 text-[13px] font-semibold transition-all ' +
                   (active
                     ? 'border-transparent bg-linear-to-br from-portal-navy-dark to-portal-navy text-white shadow-[0_4px_14px_rgba(26,46,107,0.35)]'
-                    : 'border-portal-border bg-white text-portal-text-sec hover:border-portal-accent hover:bg-portal-accent-light hover:text-portal-accent dark:bg-admin-dark-surface')
+                    : 'border-portal-border bg-white text-portal-text-sec hover:border-portal-accent hover:bg-portal-accent-light hover:text-portal-accent dark:bg-admin-dark-surface dark:text-admin-dark-text-sec')
                 }
               >
                 <Icon size={14} /> {label}
@@ -160,9 +168,9 @@ function PortalApp() {
         </div>
 
         {!user || mine.length === 0 ? (
-          <div className="px-5 py-18 text-center text-portal-text-sec">
+          <div className="px-5 py-18 text-center text-portal-text-sec dark:text-admin-dark-text-sec">
             <IconTicketOff size={64} className="mx-auto mb-5 opacity-12" />
-            <h3 className="mb-2 text-lg font-extrabold tracking-tight text-portal-text">
+            <h3 className="mb-2 text-lg font-extrabold tracking-tight text-portal-text dark:text-admin-dark-text">
               {user ? 'Aún no tienes tickets' : 'Crea tu primer ticket'}
             </h3>
             <p className="text-[13.5px] leading-relaxed">
@@ -170,9 +178,9 @@ function PortalApp() {
             </p>
           </div>
         ) : visible.length === 0 ? (
-          <div className="px-5 py-18 text-center text-portal-text-sec">
+          <div className="px-5 py-18 text-center text-portal-text-sec dark:text-admin-dark-text-sec">
             <IconFilterOff size={64} className="mx-auto mb-5 opacity-12" />
-            <h3 className="mb-2 text-lg font-extrabold tracking-tight text-portal-text">Sin tickets en este estado</h3>
+            <h3 className="mb-2 text-lg font-extrabold tracking-tight text-portal-text dark:text-admin-dark-text">Sin tickets en este estado</h3>
             <p className="text-[13.5px] leading-relaxed">No tienes tickets con ese estado en este momento.</p>
           </div>
         ) : (

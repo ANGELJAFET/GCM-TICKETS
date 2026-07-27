@@ -65,10 +65,10 @@ export function IdentScreen() {
           <div className="mb-1 text-[27px] font-extrabold tracking-tight text-portal-navy max-[620px]:text-[22px] dark:text-admin-dark-text">
             Bienvenido
           </div>
-          <div className="mb-7.5 text-[13px] text-portal-text-sec">Ingresa tus credenciales para continuar</div>
+          <div className="mb-7.5 text-[13px] text-portal-text-sec dark:text-admin-dark-text-sec">Ingresa tus credenciales para continuar</div>
 
           <div className="mb-4 flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold tracking-wide text-portal-text-sec uppercase">Usuario</label>
+            <label className="text-[11px] font-bold tracking-wide text-portal-text-sec uppercase dark:text-admin-dark-text-sec">Usuario</label>
             <input
               type="text"
               value={username}
@@ -82,7 +82,7 @@ export function IdentScreen() {
             />
           </div>
           <div className="mb-4 flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold tracking-wide text-portal-text-sec uppercase">Contraseña</label>
+            <label className="text-[11px] font-bold tracking-wide text-portal-text-sec uppercase dark:text-admin-dark-text-sec">Contraseña</label>
             <input
               id="loginPassword"
               type="password"
@@ -113,9 +113,9 @@ export function IdentScreen() {
             {loading ? 'Verificando…' : 'Iniciar sesión'}
           </button>
 
-          <p className="mt-4.5 text-center text-[13px] text-portal-text-sec">
+          <p className="mt-4.5 text-center text-[13px] text-portal-text-sec dark:text-admin-dark-text-sec">
             ¿Sin cuenta?{' '}
-            <Link href="/registro" className="font-semibold text-portal-navy hover:underline">
+            <Link href="/registro" className="font-semibold text-portal-navy hover:underline dark:text-blue-300">
               Solicitar acceso
             </Link>
           </p>

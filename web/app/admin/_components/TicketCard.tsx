@@ -38,7 +38,7 @@ export function TicketCard({ ticket: t, selected, now, onClick }: TicketCardProp
     >
       <div className="mb-1.5 flex items-start justify-between gap-2.5">
         <div>
-          <div className="mb-0.75 font-mono text-[10px] font-bold tracking-wide text-admin-text-sec">
+          <div className="mb-0.75 font-mono text-[10px] font-bold tracking-wide text-admin-text-sec dark:text-admin-dark-text-sec">
             {t.id} · {t.categoria} · <IconUser size={11} className="inline align-[-1px]" /> {t.reporter || '—'}
           </div>
           <div className="text-sm font-bold text-admin-text dark:text-admin-dark-text">{t.title}</div>
@@ -49,7 +49,7 @@ export function TicketCard({ ticket: t, selected, now, onClick }: TicketCardProp
         </div>
       </div>
 
-      <div className="mb-2.5 text-xs leading-relaxed text-admin-text-sec">{truncated}</div>
+      <div className="mb-2.5 text-xs leading-relaxed text-admin-text-sec dark:text-admin-dark-text-sec">{truncated}</div>
 
       <div className="flex flex-wrap items-center gap-2">
         <StatusBadge status={t.status} />
@@ -62,14 +62,14 @@ export function TicketCard({ ticket: t, selected, now, onClick }: TicketCardProp
           </span>
         )}
         {t.asignado === 'Sin asignar' && (
-          <span className="flex items-center gap-1 text-[11px] font-semibold text-admin-red">
+          <span className="flex items-center gap-1 text-[11px] font-semibold text-admin-red dark:text-red-300">
             <IconAlertCircle size={11} /> Sin asignar
           </span>
         )}
       </div>
 
       <div className="mt-3 flex items-center justify-between border-t border-admin-light pt-2.5 dark:border-white/8">
-        <div className="flex items-center gap-2 text-xs text-admin-text-sec">
+        <div className="flex items-center gap-2 text-xs text-admin-text-sec dark:text-admin-dark-text-sec">
           <Avatar name={t.asignado} /> <span>{t.asignado}</span>
         </div>
         <span className="flex items-center gap-1 text-[11px] text-admin-gray">

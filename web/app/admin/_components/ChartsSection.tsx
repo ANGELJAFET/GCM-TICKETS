@@ -47,7 +47,7 @@ export function ChartsSection({ tickets }: { tickets: Ticket[] }) {
   return (
     <div className="mb-3.5 grid grid-cols-3 gap-2 max-[900px]:grid-cols-1">
       <div className="rounded-[10px] border border-admin-border bg-white p-3.5 shadow-[var(--shadow-adm-sm)] dark:border-white/10 dark:bg-admin-dark-surface">
-        <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-admin-text-sec uppercase">
+        <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-admin-text-sec uppercase dark:text-admin-dark-text-sec">
           <IconChartDonut size={14} /> Por estado
         </div>
         <div className="relative h-40">
@@ -55,7 +55,7 @@ export function ChartsSection({ tickets }: { tickets: Ticket[] }) {
         </div>
       </div>
       <div className="rounded-[10px] border border-admin-border bg-white p-3.5 shadow-[var(--shadow-adm-sm)] dark:border-white/10 dark:bg-admin-dark-surface">
-        <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-admin-text-sec uppercase">
+        <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-admin-text-sec uppercase dark:text-admin-dark-text-sec">
           <IconChartBar size={14} /> Por técnico
         </div>
         <div className="relative h-40">
@@ -66,7 +66,7 @@ export function ChartsSection({ tickets }: { tickets: Ticket[] }) {
         </div>
       </div>
       <div className="rounded-[10px] border border-admin-border bg-white p-3.5 shadow-[var(--shadow-adm-sm)] dark:border-white/10 dark:bg-admin-dark-surface">
-        <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-admin-text-sec uppercase">
+        <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-admin-text-sec uppercase dark:text-admin-dark-text-sec">
           <IconChartPie size={14} /> Por categoría
         </div>
         <div className="relative h-40">

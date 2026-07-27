@@ -126,7 +126,7 @@ export function NewTicketModal({ open, onClose, onSubmit, onOpenQR, mobileToken,
     >
       <div className="flex flex-col gap-4">
         <FormField label="" htmlFor="f-title">
-          <label className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-portal-text-sec uppercase">
+          <label className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-portal-text-sec uppercase dark:text-admin-dark-text-sec">
             <IconAlertCircle size={13} className="text-portal-navy-mid" /> Título del problema *
           </label>
           <Input
@@ -142,7 +142,7 @@ export function NewTicketModal({ open, onClose, onSubmit, onOpenQR, mobileToken,
         </FormField>
 
         <div>
-          <label className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-portal-text-sec uppercase">
+          <label className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-portal-text-sec uppercase dark:text-admin-dark-text-sec">
             <IconNotes size={13} className="text-portal-navy-mid" /> Descripción del problema
           </label>
           <Textarea rows={3} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Cuéntanos qué está pasando con el mayor detalle posible..." />
@@ -150,7 +150,7 @@ export function NewTicketModal({ open, onClose, onSubmit, onOpenQR, mobileToken,
 
         <div className="grid grid-cols-2 gap-3.5 max-[600px]:grid-cols-1">
           <div>
-            <label className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-portal-text-sec uppercase">
+            <label className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-portal-text-sec uppercase dark:text-admin-dark-text-sec">
               <IconTag size={13} className="text-portal-navy-mid" /> Categoría
             </label>
             <Select value={categoria} onChange={(e) => setCategoria(e.target.value as TicketCategoria)}>
@@ -160,7 +160,7 @@ export function NewTicketModal({ open, onClose, onSubmit, onOpenQR, mobileToken,
             </Select>
           </div>
           <div>
-            <label className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-portal-text-sec uppercase">
+            <label className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-portal-text-sec uppercase dark:text-admin-dark-text-sec">
               <IconFlag size={13} className="text-portal-navy-mid" /> Prioridad
             </label>
             <Select value={prioridad} onChange={(e) => setPrioridad(e.target.value as TicketPrioridad)}>
@@ -172,7 +172,7 @@ export function NewTicketModal({ open, onClose, onSubmit, onOpenQR, mobileToken,
         </div>
 
         <div>
-          <label className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-portal-text-sec uppercase">
+          <label className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-portal-text-sec uppercase dark:text-admin-dark-text-sec">
             <IconPaperclip size={13} className="text-portal-navy-mid" /> Foto o video adjunto{' '}
             <span className="text-[11px] font-normal tracking-normal text-portal-gray normal-case">(imagen o video corto — máx. 50 MB)</span>
           </label>
@@ -239,7 +239,7 @@ export function NewTicketModal({ open, onClose, onSubmit, onOpenQR, mobileToken,
             ) : (
               <>
                 <IconUpload size={26} className="text-portal-gray" />
-                <span className="text-[13px] text-portal-text-sec">Haz clic o arrastra un archivo aquí</span>
+                <span className="text-[13px] text-portal-text-sec dark:text-admin-dark-text-sec">Haz clic o arrastra un archivo aquí</span>
                 <span className="text-[10px] text-portal-gray">JPG, PNG, GIF, MP4, MOV — máx. 50 MB</span>
               </>
             )}

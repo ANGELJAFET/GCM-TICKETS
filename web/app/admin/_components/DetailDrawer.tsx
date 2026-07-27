@@ -120,42 +120,42 @@ export function DetailDrawer({ ticket: t, open, now, onClose, admins, onReassign
         {tab === 'info' && (
           <>
             <section className="mb-5.5">
-              <h3 className="mb-3 flex items-center gap-2 text-[10px] font-extrabold tracking-wide text-admin-text-sec uppercase after:h-px after:flex-1 after:bg-admin-border">Descripción</h3>
+              <h3 className="mb-3 flex items-center gap-2 text-[10px] font-extrabold tracking-wide text-admin-text-sec uppercase after:h-px after:flex-1 after:bg-admin-border dark:text-admin-dark-text-sec">Descripción</h3>
               <div className="rounded-xl border-l-3 border-admin-blue bg-admin-light px-4 py-3.5 text-[13px] leading-relaxed dark:bg-admin-dark-alt">{t.desc || 'Sin descripción.'}</div>
             </section>
 
             <section className="mb-5.5">
-              <h3 className="mb-3 flex items-center gap-2 text-[10px] font-extrabold tracking-wide text-admin-text-sec uppercase after:h-px after:flex-1 after:bg-admin-border">Información</h3>
+              <h3 className="mb-3 flex items-center gap-2 text-[10px] font-extrabold tracking-wide text-admin-text-sec uppercase after:h-px after:flex-1 after:bg-admin-border dark:text-admin-dark-text-sec">Información</h3>
               <div className="flex items-center justify-between border-b border-admin-light py-2.25 text-[13px] dark:border-white/8">
-                <span className="text-admin-text-sec">Estado</span>
+                <span className="text-admin-text-sec dark:text-admin-dark-text-sec">Estado</span>
                 <StatusBadge status={t.status} />
               </div>
               <div className="flex items-center justify-between border-b border-admin-light py-2.25 text-[13px] dark:border-white/8">
-                <span className="text-admin-text-sec">Prioridad</span>
+                <span className="text-admin-text-sec dark:text-admin-dark-text-sec">Prioridad</span>
                 <PrioBadge prioridad={t.prioridad} />
               </div>
               <div className="flex items-center justify-between border-b border-admin-light py-2.25 text-[13px] dark:border-white/8">
-                <span className="text-admin-text-sec">Categoría</span>
+                <span className="text-admin-text-sec dark:text-admin-dark-text-sec">Categoría</span>
                 <span className="font-semibold">{t.categoria}</span>
               </div>
               <div className="flex items-center justify-between border-b border-admin-light py-2.25 text-[13px] dark:border-white/8">
-                <span className="text-admin-text-sec">Reportado por</span>
+                <span className="text-admin-text-sec dark:text-admin-dark-text-sec">Reportado por</span>
                 <span className="font-semibold">{t.reporter || '—'}</span>
               </div>
               <div className="flex items-center justify-between py-2.25 text-[13px]">
-                <span className="text-admin-text-sec">Fecha</span>
+                <span className="text-admin-text-sec dark:text-admin-dark-text-sec">Fecha</span>
                 <span className="font-semibold">{t.fecha}</span>
               </div>
               {t.status !== 'cerrado' && t.fechaTs && now > 0 && (now - t.fechaTs) / 3600000 >= 24 && (
                 <div className="flex items-center justify-between border-t border-admin-light py-2.25 text-[13px] dark:border-white/8">
-                  <span className="text-admin-text-sec">SLA</span>
+                  <span className="text-admin-text-sec dark:text-admin-dark-text-sec">SLA</span>
                   <SlaBadge ticket={t} now={now} />
                 </div>
               )}
             </section>
 
             <section className="mb-5.5">
-              <h3 className="mb-3 flex items-center gap-2 text-[10px] font-extrabold tracking-wide text-admin-text-sec uppercase after:h-px after:flex-1 after:bg-admin-border">Asignar a</h3>
+              <h3 className="mb-3 flex items-center gap-2 text-[10px] font-extrabold tracking-wide text-admin-text-sec uppercase after:h-px after:flex-1 after:bg-admin-border dark:text-admin-dark-text-sec">Asignar a</h3>
               <select
                 value={t.asignado || 'Sin asignar'}
                 onChange={(e) => onReassign(t.id, e.target.value)}
@@ -171,7 +171,7 @@ export function DetailDrawer({ ticket: t, open, now, onClose, admins, onReassign
             </section>
 
             <section className="mb-5.5">
-              <h3 className="mb-3 flex items-center gap-2 text-[10px] font-extrabold tracking-wide text-admin-text-sec uppercase after:h-px after:flex-1 after:bg-admin-border">Acciones</h3>
+              <h3 className="mb-3 flex items-center gap-2 text-[10px] font-extrabold tracking-wide text-admin-text-sec uppercase after:h-px after:flex-1 after:bg-admin-border dark:text-admin-dark-text-sec">Acciones</h3>
               <div className="flex flex-wrap gap-2">
                 {t.status !== 'en_progreso' && t.status !== 'cerrado' && (
                   <button
@@ -219,7 +219,7 @@ export function DetailDrawer({ ticket: t, open, now, onClose, admins, onReassign
             </section>
 
             <section className="mb-5.5">
-              <h3 className="mb-3 flex items-center gap-2 text-[10px] font-extrabold tracking-wide text-admin-text-sec uppercase after:h-px after:flex-1 after:bg-admin-border">Archivos adjuntos</h3>
+              <h3 className="mb-3 flex items-center gap-2 text-[10px] font-extrabold tracking-wide text-admin-text-sec uppercase after:h-px after:flex-1 after:bg-admin-border dark:text-admin-dark-text-sec">Archivos adjuntos</h3>
               {t.attachments?.length ? (
                 t.attachments.map((a, i) => {
                   if (isImage(a.path)) {
@@ -274,7 +274,7 @@ export function DetailDrawer({ ticket: t, open, now, onClose, admins, onReassign
             </section>
 
             <section>
-              <h3 className="mb-3 flex items-center gap-2 text-[10px] font-extrabold tracking-wide text-admin-text-sec uppercase after:h-px after:flex-1 after:bg-admin-border">
+              <h3 className="mb-3 flex items-center gap-2 text-[10px] font-extrabold tracking-wide text-admin-text-sec uppercase after:h-px after:flex-1 after:bg-admin-border dark:text-admin-dark-text-sec">
                 Historial de mensajes · {t.comments.length} ({userReplies} del usuario)
               </h3>
               {t.comments.length ? t.comments.map((c, i) => <CommentItem key={i} c={c} />) : <p className="mb-2.5 text-xs text-admin-gray">Sin mensajes aún.</p>}
@@ -319,7 +319,7 @@ export function DetailDrawer({ ticket: t, open, now, onClose, admins, onReassign
 
         {tab === 'notes' && (
           <section>
-            <h3 className="mb-3 flex items-center gap-2 text-[10px] font-extrabold tracking-wide text-admin-text-sec uppercase after:h-px after:flex-1 after:bg-admin-border">
+            <h3 className="mb-3 flex items-center gap-2 text-[10px] font-extrabold tracking-wide text-admin-text-sec uppercase after:h-px after:flex-1 after:bg-admin-border dark:text-admin-dark-text-sec">
               Notas internas <span className="text-[10px] font-normal normal-case text-admin-gray">(solo el equipo de soporte puede ver esto)</span>
             </h3>
             {t.notes?.length ? (
@@ -359,7 +359,7 @@ export function DetailDrawer({ ticket: t, open, now, onClose, admins, onReassign
 
         {tab === 'history' && (
           <section>
-            <h3 className="mb-3 flex items-center gap-2 text-[10px] font-extrabold tracking-wide text-admin-text-sec uppercase after:h-px after:flex-1 after:bg-admin-border">
+            <h3 className="mb-3 flex items-center gap-2 text-[10px] font-extrabold tracking-wide text-admin-text-sec uppercase after:h-px after:flex-1 after:bg-admin-border dark:text-admin-dark-text-sec">
               Historial de cambios · {t.history?.length || 0} eventos
             </h3>
             {t.history?.length ? (

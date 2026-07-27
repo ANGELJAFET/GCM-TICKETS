@@ -138,7 +138,7 @@ export function AdminManagerModal({ open, onClose }: AdminManagerModalProps) {
     >
       <div className="flex flex-col gap-5">
         <div>
-          <div className="mb-2.5 flex items-center gap-2 text-[11px] font-extrabold tracking-wide text-admin-text-sec uppercase after:h-px after:flex-1 after:bg-admin-border">Usuarios existentes</div>
+          <div className="mb-2.5 flex items-center gap-2 text-[11px] font-extrabold tracking-wide text-admin-text-sec uppercase after:h-px after:flex-1 after:bg-admin-border dark:text-admin-dark-text-sec">Usuarios existentes</div>
           {!list.length ? (
             <p className="text-[13px] text-admin-gray">Sin usuarios.</p>
           ) : (
@@ -155,7 +155,7 @@ export function AdminManagerModal({ open, onClose }: AdminManagerModalProps) {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="text-[13px] font-bold">{a.nombre}</div>
-                      <div className="flex items-center gap-1.5 font-mono text-[11px] text-admin-text-sec">
+                      <div className="flex items-center gap-1.5 font-mono text-[11px] text-admin-text-sec dark:text-admin-dark-text-sec">
                         @{a.username}
                         <span className="rounded-full px-1.75 py-0.5 text-[10px] font-bold tracking-wide" style={{ background: `${rolColor}22`, color: rolColor }}>
                           {a.rol}
@@ -183,7 +183,7 @@ export function AdminManagerModal({ open, onClose }: AdminManagerModalProps) {
                             type="button"
                             onClick={() => togglePermiso(a.id, modulo, !activo)}
                             title={`${activo ? 'Quitar' : 'Otorgar'} acceso a ${label.toLowerCase()}`}
-                            className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-bold ${activo ? 'bg-emerald-600 text-white' : 'bg-admin-light text-admin-text-sec dark:bg-admin-dark-alt'}`}
+                            className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-bold ${activo ? 'bg-emerald-600 text-white' : 'bg-admin-light text-admin-text-sec dark:bg-admin-dark-alt dark:text-admin-dark-text-sec'}`}
                           >
                             <Icon size={12} /> {label}
                           </button>
@@ -199,7 +199,7 @@ export function AdminManagerModal({ open, onClose }: AdminManagerModalProps) {
 
         {superAdmin && (
           <div>
-            <div className="mb-2.5 flex items-center gap-2 text-[11px] font-extrabold tracking-wide text-admin-text-sec uppercase after:h-px after:flex-1 after:bg-admin-border">Crear nuevo usuario</div>
+            <div className="mb-2.5 flex items-center gap-2 text-[11px] font-extrabold tracking-wide text-admin-text-sec uppercase after:h-px after:flex-1 after:bg-admin-border dark:text-admin-dark-text-sec">Crear nuevo usuario</div>
             <div className="flex flex-col gap-2.5">
               <div className="grid grid-cols-2 gap-3">
                 <FormField label="Nombre completo" required>

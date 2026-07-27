@@ -75,7 +75,7 @@ function AuditoriaApp() {
       <Header />
       <div className="flex-1 overflow-y-auto px-6 py-5">
         <div className="mb-4 flex items-center gap-2.5">
-          <Link href="/admin" className="flex items-center gap-1.5 rounded-lg border-[1.5px] border-admin-border bg-admin-light px-4 py-1.75 text-[13px] font-semibold text-admin-text-sec hover:bg-admin-border/40 dark:border-white/10 dark:bg-admin-dark-surface dark:hover:bg-admin-dark-alt">
+          <Link href="/admin" className="flex items-center gap-1.5 rounded-lg border-[1.5px] border-admin-border bg-admin-light px-4 py-1.75 text-[13px] font-semibold text-admin-text-sec hover:bg-admin-border/40 dark:border-white/10 dark:bg-admin-dark-surface dark:text-admin-dark-text-sec dark:hover:bg-admin-dark-alt">
             <IconArrowLeft size={15} /> Volver a tickets
           </Link>
         </div>
@@ -126,14 +126,14 @@ function AuditoriaApp() {
                 type="button"
                 onClick={() => setFilters(EMPTY_FILTERS)}
                 title="Limpiar filtros"
-                className="flex h-9 items-center gap-1.25 rounded-lg border-[1.5px] border-admin-border px-3 text-[13px] font-semibold text-admin-text-sec hover:bg-admin-light dark:border-white/10"
+                className="flex h-9 items-center gap-1.25 rounded-lg border-[1.5px] border-admin-border px-3 text-[13px] font-semibold text-admin-text-sec hover:bg-admin-light dark:border-white/10 dark:text-admin-dark-text-sec"
               >
                 <IconX size={14} /> Limpiar
               </button>
             </div>
           </div>
 
-          <div className="mb-3 text-[13px] text-admin-text-sec">
+          <div className="mb-3 text-[13px] text-admin-text-sec dark:text-admin-dark-text-sec">
             {rows.length} registro{rows.length !== 1 ? 's' : ''}
           </div>
 
@@ -147,10 +147,10 @@ function AuditoriaApp() {
               <table className="w-full border-collapse text-[13px]">
                 <thead>
                   <tr>
-                    <th className="border-b border-admin-border bg-slate-50 px-3.5 py-2.5 text-left text-xs font-semibold text-admin-text-sec dark:border-white/10 dark:bg-admin-dark-alt">Fecha / Hora</th>
-                    <th className="border-b border-admin-border bg-slate-50 px-3.5 py-2.5 text-left text-xs font-semibold text-admin-text-sec dark:border-white/10 dark:bg-admin-dark-alt">Usuario</th>
-                    <th className="border-b border-admin-border bg-slate-50 px-3.5 py-2.5 text-left text-xs font-semibold text-admin-text-sec dark:border-white/10 dark:bg-admin-dark-alt">Área</th>
-                    <th className="border-b border-admin-border bg-slate-50 px-3.5 py-2.5 text-left text-xs font-semibold text-admin-text-sec dark:border-white/10 dark:bg-admin-dark-alt">Acción / Detalle</th>
+                    <th className="border-b border-admin-border bg-slate-50 px-3.5 py-2.5 text-left text-xs font-semibold text-admin-text-sec dark:border-white/10 dark:bg-admin-dark-alt dark:text-admin-dark-text-sec">Fecha / Hora</th>
+                    <th className="border-b border-admin-border bg-slate-50 px-3.5 py-2.5 text-left text-xs font-semibold text-admin-text-sec dark:border-white/10 dark:bg-admin-dark-alt dark:text-admin-dark-text-sec">Usuario</th>
+                    <th className="border-b border-admin-border bg-slate-50 px-3.5 py-2.5 text-left text-xs font-semibold text-admin-text-sec dark:border-white/10 dark:bg-admin-dark-alt dark:text-admin-dark-text-sec">Área</th>
+                    <th className="border-b border-admin-border bg-slate-50 px-3.5 py-2.5 text-left text-xs font-semibold text-admin-text-sec dark:border-white/10 dark:bg-admin-dark-alt dark:text-admin-dark-text-sec">Acción / Detalle</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -163,16 +163,16 @@ function AuditoriaApp() {
                         <td className="px-3.5 py-2.5 align-middle whitespace-nowrap">
                           <div className="flex flex-col">
                             <span>{fecha.toLocaleDateString('es-HN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                            <span className="text-[11px] text-admin-text-sec">{fecha.toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' })}</span>
+                            <span className="text-[11px] text-admin-text-sec dark:text-admin-dark-text-sec">{fecha.toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' })}</span>
                           </div>
                         </td>
                         <td className="px-3.5 py-2.5 align-middle whitespace-nowrap">
                           {r.actor ? (
                             <span className="flex items-center gap-1.25">
-                              <IconUserCircle size={14} className="text-admin-text-sec" /> {r.actor}
+                              <IconUserCircle size={14} className="text-admin-text-sec dark:text-admin-dark-text-sec" /> {r.actor}
                             </span>
                           ) : (
-                            <span className="text-admin-text-sec">—</span>
+                            <span className="text-admin-text-sec dark:text-admin-dark-text-sec">—</span>
                           )}
                         </td>
                         <td className="px-3.5 py-2.5 align-middle">
@@ -183,7 +183,7 @@ function AuditoriaApp() {
                         <td className="px-3.5 py-2.5 align-middle">
                           <div className="flex flex-col gap-0.75">
                             <span className="font-semibold">{r.accion}</span>
-                            {r.detalle && <span className="text-xs text-admin-text-sec">{r.detalle}</span>}
+                            {r.detalle && <span className="text-xs text-admin-text-sec dark:text-admin-dark-text-sec">{r.detalle}</span>}
                           </div>
                         </td>
                       </tr>

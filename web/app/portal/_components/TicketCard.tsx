@@ -116,7 +116,7 @@ export function TicketCard({ ticket: t, onReply }: TicketCardProps) {
         </span>
       </div>
 
-      <div className="mb-4 text-[13px] leading-relaxed text-portal-text-sec">{t.desc}</div>
+      <div className="mb-4 text-[13px] leading-relaxed text-portal-text-sec dark:text-admin-dark-text-sec">{t.desc}</div>
 
       {t.attachments?.length > 0 && (
         <div className="mt-3 mb-1 flex flex-wrap gap-2">
@@ -163,11 +163,11 @@ export function TicketCard({ ticket: t, onReply }: TicketCardProps) {
         <div className="flex items-center gap-2">
           <span className={`rounded-full px-2.75 py-1 text-[10px] font-bold ${PRIO_BADGE_CLASS[t.prioridad] || ''}`}>{t.prioridad}</span>
           {t.asignado && t.asignado !== 'Sin asignar' ? (
-            <span className="flex items-center gap-1 text-[11px] text-portal-text-sec">
+            <span className="flex items-center gap-1 text-[11px] text-portal-text-sec dark:text-admin-dark-text-sec">
               <IconUserCheck size={12} /> Equipo de Soporte
             </span>
           ) : (
-            <span className="flex items-center gap-1 text-[11px] font-semibold text-portal-red">
+            <span className="flex items-center gap-1 text-[11px] font-semibold text-portal-red dark:text-red-300">
               <IconUserOff size={12} /> Sin asignar
             </span>
           )}
@@ -178,7 +178,7 @@ export function TicketCard({ ticket: t, onReply }: TicketCardProps) {
       </div>
 
       <div className="mt-4">
-        <div className="mb-2 flex justify-between text-[11px] font-semibold text-portal-text-sec">
+        <div className="mb-2 flex justify-between text-[11px] font-semibold text-portal-text-sec dark:text-admin-dark-text-sec">
           <span>Progreso</span>
           <span>{PROGRESS_LABEL[t.status]}</span>
         </div>
@@ -200,7 +200,7 @@ export function TicketCard({ ticket: t, onReply }: TicketCardProps) {
 
       {t.status !== 'cerrado' ? (
         <div className="mt-4 border-t border-dashed border-slate-300 pt-4">
-          <div className="mb-2.5 flex items-center gap-1.5 text-[10px] font-extrabold tracking-wide text-portal-text-sec uppercase">
+          <div className="mb-2.5 flex items-center gap-1.5 text-[10px] font-extrabold tracking-wide text-portal-text-sec uppercase dark:text-admin-dark-text-sec">
             <IconMessageReply size={13} /> Tu respuesta
           </div>
           <textarea

@@ -22,7 +22,7 @@ function GroupHeader({ title, icon: Icon, count, mine }: { title: string; icon: 
     <div
       className={clsx(
         'mt-4 mb-2 flex items-center justify-between rounded-[10px] border px-3.5 py-2 text-xs font-bold first:mt-0',
-        mine ? 'border-blue-200 bg-admin-blue-light text-blue-700 dark:border-admin-blue/40 dark:bg-admin-blue/15 dark:text-admin-blue' : 'border-admin-border bg-admin-light text-admin-text-sec dark:border-white/10 dark:bg-admin-dark-alt'
+        mine ? 'border-blue-200 bg-admin-blue-light text-blue-700 dark:border-admin-blue/40 dark:bg-admin-blue/15 dark:text-admin-blue' : 'border-admin-border bg-admin-light text-admin-text-sec dark:border-white/10 dark:bg-admin-dark-alt dark:text-admin-dark-text-sec'
       )}
     >
       <span className="flex items-center gap-1.75">
@@ -45,7 +45,7 @@ function GroupHeader({ title, icon: Icon, count, mine }: { title: string; icon: 
 export function TicketList({ list, currentTab, adminNombre, selectedId, currentPage, now, onPageChange, onSelect }: TicketListProps) {
   if (!list.length) {
     return (
-      <div className="flex flex-col items-center gap-2 py-16 text-admin-text-sec">
+      <div className="flex flex-col items-center gap-2 py-16 text-admin-text-sec dark:text-admin-dark-text-sec">
         <IconSearchOff size={40} className="opacity-30" />
         <p>No se encontraron tickets</p>
       </div>
@@ -105,7 +105,7 @@ export function TicketList({ list, currentTab, adminNombre, selectedId, currentP
             type="button"
             disabled={page === 1}
             onClick={() => onPageChange(page - 1)}
-            className="flex h-8.5 w-8.5 items-center justify-center rounded-lg border-[1.5px] border-admin-border text-admin-text-sec transition-colors hover:border-admin-blue hover:text-admin-blue disabled:opacity-40"
+            className="flex h-8.5 w-8.5 items-center justify-center rounded-lg border-[1.5px] border-admin-border text-admin-text-sec transition-colors hover:border-admin-blue hover:text-admin-blue disabled:opacity-40 dark:text-admin-dark-text-sec"
           >
             <IconChevronLeft size={16} />
           </button>
@@ -113,13 +113,13 @@ export function TicketList({ list, currentTab, adminNombre, selectedId, currentP
             .filter((i) => totalPages <= 7 || Math.abs(i - page) <= 2 || i === 1 || i === totalPages)
             .map((i, idx, arr) => (
               <span key={i} className="flex items-center gap-1.5">
-                {idx > 0 && arr[idx - 1] !== i - 1 && <span className="px-1 text-xs text-admin-text-sec">…</span>}
+                {idx > 0 && arr[idx - 1] !== i - 1 && <span className="px-1 text-xs text-admin-text-sec dark:text-admin-dark-text-sec">…</span>}
                 <button
                   type="button"
                   onClick={() => onPageChange(i)}
                   className={clsx(
                     'flex h-8.5 w-8.5 items-center justify-center rounded-lg border-[1.5px] text-[13px] font-semibold transition-colors',
-                    i === page ? 'border-admin-blue bg-admin-blue text-white' : 'border-admin-border text-admin-text-sec hover:border-admin-blue hover:text-admin-blue'
+                    i === page ? 'border-admin-blue bg-admin-blue text-white' : 'border-admin-border text-admin-text-sec hover:border-admin-blue hover:text-admin-blue dark:text-admin-dark-text-sec'
                   )}
                 >
                   {i}
@@ -130,11 +130,11 @@ export function TicketList({ list, currentTab, adminNombre, selectedId, currentP
             type="button"
             disabled={page === totalPages}
             onClick={() => onPageChange(page + 1)}
-            className="flex h-8.5 w-8.5 items-center justify-center rounded-lg border-[1.5px] border-admin-border text-admin-text-sec transition-colors hover:border-admin-blue hover:text-admin-blue disabled:opacity-40"
+            className="flex h-8.5 w-8.5 items-center justify-center rounded-lg border-[1.5px] border-admin-border text-admin-text-sec transition-colors hover:border-admin-blue hover:text-admin-blue disabled:opacity-40 dark:text-admin-dark-text-sec"
           >
             <IconChevronRight size={16} />
           </button>
-          <span className="px-2 text-xs text-admin-text-sec">
+          <span className="px-2 text-xs text-admin-text-sec dark:text-admin-dark-text-sec">
             {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, list.length)} de {list.length}
           </span>
         </div>

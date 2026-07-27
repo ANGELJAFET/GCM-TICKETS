@@ -90,7 +90,7 @@ export function DashboardView({ items, canEquipos, onAddFirst, onGoTo }: Dashboa
     <div className="flex flex-col gap-4.5 py-0.5">
       <div className="grid grid-cols-3 gap-2 max-[900px]:grid-cols-1">
         <div className="rounded-[10px] border border-admin-border bg-white p-3.5 shadow-[var(--shadow-adm-sm)] dark:border-white/10 dark:bg-admin-dark-surface">
-          <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold text-admin-text-sec">
+          <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold text-admin-text-sec dark:text-admin-dark-text-sec">
             <IconChartDonut size={14} /> Estado de equipos
           </div>
           <div className="relative h-47.5 overflow-hidden">
@@ -105,7 +105,7 @@ export function DashboardView({ items, canEquipos, onAddFirst, onGoTo }: Dashboa
           </div>
         </div>
         <div className="rounded-[10px] border border-admin-border bg-white p-3.5 shadow-[var(--shadow-adm-sm)] dark:border-white/10 dark:bg-admin-dark-surface">
-          <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold text-admin-text-sec">
+          <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold text-admin-text-sec dark:text-admin-dark-text-sec">
             <IconChartBar size={14} /> Por tipo
           </div>
           <div className="relative h-47.5 overflow-hidden">
@@ -124,7 +124,7 @@ export function DashboardView({ items, canEquipos, onAddFirst, onGoTo }: Dashboa
           </div>
         </div>
         <div className="rounded-[10px] border border-admin-border bg-white p-3.5 shadow-[var(--shadow-adm-sm)] dark:border-white/10 dark:bg-admin-dark-surface">
-          <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold text-admin-text-sec">
+          <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold text-admin-text-sec dark:text-admin-dark-text-sec">
             <IconChartPie size={14} /> Condición general
           </div>
           <div className="relative h-47.5 overflow-hidden">
@@ -141,7 +141,7 @@ export function DashboardView({ items, canEquipos, onAddFirst, onGoTo }: Dashboa
       </div>
 
       <div>
-        <div className="mb-2.5 text-[11px] font-extrabold tracking-wide text-admin-text-sec uppercase">Últimos ingresos</div>
+        <div className="mb-2.5 text-[11px] font-extrabold tracking-wide text-admin-text-sec uppercase dark:text-admin-dark-text-sec">Últimos ingresos</div>
         <div className="flex flex-col rounded-2xl border border-admin-border bg-white px-2 dark:border-white/10 dark:bg-admin-dark-surface">
           {recent.length ? (
             recent.map((i) => (

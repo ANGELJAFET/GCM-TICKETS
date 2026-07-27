@@ -68,7 +68,7 @@ export function NotificationBell({ forceDot = false }: { forceDot?: boolean }) {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-[13px] font-semibold">{n.title}</div>
-                    <div className="mb-0.5 text-xs text-slate-500">{n.body}</div>
+                    <div className="mb-0.5 text-xs text-slate-500 dark:text-admin-dark-text-sec">{n.body}</div>
                     <div className="text-[11px] text-slate-400">{n.time}</div>
                   </div>
                 </div>

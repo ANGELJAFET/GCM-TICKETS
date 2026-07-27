@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { PortalAuthProvider } from '@/lib/auth';
 import { ToastProvider } from '@/components/ui';
+import { PortalNotificationsProvider } from './_components/PortalNotificationsContext';
 import './portal.css';
 
 export const metadata: Metadata = {
@@ -18,7 +19,9 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       <div className="portal-blob portal-blob-1" />
       <div className="portal-blob portal-blob-2" />
       <PortalAuthProvider>
-        <ToastProvider>{children}</ToastProvider>
+        <ToastProvider>
+          <PortalNotificationsProvider>{children}</PortalNotificationsProvider>
+        </ToastProvider>
       </PortalAuthProvider>
     </div>
   );

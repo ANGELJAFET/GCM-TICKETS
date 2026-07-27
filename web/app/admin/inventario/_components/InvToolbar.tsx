@@ -27,7 +27,7 @@ export function InvToolbar({ view, onChange, canEquipos, canPrestamos, activosCo
         'flex items-center gap-1.5 rounded-[10px] border-[1.5px] border-transparent px-4 py-2 text-[13px] font-semibold transition-all',
         view === v
           ? 'border-blue-300/50 bg-admin-blue-light text-admin-blue dark:border-admin-blue/40 dark:bg-admin-blue/15'
-          : 'text-admin-text-sec hover:border-blue-200 hover:bg-admin-blue-light hover:text-admin-blue dark:hover:border-admin-blue/40 dark:hover:bg-admin-blue/15'
+          : 'text-admin-text-sec hover:border-blue-200 hover:bg-admin-blue-light hover:text-admin-blue dark:text-admin-dark-text-sec dark:hover:border-admin-blue/40 dark:hover:bg-admin-blue/15'
       )}
     >
       {icon} {label}

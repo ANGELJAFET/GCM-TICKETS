@@ -159,24 +159,24 @@ export function QRPhotoModal({ open, onClose, onConfirm }: QRPhotoModalProps) {
               className="h-50 w-50 rounded-xl border-[3px] border-admin-border"
             />
             <div className="mt-1 flex w-full flex-col gap-1.5">
-              <div className="flex items-center gap-2.5 text-[12.5px] text-admin-text-sec">
+              <div className="flex items-center gap-2.5 text-[12.5px] text-admin-text-sec dark:text-admin-dark-text-sec">
                 <span className="flex h-5.5 w-5.5 shrink-0 items-center justify-center rounded-full bg-admin-blue text-[11px] font-extrabold text-white">1</span>
                 Abre la cámara de tu celular
               </div>
-              <div className="flex items-center gap-2.5 text-[12.5px] text-admin-text-sec">
+              <div className="flex items-center gap-2.5 text-[12.5px] text-admin-text-sec dark:text-admin-dark-text-sec">
                 <span className="flex h-5.5 w-5.5 shrink-0 items-center justify-center rounded-full bg-admin-blue text-[11px] font-extrabold text-white">2</span>
                 Apunta al código QR para escanearlo
               </div>
-              <div className="flex items-center gap-2.5 text-[12.5px] text-admin-text-sec">
+              <div className="flex items-center gap-2.5 text-[12.5px] text-admin-text-sec dark:text-admin-dark-text-sec">
                 <span className="flex h-5.5 w-5.5 shrink-0 items-center justify-center rounded-full bg-admin-blue text-[11px] font-extrabold text-white">3</span>
                 Toma la foto del equipo
               </div>
-              <div className="flex items-center gap-2.5 text-[12.5px] text-admin-text-sec">
+              <div className="flex items-center gap-2.5 text-[12.5px] text-admin-text-sec dark:text-admin-dark-text-sec">
                 <span className="flex h-5.5 w-5.5 shrink-0 items-center justify-center rounded-full bg-admin-blue text-[11px] font-extrabold text-white">4</span>
                 La foto aparecerá aquí automáticamente
               </div>
             </div>
-            <div className="mt-1 flex items-center gap-2.5 text-[13px] font-semibold text-admin-text-sec">
+            <div className="mt-1 flex items-center gap-2.5 text-[13px] font-semibold text-admin-text-sec dark:text-admin-dark-text-sec">
               <span className="h-1.75 w-1.75 animate-pulse rounded-full bg-admin-blue" />
               Esperando foto…
             </div>
@@ -192,8 +192,8 @@ export function QRPhotoModal({ open, onClose, onConfirm }: QRPhotoModalProps) {
               <IconCircleCheck size={56} />
             </div>
             <h3 className="text-base font-bold">Foto recibida</h3>
-            <p className="text-center text-[13px] font-semibold text-admin-text-sec">{file.name}</p>
-            <p className="mt-1.5 text-center text-[13px] text-admin-text-sec">Se adjuntará al equipo al guardarlo</p>
+            <p className="text-center text-[13px] font-semibold text-admin-text-sec dark:text-admin-dark-text-sec">{file.name}</p>
+            <p className="mt-1.5 text-center text-[13px] text-admin-text-sec dark:text-admin-dark-text-sec">Se adjuntará al equipo al guardarlo</p>
           </>
         )}
 
@@ -201,7 +201,7 @@ export function QRPhotoModal({ open, onClose, onConfirm }: QRPhotoModalProps) {
           <>
             <div className="mb-2.5 text-4xl">⏱</div>
             <h3 className="text-base font-bold">Código expirado</h3>
-            <p className="mt-1.5 text-center text-[13px] text-admin-text-sec">Genera uno nuevo para intentarlo de nuevo</p>
+            <p className="mt-1.5 text-center text-[13px] text-admin-text-sec dark:text-admin-dark-text-sec">Genera uno nuevo para intentarlo de nuevo</p>
             <button
               type="button"
               onClick={() => startSession(onClose)}

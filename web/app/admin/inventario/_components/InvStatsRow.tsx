@@ -39,7 +39,7 @@ export function InvStatsRow({ items, onGoTo }: InvStatsRowProps) {
           </div>
           <div>
             <div className="text-2xl leading-none font-extrabold">{c.val}</div>
-            <div className="mt-0.75 text-[11px] font-medium text-admin-text-sec">{c.lbl}</div>
+            <div className="mt-0.75 text-[11px] font-medium text-admin-text-sec dark:text-admin-dark-text-sec">{c.lbl}</div>
           </div>
         </button>
       ))}

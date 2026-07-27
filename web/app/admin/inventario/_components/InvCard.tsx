@@ -84,7 +84,7 @@ export function InvCard({ item, onOpenSimilar, onLoan, onReturn, onEdit, onDelet
             {item.marca}
             {item.modelo ? ` ${item.modelo}` : ''}
           </div>
-          <div className="mt-0.5 font-mono text-[11px] text-admin-text-sec">
+          <div className="mt-0.5 font-mono text-[11px] text-admin-text-sec dark:text-admin-dark-text-sec">
             {item.id} · {item.tipo}
             {item.color ? ` · ${item.color}` : ''}
           </div>
@@ -102,26 +102,26 @@ export function InvCard({ item, onOpenSimilar, onLoan, onReturn, onEdit, onDelet
 
       <div className="flex flex-col gap-1.25">
         {item.serie && (
-          <div className="flex items-center gap-1.75 text-xs text-admin-text-sec">
+          <div className="flex items-center gap-1.75 text-xs text-admin-text-sec dark:text-admin-dark-text-sec">
             <IconBarcode size={13} className="shrink-0 text-admin-gray" /> Serie: <strong>{item.serie}</strong>
           </div>
         )}
         {isCant && (
-          <div className="flex items-center gap-1.75 text-xs text-admin-text-sec">
+          <div className="flex items-center gap-1.75 text-xs text-admin-text-sec dark:text-admin-dark-text-sec">
             <IconStack size={13} className="shrink-0 text-admin-gray" /> Lote: <strong>{item.cantidadTotal} unidades</strong> ({disponible} disponibles, {item.cantidadPrestada || 0} prestadas)
           </div>
         )}
         {item.ubicacion && (
-          <div className="flex items-center gap-1.75 text-xs text-admin-text-sec">
+          <div className="flex items-center gap-1.75 text-xs text-admin-text-sec dark:text-admin-dark-text-sec">
             <IconMapPin size={13} className="shrink-0 text-admin-gray" /> Ubicación: {item.ubicacion}
           </div>
         )}
         {item.responsable && (
-          <div className="flex items-center gap-1.75 text-xs text-admin-text-sec">
+          <div className="flex items-center gap-1.75 text-xs text-admin-text-sec dark:text-admin-dark-text-sec">
             <IconUser size={13} className="shrink-0 text-admin-gray" /> Responsable: {item.responsable}
           </div>
         )}
-        <div className="flex items-center gap-1.75 text-xs text-admin-text-sec">
+        <div className="flex items-center gap-1.75 text-xs text-admin-text-sec dark:text-admin-dark-text-sec">
           <IconSparkles size={13} className="shrink-0 text-admin-gray" /> Condición:{' '}
           <span className={clsx('rounded-md px-1.75 py-0.5 text-[11px] font-bold', CONDICION_CLS[item.condicion])}>{CONDICION_LABEL[item.condicion]}</span>
         </div>
@@ -129,13 +129,13 @@ export function InvCard({ item, onOpenSimilar, onLoan, onReturn, onEdit, onDelet
           <IconCalendarPlus size={13} className="shrink-0" /> Ingreso: {item.fechaIngreso}
         </div>
         {garantia && GarantiaIcon && (
-          <div className="flex items-center gap-1.75 text-xs text-admin-text-sec">
+          <div className="flex items-center gap-1.75 text-xs text-admin-text-sec dark:text-admin-dark-text-sec">
             <GarantiaIcon size={13} className="shrink-0 text-admin-gray" />
             <span className={clsx('rounded-full px-2 py-0.5 text-[11px] font-bold', GARANTIA_CLS[garantia.tone])}>{garantia.label}</span>
             {garantia.proveedor && <span> · {garantia.proveedor}</span>}
           </div>
         )}
-        {item.notas && <div className="rounded-lg border-l-3 border-admin-border bg-admin-light px-2.5 py-2 text-[11px] leading-relaxed text-admin-text-sec italic dark:bg-admin-dark-alt">{item.notas}</div>}
+        {item.notas && <div className="rounded-lg border-l-3 border-admin-border bg-admin-light px-2.5 py-2 text-[11px] leading-relaxed text-admin-text-sec italic dark:bg-admin-dark-alt dark:text-admin-dark-text-sec">{item.notas}</div>}
       </div>
 
       <div className="mt-0.5 flex flex-wrap gap-1.5">
@@ -148,7 +148,7 @@ export function InvCard({ item, onOpenSimilar, onLoan, onReturn, onEdit, onDelet
             <IconCheck size={13} /> Devolver
           </button>
         ) : null}
-        <button type="button" onClick={() => onEdit(item.id)} title="Editar" className="inline-flex items-center gap-1.25 rounded-lg border-[1.5px] border-admin-border bg-white px-3 py-1.75 text-xs font-bold text-admin-text-sec hover:border-admin-blue hover:bg-admin-blue-light hover:text-admin-blue dark:bg-admin-dark-alt">
+        <button type="button" onClick={() => onEdit(item.id)} title="Editar" className="inline-flex items-center gap-1.25 rounded-lg border-[1.5px] border-admin-border bg-white px-3 py-1.75 text-xs font-bold text-admin-text-sec hover:border-admin-blue hover:bg-admin-blue-light hover:text-admin-blue dark:bg-admin-dark-alt dark:text-admin-dark-text-sec">
           <IconEdit size={13} />
         </button>
         <button type="button" onClick={() => onDelete(item.id)} title="Eliminar" className="inline-flex items-center gap-1.25 rounded-lg border-[1.5px] border-red-200 bg-admin-red-light px-3 py-1.75 text-xs font-bold text-admin-red hover:bg-admin-red hover:text-white">

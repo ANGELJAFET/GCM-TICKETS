@@ -33,11 +33,11 @@ function LoanRow({ loan, onReturnFull, onReturnPartial, onGenerateWord }: { loan
       </div>
       <div className="min-w-0">
         <div className="truncate text-[13px] font-bold">{loan.equipoDesc || loan.inventoryId}</div>
-        <div className="font-mono text-[11px] text-admin-text-sec">
+        <div className="font-mono text-[11px] text-admin-text-sec dark:text-admin-dark-text-sec">
           {loan.inventoryId} · <span className="font-extrabold text-admin-blue">{loan.id}</span>
         </div>
         {loan.cantidad > 1 && (
-          <div className="font-mono text-[11px] text-admin-text-sec">
+          <div className="font-mono text-[11px] text-admin-text-sec dark:text-admin-dark-text-sec">
             Cantidad: {loan.cantidad} · Devuelto: {loan.cantidadDevuelta}
             {loan.estado === 'activo' ? ` · Pendiente: ${loan.cantidad - loan.cantidadDevuelta}` : ''}
           </div>
@@ -55,11 +55,11 @@ function LoanRow({ loan, onReturnFull, onReturnPartial, onGenerateWord }: { loan
         )}
       </div>
       <div className="flex flex-col gap-0.75 max-[1100px]:hidden">
-        <div className="flex items-center gap-1 text-[11px] text-admin-text-sec">
+        <div className="flex items-center gap-1 text-[11px] text-admin-text-sec dark:text-admin-dark-text-sec">
           <IconCalendarPlus size={10} /> {loan.fechaPrestamo}
         </div>
         {loan.fechaDevolucionEstimada && (
-          <div className={clsx('flex items-center gap-1 text-[11px]', vencido ? 'font-semibold text-admin-red' : 'text-admin-text-sec')}>
+          <div className={clsx('flex items-center gap-1 text-[11px]', vencido ? 'font-semibold text-admin-red dark:text-red-300' : 'text-admin-text-sec dark:text-admin-dark-text-sec')}>
             <IconCalendarMinus size={10} /> Est. {loan.fechaDevolucionEstimada}
           </div>
         )}
@@ -93,7 +93,7 @@ function LoanRow({ loan, onReturnFull, onReturnPartial, onGenerateWord }: { loan
           type="button"
           onClick={() => onGenerateWord(loan.id)}
           title={loan.estado === 'devuelto' ? 'Generar comprobante de devolución (Word)' : 'Generar comprobante de préstamo (Word)'}
-          className="inline-flex items-center gap-1.25 rounded-lg border-[1.5px] border-admin-border bg-white px-3 py-1.5 text-[11px] font-bold whitespace-nowrap text-admin-text-sec hover:border-admin-blue hover:text-admin-blue dark:bg-admin-dark-alt"
+          className="inline-flex items-center gap-1.25 rounded-lg border-[1.5px] border-admin-border bg-white px-3 py-1.5 text-[11px] font-bold whitespace-nowrap text-admin-text-sec hover:border-admin-blue hover:text-admin-blue dark:bg-admin-dark-alt dark:text-admin-dark-text-sec"
         >
           <IconFileTypeDoc size={12} /> {loan.estado === 'devuelto' ? 'Comprobante devolución' : 'Comprobante'}
         </button>
@@ -157,7 +157,7 @@ export function PrestamosView({ allCount, loans, query, estado, onQueryChange, o
       {toolbar}
       {activos.length > 0 && (
         <div>
-          <div className="mb-2.5 flex items-center gap-2 text-[11px] font-extrabold tracking-wide text-admin-text-sec uppercase after:h-px after:flex-1 after:bg-admin-border">
+          <div className="mb-2.5 flex items-center gap-2 text-[11px] font-extrabold tracking-wide text-admin-text-sec uppercase after:h-px after:flex-1 after:bg-admin-border dark:text-admin-dark-text-sec">
             <IconClock size={14} /> Activos — {activos.length}
           </div>
           <div className="overflow-hidden rounded-2xl border border-admin-border bg-white shadow-[var(--shadow-adm-sm)] dark:border-white/10 dark:bg-admin-dark-surface">
@@ -169,7 +169,7 @@ export function PrestamosView({ allCount, loans, query, estado, onQueryChange, o
       )}
       {devueltos.length > 0 && (
         <div>
-          <div className="mb-2.5 flex items-center gap-2 text-[11px] font-extrabold tracking-wide text-admin-text-sec uppercase after:h-px after:flex-1 after:bg-admin-border">
+          <div className="mb-2.5 flex items-center gap-2 text-[11px] font-extrabold tracking-wide text-admin-text-sec uppercase after:h-px after:flex-1 after:bg-admin-border dark:text-admin-dark-text-sec">
             <IconHistory size={14} /> Historial — {devueltos.length}
           </div>
           <div className="overflow-hidden rounded-2xl border border-admin-border bg-white shadow-[var(--shadow-adm-sm)] dark:border-white/10 dark:bg-admin-dark-surface">

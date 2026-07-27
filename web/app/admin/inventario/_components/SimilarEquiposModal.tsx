@@ -30,7 +30,7 @@ export function SimilarEquiposModal({ open, items, nombre, onClose, onOpenSimila
       title={
         <span className="flex items-center gap-2">
           <IconDevices size={17} /> {nombre}{' '}
-          <span className="font-normal text-admin-text-sec">
+          <span className="font-normal text-admin-text-sec dark:text-admin-dark-text-sec">
             ({items.length} equipo{items.length === 1 ? '' : 's'})
           </span>
         </span>

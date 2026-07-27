@@ -134,7 +134,7 @@ export function ResponsablesView({ items, onEdit }: ResponsablesViewProps) {
                     </span>
                   </div>
                 </div>
-                <button type="button" onClick={() => onEdit(item.id)} title="Ver / editar equipo" className="shrink-0 rounded-lg border-[1.5px] border-admin-border bg-white px-2.5 py-1.25 text-admin-text-sec hover:border-admin-blue hover:text-admin-blue dark:bg-admin-dark-surface">
+                <button type="button" onClick={() => onEdit(item.id)} title="Ver / editar equipo" className="shrink-0 rounded-lg border-[1.5px] border-admin-border bg-white px-2.5 py-1.25 text-admin-text-sec hover:border-admin-blue hover:text-admin-blue dark:bg-admin-dark-surface dark:text-admin-dark-text-sec">
                   <IconPencil size={13} />
                 </button>
               </div>

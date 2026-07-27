@@ -263,7 +263,7 @@ export function InventoryModal({ open, editingItem, usuarios, onClose, onSave }:
         </FormField>
 
         <hr className="border-admin-border dark:border-white/10" />
-        <div className="flex items-center gap-2 text-[11px] font-extrabold tracking-wide text-admin-text-sec uppercase after:h-px after:flex-1 after:bg-admin-border">
+        <div className="flex items-center gap-2 text-[11px] font-extrabold tracking-wide text-admin-text-sec uppercase after:h-px after:flex-1 after:bg-admin-border dark:text-admin-dark-text-sec">
           <IconShieldCheck size={14} /> Garantía
         </div>
         <label className="flex w-fit cursor-pointer items-center gap-2 text-xs">

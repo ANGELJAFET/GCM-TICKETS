@@ -24,6 +24,15 @@ interface ModalProps {
  * (ej. una tarjeta con `hover:-translate-y-0.5`), lo que rompía el tamaño y
  * la posición del modal al usarlo dentro de ese tipo de contenedores. El
  * portal evita depender de en qué parte del árbol se monte este componente.
+ *
+ * Como consecuencia de portar a `document.body`, el contenido ya no
+ * hereda el color de texto que ponen `admin/layout.tsx` o
+ * `portal/layout.tsx` en un ancestro — por eso la tarjeta blanca fija
+ * aquí su propio color base (`text-admin-text dark:text-admin-dark-text`;
+ * los valores dark de admin y portal son idénticos, ver globals.css) para
+ * que cualquier texto sin clase de color propia siga leyéndose bien en
+ * ambos temas, sin importar si el modal se usa en el panel admin o en
+ * el portal de empleados.
  */
 export function Modal({ open, onClose, title, children, footer, className }: ModalProps) {
   const [mounted, setMounted] = useState(false);
@@ -52,8 +61,8 @@ export function Modal({ open, onClose, title, children, footer, className }: Mod
     >
       <div
         className={clsx(
-          'flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl',
-          'dark:bg-admin-dark-surface',
+          'flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white text-admin-text shadow-2xl',
+          'dark:bg-admin-dark-surface dark:text-admin-dark-text',
           className
         )}
       >

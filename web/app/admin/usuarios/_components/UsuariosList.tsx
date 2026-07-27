@@ -154,7 +154,7 @@ export function UsuariosList({ usuarios, currentUsername, onView, onToggleActivo
         <>
           {sysUsers.length > 0 && (
             <>
-              <div className="mt-1 mb-1.5 flex items-center gap-1.5 border-t border-admin-border pt-3 text-[11px] font-bold text-admin-text-sec first:mt-0 first:border-t-0 first:pt-0">
+              <div className="mt-1 mb-1.5 flex items-center gap-1.5 border-t border-admin-border pt-3 text-[11px] font-bold text-admin-text-sec first:mt-0 first:border-t-0 first:pt-0 dark:text-admin-dark-text-sec">
                 <IconShieldCheck size={13} /> Usuarios del sistema <span className="rounded-full bg-admin-light px-1.75 py-0.5 text-[10px] dark:bg-white/10">{sysUsers.length}</span>
               </div>
               {sysUsers.map((u) => (
@@ -164,7 +164,7 @@ export function UsuariosList({ usuarios, currentUsername, onView, onToggleActivo
           )}
           {empleados.length > 0 && (
             <>
-              <div className="mt-3 mb-1.5 flex items-center gap-1.5 border-t border-admin-border pt-3 text-[11px] font-bold text-admin-text-sec">
+              <div className="mt-3 mb-1.5 flex items-center gap-1.5 border-t border-admin-border pt-3 text-[11px] font-bold text-admin-text-sec dark:text-admin-dark-text-sec">
                 <IconUsers size={13} /> Empleados <span className="rounded-full bg-admin-light px-1.75 py-0.5 text-[10px] dark:bg-white/10">{empleados.length}</span>
               </div>
               {empleados.map((u) => (

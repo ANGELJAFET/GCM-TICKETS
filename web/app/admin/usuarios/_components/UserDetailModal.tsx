@@ -25,7 +25,7 @@ import { api } from '@/lib/api';
 import type { Usuario, UsuarioTicketSummary } from '@/lib/types';
 
 const AVATAR_CLS: Record<number, string> = { 1: 'bg-linear-to-br from-slate-500 to-slate-400', 2: 'bg-linear-to-br from-blue-600 to-violet-600', 3: 'bg-linear-to-br from-emerald-600 to-green-500', 4: 'bg-linear-to-br from-red-600 to-orange-500' };
-const ROL_CLS: Record<string, string> = { empleado: 'bg-admin-light text-admin-gray', tecnico: 'bg-admin-blue-light text-blue-700', admin: 'bg-admin-green-light text-emerald-800', superadmin: 'bg-admin-amber-light text-amber-800' };
+const ROL_CLS: Record<string, string> = { empleado: 'bg-admin-light text-admin-gray dark:bg-white/10 dark:text-admin-dark-text-sec', tecnico: 'bg-admin-blue-light text-blue-700 dark:bg-blue-500/15 dark:text-blue-300', admin: 'bg-admin-green-light text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300', superadmin: 'bg-admin-amber-light text-amber-800 dark:bg-amber-500/15 dark:text-amber-300' };
 const STATUS_LABEL: Record<string, string> = { abierto: 'Abierto', en_progreso: 'En progreso', cerrado: 'Cerrado' };
 const STATUS_COLOR: Record<string, string> = { abierto: '#3b82f6', en_progreso: '#f59e0b', cerrado: '#10b981' };
 const PRIO_COLOR: Record<string, string> = { 'Crítica': '#ef4444', Alta: '#f97316', Media: '#f59e0b', Baja: '#94a3b8' };
@@ -89,7 +89,7 @@ function PasswordSection({ userId }: { userId: number }) {
 
   return (
     <div className="border-t border-admin-border pt-4 dark:border-white/10">
-      <div className="mb-2.5 flex items-center gap-1.5 text-[11px] font-extrabold tracking-wide text-admin-text-sec uppercase">
+      <div className="mb-2.5 flex items-center gap-1.5 text-[11px] font-extrabold tracking-wide text-admin-text-sec uppercase dark:text-admin-dark-text-sec">
         <IconLock size={13} /> Contraseña
       </div>
       <div className="flex items-center gap-2">

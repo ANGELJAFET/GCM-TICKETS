@@ -74,7 +74,7 @@ export function FilterBar({ filters, onChange, admins, onExport }: FilterBarProp
         type="button"
         onClick={() => onChange(EMPTY_FILTERS)}
         title="Limpiar filtros"
-        className="flex h-9.5 w-9.5 shrink-0 items-center justify-center rounded-[10px] border-[1.5px] border-admin-border bg-admin-light text-admin-text-sec transition-colors hover:border-admin-red hover:bg-admin-red-light hover:text-admin-red"
+        className="flex h-9.5 w-9.5 shrink-0 items-center justify-center rounded-[10px] border-[1.5px] border-admin-border bg-admin-light text-admin-text-sec transition-colors hover:border-admin-red hover:bg-admin-red-light hover:text-admin-red dark:border-white/10 dark:bg-admin-dark-bg dark:text-admin-dark-text-sec"
       >
         <IconFilterOff size={16} />
       </button>
