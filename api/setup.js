@@ -75,17 +75,22 @@ async function runBatches(pool, batches, label) {
 }
 
 /**
- * Crea el usuario `admin` (rol superadmin) si aún no existe en la BD. No
- * modifica ni resetea la contraseña de un `admin` ya existente — la
- * variable `ADMIN_PASSWORD` solo aplica en la primera creación.
+ * Bootstrap del superadmin inicial: crea el usuario `admin` (contraseña
+ * `ADMIN_PASSWORD`) solo si la BD **no tiene ningún superadmin todavía**.
+ * En una instalación ya establecida (que ya tiene su propio superadmin, ej.
+ * `SOPORTEMILCIEN`) no crea nada, para no reintroducir en cada `setup` una
+ * cuenta superadmin con contraseña por defecto. `ADMIN_PASSWORD` solo aplica
+ * en el arranque de una BD vacía.
  * @param {import('mssql').ConnectionPool} pool Pool de conexión activo.
  */
 async function createAdminIfNotExists(pool) {
   const exists = await pool.request().query(
-    `SELECT 1 FROM usuarios WHERE username = 'admin'`
+    `SELECT 1 FROM usuarios u
+       JOIN roles r ON r.id = u.rol_id
+      WHERE r.nombre = 'superadmin'`
   );
   if (exists.recordset.length > 0) {
-    console.log('   ✓ Usuario admin ya existe — sin cambios');
+    console.log('   ✓ Ya existe un superadmin — sin cambios');
     return;
   }
 
