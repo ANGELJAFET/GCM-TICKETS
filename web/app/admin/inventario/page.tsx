@@ -94,6 +94,7 @@ function InventarioApp() {
       modelo: values.modelo.trim(),
       color: values.color.trim(),
       condicion: values.condicion,
+      estado: values.estado,
       ubicacion: values.ubicacion.trim(),
       responsable: values.responsable.trim(),
       notas: values.notas.trim(),
@@ -107,7 +108,6 @@ function InventarioApp() {
       await api(`/inventory/${id}`, { method: 'PATCH', token, body });
       showToast('Equipo actualizado ✓');
     } else {
-      body.estado = values.estado;
       body.tipoManejo = values.tipoManejo;
       await api('/inventory', { method: 'POST', token, body });
       showToast('Equipo agregado al inventario ✓');
