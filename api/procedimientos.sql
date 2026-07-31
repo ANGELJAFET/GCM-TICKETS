@@ -97,6 +97,7 @@ CREATE PROCEDURE sp_InsertSolicitudRegistro
   @departamento_nombre NVARCHAR(255) = NULL,
   @finca               NVARCHAR(50)  = NULL,
   @area                NVARCHAR(255) = NULL,
+  @anydesk             NVARCHAR(50)  = NULL,
   @mensaje             NVARCHAR(MAX) = NULL
 AS
 BEGIN
@@ -107,9 +108,9 @@ BEGIN
     THROW 50409, 'Ya tienes una solicitud pendiente con ese usuario.', 1;
 
   INSERT INTO solicitudes_registro
-    (nombre, apellido, email, username, password_hash, telefono, departamento_nombre, finca, area, mensaje)
+    (nombre, apellido, email, username, password_hash, telefono, departamento_nombre, finca, area, anydesk, mensaje)
   VALUES
-    (@nombre, @apellido, @email, @username, @password_hash, @telefono, @departamento_nombre, @finca, @area, @mensaje);
+    (@nombre, @apellido, @email, @username, @password_hash, @telefono, @departamento_nombre, @finca, @area, @anydesk, @mensaje);
 END;
 GO
 
@@ -126,7 +127,7 @@ BEGIN
          sr.telefono, sr.mensaje, sr.estado, sr.motivo_rechazo,
          sr.created_at, sr.revisado_en,
          sr.departamento_nombre AS departamento,
-         sr.finca, sr.area,
+         sr.finca, sr.area, sr.anydesk,
          LTRIM(RTRIM(CONCAT(u.nombre, ' ', ISNULL(u.apellido, '')))) AS revisado_por_nombre
   FROM solicitudes_registro sr
   LEFT JOIN usuarios u ON u.id = sr.revisado_por
@@ -163,7 +164,8 @@ BEGIN
             @telefono            NVARCHAR(20),
             @departamento_nombre NVARCHAR(255),
             @finca               NVARCHAR(50),
-            @area                NVARCHAR(255);
+            @area                NVARCHAR(255),
+            @anydesk             NVARCHAR(50);
 
     SELECT @estado              = estado,
            @username            = username,
@@ -174,7 +176,8 @@ BEGIN
            @telefono            = telefono,
            @departamento_nombre = departamento_nombre,
            @finca               = finca,
-           @area                = area
+           @area                = area,
+           @anydesk             = anydesk
     FROM solicitudes_registro WHERE id = @solicitud_id;
 
     IF @estado IS NULL
@@ -204,10 +207,10 @@ BEGIN
     DECLARE @rolId TINYINT = (SELECT id FROM roles WHERE nombre = 'empleado');
     INSERT INTO usuarios
       (username, email, password_hash, nombre, apellido, telefono,
-       departamento_id, finca, area, rol_id, activo, registro_aprobado)
+       departamento_id, finca, area, anydesk, rol_id, activo, registro_aprobado)
     VALUES
       (@username, @email, @password_hash, @nombre, @apellido, @telefono,
-       @deptId, @finca, @area, @rolId, 1, 1);
+       @deptId, @finca, @area, @anydesk, @rolId, 1, 1);
 
     -- Marcar solicitud como aprobada
     DECLARE @adminId INT = (SELECT id FROM usuarios WHERE username = @requestedBy);
@@ -292,7 +295,7 @@ BEGIN
   SET NOCOUNT ON;
   SELECT u.id, u.username, u.email, u.nombre, u.apellido, u.telefono,
          d.nombre AS departamento,
-         u.finca, u.area,
+         u.finca, u.area, u.anydesk,
          r.nombre AS rol, r.nivel,
          u.activo, u.ultimo_login, u.created_at,
          u.acceso_inventario, u.acceso_prestamos, u.acceso_bitacora, u.acceso_solicitudes

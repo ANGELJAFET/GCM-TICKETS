@@ -78,6 +78,7 @@ export default function RegistroPage() {
           departamento: get('departamento') || undefined,
           finca: get('finca'),
           area: get('area') || undefined,
+          anydesk: get('anydesk'),
           mensaje: get('mensaje') || undefined,
         },
       });
@@ -216,6 +217,20 @@ export default function RegistroPage() {
                     <label className={labelClass}>Área</label>
                     <input name="area" placeholder="Ej: Producción" className={inputClass} />
                   </div>
+                </div>
+
+                <div className="mb-3.5 flex flex-col gap-1.25">
+                  <label className={labelClass}>ID de AnyDesk *</label>
+                  <input
+                    name="anydesk"
+                    required
+                    inputMode="numeric"
+                    placeholder="Ej: 123 456 789"
+                    className={inputClass}
+                  />
+                  <span className="text-[11px] text-slate-500">
+                    Necesario para brindarte soporte remoto. Ábrelo en AnyDesk: es el número que aparece en “Este puesto de trabajo”.
+                  </span>
                 </div>
 
                 <div className="mb-3.5 grid grid-cols-2 gap-3 max-[480px]:grid-cols-1">

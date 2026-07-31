@@ -140,6 +140,8 @@ export interface Usuario {
   departamento: string | null;
   finca: string | null;
   area: string | null;
+  /** ID de AnyDesk del equipo del empleado (para soporte remoto). */
+  anydesk: string | null;
   rol: string;
   nivel: number;
   activo: boolean;
@@ -169,6 +171,8 @@ export interface Solicitud {
   departamento: string | null;
   finca: string | null;
   area: string | null;
+  /** ID de AnyDesk del equipo del empleado (para soporte remoto). */
+  anydesk: string | null;
   revisado_por_nombre: string | null;
 }
 

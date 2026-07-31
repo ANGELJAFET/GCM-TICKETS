@@ -116,11 +116,12 @@ router.post('/login', loginLimiter, async (req: Request, res: Response) => {
  *
  * Rate limit: 10 solicitudes / hora por IP.
  *
- * Body: `{ username, email, password, nombre, apellido?, telefono?, departamento?, finca, area?, mensaje? }`
+ * Body: `{ username, email, password, nombre, apellido?, telefono?, departamento?, finca, area?, anydesk, mensaje? }`
  * - `username`: 3-20 caracteres, letras/números/guión bajo.
  * - `password`: mínimo 6 caracteres.
  * - `email`: formato de correo válido.
  * - `finca`: debe ser una de las fincas válidas (o `'No aplica'`).
+ * - `anydesk`: obligatorio (ID de AnyDesk del equipo del empleado, para soporte remoto).
  *
  * Respuesta 201: `{ ok: true }`
  *
@@ -132,7 +133,7 @@ router.post('/login', loginLimiter, async (req: Request, res: Response) => {
  */
 router.post('/register', registerLimiter, async (req: Request, res: Response) => {
   try {
-    const { username, email, password, nombre, apellido, telefono, departamento, finca, area, mensaje } = req.body;
+    const { username, email, password, nombre, apellido, telefono, departamento, finca, area, anydesk, mensaje } = req.body;
 
     if (!username || !password || !nombre || !email)
       return res.status(400).json({ error: 'Usuario, correo, contraseña y nombre son requeridos.' });
@@ -144,6 +145,8 @@ router.post('/register', registerLimiter, async (req: Request, res: Response) =>
       return res.status(400).json({ error: 'El correo electrónico no tiene un formato válido.' });
     if (!finca || !FINCAS.includes(finca))
       return res.status(400).json({ error: 'Selecciona una finca válida.' });
+    if (!anydesk || !anydesk.trim())
+      return res.status(400).json({ error: 'El ID de AnyDesk es obligatorio.' });
 
     const hash = await db.bcrypt.hash(password, db.ROUNDS);
 
@@ -157,6 +160,7 @@ router.post('/register', registerLimiter, async (req: Request, res: Response) =>
       departamento_nombre: departamento?.trim() || null,
       finca,
       area:                area?.trim()         || null,
+      anydesk:             anydesk.trim(),
       mensaje:             mensaje?.trim()      || null
     });
 

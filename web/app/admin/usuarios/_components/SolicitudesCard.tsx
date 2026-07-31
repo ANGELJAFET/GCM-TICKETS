@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { IconClipboardList, IconLock, IconInbox, IconCheck, IconX, IconMail, IconBuilding, IconMapPin, IconMap2, IconCalendar } from '@tabler/icons-react';
+import { IconClipboardList, IconLock, IconInbox, IconCheck, IconX, IconMail, IconBuilding, IconMapPin, IconMap2, IconDeviceDesktop, IconCalendar } from '@tabler/icons-react';
 import { useConfirm } from '@/components/ui';
 import type { Solicitud, SolicitudEstado } from '@/lib/types';
 
@@ -110,6 +110,11 @@ export function SolicitudesCard({ canView, solicitudes, onAprobar, onRechazar }:
                   {s.area && (
                     <span className="flex items-center gap-0.75">
                       <IconMap2 size={11} /> {s.area}
+                    </span>
+                  )}
+                  {s.anydesk && (
+                    <span className="flex items-center gap-0.75 font-semibold text-admin-blue">
+                      <IconDeviceDesktop size={11} /> AnyDesk: {s.anydesk}
                     </span>
                   )}
                   <span className="flex items-center gap-0.75">

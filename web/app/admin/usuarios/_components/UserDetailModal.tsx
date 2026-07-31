@@ -10,6 +10,7 @@ import {
   IconBuilding,
   IconMapPin,
   IconMap2,
+  IconDeviceDesktop,
   IconLogin,
   IconCalendar,
   IconCopy,
@@ -269,6 +270,7 @@ export function UserDetailModal({ open, usuario, onClose, onOpenTicket }: UserDe
             <InfoRow icon={<IconBuilding size={13} />} label="Departamento" value={u.departamento} />
             <InfoRow icon={<IconMapPin size={13} />} label="Finca" value={u.finca} />
             <InfoRow icon={<IconMap2 size={13} />} label="Área" value={u.area} />
+            <InfoRow icon={<IconDeviceDesktop size={13} />} label="AnyDesk" value={u.anydesk} />
             <InfoRow icon={<IconLogin size={13} />} label="Último acceso" value={u.ultimo_login ? fmtDate(u.ultimo_login) : 'Nunca'} />
             <InfoRow icon={<IconCalendar size={13} />} label="Registrado" value={fmtDate(u.created_at)} />
           </div>

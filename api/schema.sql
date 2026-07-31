@@ -654,6 +654,20 @@ IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('usuarios')
 GO
 
 -- ============================================================
+-- 9.1 AnyDesk (registro de empleados)
+--    ID de AnyDesk del equipo del empleado, obligatorio en la solicitud
+--    de acceso (validado en la app, ver src/routes/auth.ts). Se copia a
+--    usuarios al aprobar y se muestra en el panel admin (detalle de usuario
+--    y solicitudes) para dar soporte remoto.
+-- ============================================================
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('solicitudes_registro') AND name = 'anydesk')
+  ALTER TABLE solicitudes_registro ADD anydesk NVARCHAR(50) NULL;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('usuarios') AND name = 'anydesk')
+  ALTER TABLE usuarios ADD anydesk NVARCHAR(50) NULL;
+GO
+
+-- ============================================================
 -- 10. Inventario por cantidad (lotes: cables, mouse, etc.)
 --     inventario.tipo_manejo: 'unidad' (default, número de serie
 --     obligatorio, 1 fila = 1 unidad física) | 'cantidad' (lote sin
