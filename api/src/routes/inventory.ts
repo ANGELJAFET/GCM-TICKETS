@@ -215,6 +215,9 @@ router.get('/inventory', ...requireSuperadminOrAcceso('inventario'), async (req:
       notas: i.notas, garantia: i.garantia ? JSON.parse(i.garantia) : null,
       fechaIngreso: i.fecha_ingreso ? fmtDate(i.fecha_ingreso) : fmtDate(i.created_at),
       fechaTs: new Date(i.created_at).getTime(),
+      // Fecha de ingreso en formato YYYY-MM-DD (misma base local que fmtDate),
+      // para el filtro por rango de fechas del panel de equipos.
+      fechaIngresoISO: new Date(i.fecha_ingreso || i.created_at).toLocaleDateString('en-CA'),
       historial: []
     })));
   } catch (err) {
@@ -475,6 +478,8 @@ router.get('/loans', ...requireSuperadminOrAcceso('prestamos'), async (req: Requ
       departamento: l.departamento,
       fechaPrestamo: fmtDate(l.fecha_prestamo),
       fechaPrestamoTs: new Date(l.fecha_prestamo).getTime(),
+      // Fecha del préstamo en YYYY-MM-DD (misma base local que fmtDate), para el filtro por rango de fechas.
+      fechaPrestamoISO: new Date(l.fecha_prestamo).toLocaleDateString('en-CA'),
       fechaDevolucionEstimada: l.fecha_devolucion_estimada ? fmtDate(l.fecha_devolucion_estimada) : '',
       fechaDevolucionReal: l.fecha_devolucion_real ? fmtDate(l.fecha_devolucion_real) : null,
       estado: l.estado,

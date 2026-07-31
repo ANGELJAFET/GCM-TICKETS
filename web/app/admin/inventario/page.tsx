@@ -57,8 +57,12 @@ function InventarioApp() {
   const [view, setView] = useState<InvView>('dashboard');
   const [query, setQuery] = useState('');
   const [estadoFilter, setEstadoFilter] = useState('');
+  const [fechaDesde, setFechaDesde] = useState('');
+  const [fechaHasta, setFechaHasta] = useState('');
   const [loanQuery, setLoanQuery] = useState('');
   const [loanEstadoFilter, setLoanEstadoFilter] = useState('');
+  const [loanFechaDesde, setLoanFechaDesde] = useState('');
+  const [loanFechaHasta, setLoanFechaHasta] = useState('');
 
   const [invModalOpen, setInvModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
@@ -72,8 +76,8 @@ function InventarioApp() {
   const [returnConfirmLoan, setReturnConfirmLoan] = useState<Loan | null>(null);
   const [partialReturnLoan, setPartialReturnLoan] = useState<Loan | null>(null);
 
-  const filteredEquipos = useMemo(() => filterInventory(items, query, estadoFilter), [items, query, estadoFilter]);
-  const filteredLoans = useMemo(() => filterLoans(loanList, loanQuery, loanEstadoFilter), [loanList, loanQuery, loanEstadoFilter]);
+  const filteredEquipos = useMemo(() => filterInventory(items, query, estadoFilter, fechaDesde, fechaHasta), [items, query, estadoFilter, fechaDesde, fechaHasta]);
+  const filteredLoans = useMemo(() => filterLoans(loanList, loanQuery, loanEstadoFilter, loanFechaDesde, loanFechaHasta), [loanList, loanQuery, loanEstadoFilter, loanFechaDesde, loanFechaHasta]);
   const activosCount = loanList.filter((l) => l.estado === 'activo').length;
 
   function goToEquipos(estado: string, tipo?: string) {
@@ -278,8 +282,12 @@ function InventarioApp() {
               items={filteredEquipos}
               query={query}
               estado={estadoFilter}
+              fechaDesde={fechaDesde}
+              fechaHasta={fechaHasta}
               onQueryChange={setQuery}
               onEstadoChange={setEstadoFilter}
+              onFechaDesdeChange={setFechaDesde}
+              onFechaHastaChange={setFechaHasta}
               onAdd={() => {
                 setEditingItem(null);
                 setInvModalOpen(true);
@@ -306,8 +314,12 @@ function InventarioApp() {
               loans={filteredLoans}
               query={loanQuery}
               estado={loanEstadoFilter}
+              fechaDesde={loanFechaDesde}
+              fechaHasta={loanFechaHasta}
               onQueryChange={setLoanQuery}
               onEstadoChange={setLoanEstadoFilter}
+              onFechaDesdeChange={setLoanFechaDesde}
+              onFechaHastaChange={setLoanFechaHasta}
               onReturnFull={handleReturnFull}
               onReturnPartial={handleReturnPartial}
               onGenerateWord={handleGenerateWord}

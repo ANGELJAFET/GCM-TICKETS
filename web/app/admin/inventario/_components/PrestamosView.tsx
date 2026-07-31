@@ -1,14 +1,19 @@
 import clsx from 'clsx';
 import { IconExchangeOff, IconPackage, IconUser, IconUserCheck, IconCalendarPlus, IconCalendarMinus, IconCheck, IconFileTypeDoc, IconClock, IconHistory, IconSearch } from '@tabler/icons-react';
 import type { Loan } from '@/lib/types';
+import { DateRangeFilter } from './DateRangeFilter';
 
 interface PrestamosViewProps {
   allCount: number;
   loans: Loan[];
   query: string;
   estado: string;
+  fechaDesde: string;
+  fechaHasta: string;
   onQueryChange: (q: string) => void;
   onEstadoChange: (e: string) => void;
+  onFechaDesdeChange: (v: string) => void;
+  onFechaHastaChange: (v: string) => void;
   onReturnFull: (loanId: string) => void;
   onReturnPartial: (loanId: string) => void;
   onGenerateWord: (loanId: string) => void;
@@ -103,7 +108,7 @@ function LoanRow({ loan, onReturnFull, onReturnPartial, onGenerateWord }: { loan
 }
 
 /** Vista "Préstamos": buscador + filtro de estado, y listado separado en "Activos" e "Historial" (devueltos). */
-export function PrestamosView({ allCount, loans, query, estado, onQueryChange, onEstadoChange, onReturnFull, onReturnPartial, onGenerateWord }: PrestamosViewProps) {
+export function PrestamosView({ allCount, loans, query, estado, fechaDesde, fechaHasta, onQueryChange, onEstadoChange, onFechaDesdeChange, onFechaHastaChange, onReturnFull, onReturnPartial, onGenerateWord }: PrestamosViewProps) {
   const toolbar = (
     <div className="flex flex-wrap items-center gap-2.5">
       <div className="relative min-w-50 flex-1">
@@ -125,6 +130,7 @@ export function PrestamosView({ allCount, loans, query, estado, onQueryChange, o
         <option value="activo">Activos</option>
         <option value="devuelto">Devueltos</option>
       </select>
+      <DateRangeFilter label="Préstamo" desde={fechaDesde} hasta={fechaHasta} onDesde={onFechaDesdeChange} onHasta={onFechaHastaChange} />
     </div>
   );
 

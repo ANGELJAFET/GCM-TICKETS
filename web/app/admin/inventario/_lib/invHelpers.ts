@@ -97,8 +97,10 @@ function invSearchText(i: InventoryItem): string {
  * @param items Equipos a filtrar.
  * @param query Texto de búsqueda libre (vacío = sin filtro de texto).
  * @param estado Estado exacto a filtrar (vacío = todos los estados).
+ * @param desde Fecha de ingreso mínima (`YYYY-MM-DD`, inclusive; vacío = sin límite inferior).
+ * @param hasta Fecha de ingreso máxima (`YYYY-MM-DD`, inclusive; vacío = sin límite superior).
  */
-export function filterInventory(items: InventoryItem[], query: string, estado: string): InventoryItem[] {
+export function filterInventory(items: InventoryItem[], query: string, estado: string, desde = '', hasta = ''): InventoryItem[] {
   const q = normalize(query.trim());
   return items.filter((i) => {
     if (estado) {
@@ -112,6 +114,9 @@ export function filterInventory(items: InventoryItem[], query: string, estado: s
         return false;
       }
     }
+    // Comparación lexicográfica de fechas ISO (YYYY-MM-DD), inclusiva en ambos extremos.
+    if (desde && (i.fechaIngresoISO || '') < desde) return false;
+    if (hasta && (i.fechaIngresoISO || '') > hasta) return false;
     if (q) {
       const texto = invSearchText(i);
       const terminos = q.split(/\s+/);
@@ -144,11 +149,15 @@ function loanSearchText(l: Loan): string {
  * Mismo criterio que {@link filterInventory}: texto libre (todos los
  * términos deben aparecer, en cualquier orden) + filtro exacto de estado.
  * @param estado `'activo' | 'devuelto' | ''` — a diferencia del de inventario, no hay que derivar nada (`Loan.estado` ya es exactamente eso).
+ * @param desde Fecha de préstamo mínima (`YYYY-MM-DD`, inclusive; vacío = sin límite inferior).
+ * @param hasta Fecha de préstamo máxima (`YYYY-MM-DD`, inclusive; vacío = sin límite superior).
  */
-export function filterLoans(loans: Loan[], query: string, estado: string): Loan[] {
+export function filterLoans(loans: Loan[], query: string, estado: string, desde = '', hasta = ''): Loan[] {
   const q = normalize(query.trim());
   return loans.filter((l) => {
     if (estado && l.estado !== estado) return false;
+    if (desde && (l.fechaPrestamoISO || '') < desde) return false;
+    if (hasta && (l.fechaPrestamoISO || '') > hasta) return false;
     if (q) {
       const texto = loanSearchText(l);
       const terminos = q.split(/\s+/);

@@ -1,14 +1,19 @@
 import { IconSearch, IconPackageOff, IconPlus } from '@tabler/icons-react';
 import type { InventoryItem } from '@/lib/types';
 import { InvCard } from './InvCard';
+import { DateRangeFilter } from './DateRangeFilter';
 
 interface EquiposViewProps {
   allCount: number;
   items: InventoryItem[];
   query: string;
   estado: string;
+  fechaDesde: string;
+  fechaHasta: string;
   onQueryChange: (q: string) => void;
   onEstadoChange: (e: string) => void;
+  onFechaDesdeChange: (v: string) => void;
+  onFechaHastaChange: (v: string) => void;
   onAdd: () => void;
   onOpenSimilar: (id: string) => void;
   onLoan: (id: string) => void;
@@ -17,8 +22,8 @@ interface EquiposViewProps {
   onDelete: (id: string) => void;
 }
 
-/** Vista "Equipos": buscador + filtro de estado y grilla de tarjetas ({@link InvCard}). Es un componente controlado; el filtrado real ocurre en el padre (`invHelpers.filterInventory`). */
-export function EquiposView({ allCount, items, query, estado, onQueryChange, onEstadoChange, onAdd, onOpenSimilar, onLoan, onReturn, onEdit, onDelete }: EquiposViewProps) {
+/** Vista "Equipos": buscador + filtro de estado y rango de fecha de ingreso, y grilla de tarjetas ({@link InvCard}). Es un componente controlado; el filtrado real ocurre en el padre (`invHelpers.filterInventory`). */
+export function EquiposView({ allCount, items, query, estado, fechaDesde, fechaHasta, onQueryChange, onEstadoChange, onFechaDesdeChange, onFechaHastaChange, onAdd, onOpenSimilar, onLoan, onReturn, onEdit, onDelete }: EquiposViewProps) {
   return (
     <div className="flex flex-col gap-3.5">
       <div className="flex flex-wrap items-center gap-2.5">
@@ -44,6 +49,7 @@ export function EquiposView({ allCount, items, query, estado, onQueryChange, onE
           <option value="en_reparacion">En reparación</option>
           <option value="de_baja">De baja</option>
         </select>
+        <DateRangeFilter label="Ingreso" desde={fechaDesde} hasta={fechaHasta} onDesde={onFechaDesdeChange} onHasta={onFechaHastaChange} />
       </div>
 
       {items.length ? (

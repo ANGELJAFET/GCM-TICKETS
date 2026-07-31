@@ -91,6 +91,8 @@ export interface InventoryItem {
   garantia: Garantia | null;
   fechaIngreso: string;
   fechaTs: number;
+  /** Fecha de ingreso en formato `YYYY-MM-DD`, para filtrar por rango de fechas. */
+  fechaIngresoISO: string;
 }
 
 export type LoanEstado = 'activo' | 'devuelto';
@@ -103,6 +105,8 @@ export interface Loan {
   departamento: string;
   fechaPrestamo: string;
   fechaPrestamoTs: number;
+  /** Fecha del préstamo en formato `YYYY-MM-DD`, para filtrar por rango de fechas. */
+  fechaPrestamoISO: string;
   fechaDevolucionEstimada: string;
   fechaDevolucionReal: string | null;
   estado: LoanEstado;
