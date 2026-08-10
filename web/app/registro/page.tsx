@@ -95,9 +95,6 @@ export default function RegistroPage() {
       <div className="ident-orb ident-orb-1" />
       <div className="ident-orb ident-orb-2" />
       <div className="ident-orb ident-orb-3" />
-      <Image src="/assets/camaron.svg" alt="" width={320} height={320} className="fixed top-[10%] right-[4%] z-0 rotate-20 opacity-6 invert brightness-200" unoptimized />
-      <Image src="/assets/camaron.svg" alt="" width={200} height={200} className="fixed bottom-[6%] left-[3%] z-0 -rotate-35 opacity-6 invert brightness-200 [transform:rotate(-35deg)_scaleX(-1)]" unoptimized />
-
       <div className="relative z-1 flex w-[900px] max-w-full overflow-hidden rounded-3xl shadow-[0_40px_100px_rgba(0,0,0,0.65),0_0_0_1px_rgba(255,255,255,0.06)] max-[700px]:flex-col">
         {/* Panel izquierdo: marca */}
         <div className="relative flex w-[38%] shrink-0 flex-col items-center justify-center overflow-hidden bg-linear-to-br from-[#0b1838] via-[#162660] to-portal-navy-mid px-9 py-13 text-center max-[700px]:w-full max-[700px]:px-7 max-[700px]:py-9">

@@ -35,23 +35,11 @@
 .ident-orb-2 { width: 420px; height: 420px; background: #0f2a6e; opacity: .18; bottom: -120px; right: -100px; animation: identOrbDrift 13s ease-in-out infinite reverse; }
 .ident-orb-3 { width: 260px; height: 260px; background: #2d5be3; opacity: .10; top: 55%; left: 52%; animation: identOrbDrift 9s ease-in-out infinite 3s; }
 
-.ident-shrimp { position: absolute; pointer-events: none; user-select: none; z-index: 0; }
-.ident-shrimp-1 { width: 680px; bottom: -80px; right: -80px; opacity: 0.11; transform: rotate(-15deg); }
-.ident-shrimp-2 { width: 400px; top: -90px; left: -70px; opacity: 0.06; transform: rotate(170deg); }
-.ident-shrimp-3 { width: 320px; bottom: -50px; left: 18%; opacity: 0.05; transform: rotate(-40deg); }
-
-/* Mismo camarón decorativo de la pantalla de login, en versión reducida
-   para el header del portal (68px de alto, recortado con overflow-hidden). */
-.header-shrimp { position: absolute; pointer-events: none; user-select: none; z-index: 0; }
-/* Pareja de simetría puntual (rotación 180°) anclada al eje central del header:
-   ocupan la banda vacía entre el logo+texto y el menú de cuenta, sin pisarlos. */
-.header-shrimp-1 { width: 148px; bottom: -44px; left: 50%; opacity: 0.30; transform: translateX(-168px) rotate(20deg); }
-.header-shrimp-2 { width: 148px; top: -44px; left: 50%; opacity: 0.30; transform: translateX(20px) rotate(200deg); }
-/* En pantallas chicas comprimimos la pareja hacia el centro para no rozar el logo. */
-@media (max-width: 520px) {
-  .header-shrimp-1 { width: 118px; transform: translateX(-118px) rotate(20deg); }
-  .header-shrimp-2 { width: 118px; transform: translateX(0) rotate(200deg); }
-}
+/* Versión clara de los orbes (modo claro): azules suaves de la marca sobre
+   el degradado blanco, para dar profundidad sin recargar. */
+.ident-orb-l1 { width: 560px; height: 560px; background: #93c5fd; opacity: .30; top: -160px; left: -160px; animation: identOrbDrift 10s ease-in-out infinite; }
+.ident-orb-l2 { width: 420px; height: 420px; background: #bfdbfe; opacity: .34; bottom: -120px; right: -100px; animation: identOrbDrift 13s ease-in-out infinite reverse; }
+.ident-orb-l3 { width: 300px; height: 300px; background: #c7d2fe; opacity: .26; top: 55%; left: 52%; animation: identOrbDrift 9s ease-in-out infinite 3s; }
 
 /* Olas animadas del hero — 5 capas SVG */
 .hero-waves { position: absolute; bottom: 0; left: 0; right: 0; height: 100px; overflow: hidden; pointer-events: none; }

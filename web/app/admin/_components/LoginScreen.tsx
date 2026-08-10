@@ -29,15 +29,15 @@ export function LoginScreen() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center overflow-hidden bg-linear-to-br from-[#060b18] via-[#0d1829] to-[#091535] p-5">
-      <div className="adm-orb adm-orb-1" />
-      <div className="adm-orb adm-orb-2" />
-      <div className="adm-orb adm-orb-3" />
-      <Image src="/assets/camaron.svg" alt="" width={680} height={680} className="adm-shrimp adm-shrimp-1" aria-hidden unoptimized />
-      <Image src="/assets/camaron.svg" alt="" width={400} height={400} className="adm-shrimp adm-shrimp-2" aria-hidden unoptimized />
-      <Image src="/assets/camaron.svg" alt="" width={320} height={320} className="adm-shrimp adm-shrimp-3" aria-hidden unoptimized />
+    <div className="flex min-h-screen items-center justify-center overflow-hidden bg-linear-to-br from-slate-50 via-white to-blue-50 p-5 dark:from-[#060b18] dark:via-[#0d1829] dark:to-[#091535]">
+      <div className="adm-orb adm-orb-l1 dark:hidden" />
+      <div className="adm-orb adm-orb-l2 dark:hidden" />
+      <div className="adm-orb adm-orb-l3 dark:hidden" />
+      <div className="adm-orb adm-orb-1 hidden dark:block" />
+      <div className="adm-orb adm-orb-2 hidden dark:block" />
+      <div className="adm-orb adm-orb-3 hidden dark:block" />
 
-      <div className="relative z-1 flex w-215 max-w-full overflow-hidden rounded-3xl shadow-[0_40px_100px_rgba(0,0,0,0.65),0_0_0_1px_rgba(255,255,255,0.06)] max-[620px]:flex-col">
+      <div className="relative z-1 flex w-215 max-w-full overflow-hidden rounded-3xl shadow-[0_30px_80px_rgba(15,23,42,0.18)] max-[620px]:flex-col dark:shadow-[0_40px_100px_rgba(0,0,0,0.65),0_0_0_1px_rgba(255,255,255,0.06)]">
         <div className="relative flex w-[38%] shrink-0 flex-col items-center justify-center overflow-hidden bg-linear-to-br from-[#0b1838] via-[#162660] to-admin-brand2 px-9 py-13 text-center max-[620px]:w-auto max-[620px]:px-7 max-[620px]:py-9">
           <div className="absolute top-0 bottom-0 left-0 w-1 bg-linear-to-b from-transparent via-[#cc2222] to-transparent" style={{ backgroundImage: 'linear-gradient(180deg, transparent 0%, #cc2222 35%, #ef4444 65%, transparent 100%)' }} />
           <Image

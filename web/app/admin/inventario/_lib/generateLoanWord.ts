@@ -76,8 +76,8 @@ export async function generateLoanWord(loan: Loan, item: Partial<InventoryItem> 
   // embeben como data URIs para que el documento quede autocontenido.
   const fotos = (await Promise.all((loan.fotosEntrega || []).map((p) => photoToDataUrl(p)))).filter((d): d is string => !!d);
 
-  const S = 'font-family:Arial,sans-serif;font-size:11pt;color:#000;';
-  const SB = 'font-family:Arial,sans-serif;font-size:11pt;color:#000;font-weight:bold;';
+  const S = 'font-family:Arial,sans-serif;font-size:12pt;color:#000;';
+  const SB = 'font-family:Arial,sans-serif;font-size:12pt;color:#000;font-weight:bold;';
 
   // Bloque de fotos (una por fila, con ancho acotado para no romper la página del .doc).
   // Word respeta el atributo `width` en píxeles (no `width:100%`, que expande
@@ -96,21 +96,27 @@ ${fotos.map((d) => `<div style="margin:0 0 8px;"><img src="${d}" width="360" sty
 <title>Prestamo ${loan.id}</title>
 <style>
 html{color-scheme:light only;}
-body{${S}margin:1.5cm 2cm;line-height:1.3;background:#ffffff !important;}
+/* Sección con pie de página (mso-footer) para que el bloque de firmas se
+   repita automáticamente en TODAS las páginas del documento en Word. El
+   margen inferior es amplio (3.4cm) para dejar espacio a ese pie. */
+@page WordSectionLoan{size:21.59cm 27.94cm;margin:1.5cm 2cm 3.4cm 2cm;mso-footer-margin:1.0cm;mso-footer:lf1;}
+div.WordSectionLoan{page:WordSectionLoan;}
+body{${S}margin:0;line-height:1.5;background:#ffffff !important;}
 table{${S}border-collapse:collapse;background:#ffffff !important;}
 td{background:#ffffff !important;}
-p{margin:0 0 7px;padding:0;color:#000 !important;}
+p{margin:0 0 9px;padding:0;color:#000 !important;}
 </style>
 </head>
 <body style="background:#ffffff !important;color:#000 !important">
+<div class="WordSectionLoan">
 
-<table border="0" width="100%" cellspacing="0" cellpadding="0" style="height:70px;">
+<table border="0" width="100%" cellspacing="0" cellpadding="0" style="height:74px;">
 <tr style="height:70px;">
 <td style="width:75px;padding:0;" valign="middle">
   <img src="${logoUrl}" width="65" height="65"
        style="width:65px;height:65px;mso-width-source:userset;mso-height-source:userset;display:block;">
 </td>
-<td align="center" valign="middle" style="${S}font-size:14pt;font-weight:bold;text-decoration:underline;">
+<td align="center" valign="middle" style="${S}font-size:15pt;font-weight:bold;text-decoration:underline;">
 GRUPO CAMARONERO MILCIEN S.A. de C.V.
 </td>
 </tr>
@@ -145,7 +151,8 @@ ${loan.notas ? `<p><b>NOTA:</b>&nbsp;${escapeHtml(String(loan.notas).toUpperCase
 
 ${fotosHtml}
 
-<table border="0" width="100%" cellspacing="0" cellpadding="3" style="margin-top:34px;">
+<div style='mso-element:footer' id="lf1">
+<table border="0" width="100%" cellspacing="0" cellpadding="3" style="${S}margin-top:18px;">
 <tr>
 <td width="50%" valign="top" style="${S}border-top:2px solid #000;padding-top:6px;">
 <b>Entregado por:</b><br>${escapeHtml(String(adminNombre || 'Depto. Sistemas / TI').toUpperCase())}
@@ -155,7 +162,9 @@ ${fotosHtml}
 </td>
 </tr>
 </table>
+</div>
 
+</div>
 </body>
 </html>`;
 

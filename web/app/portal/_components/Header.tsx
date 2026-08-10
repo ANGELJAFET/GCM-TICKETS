@@ -84,14 +84,6 @@ function AccountMenu() {
 export function Header() {
   return (
     <header className="sticky top-0 z-50 flex h-17 items-center justify-between border-b border-white/10 bg-linear-to-br from-portal-navy to-portal-navy-mid px-7 text-white shadow-[0_1px_0_rgba(0,0,0,0.04),0_4px_20px_rgba(0,0,0,0.05)]">
-      {/* Contenedor propio con overflow-hidden solo para recortar los camarones —
-          si el recorte fuera del <header>, también cortaría el dropdown de
-          AccountMenu, que necesita sobresalir por debajo de esta barra. */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <Image src="/assets/camaron.svg" alt="" width={170} height={170} className="header-shrimp header-shrimp-1" aria-hidden unoptimized />
-        <Image src="/assets/camaron.svg" alt="" width={150} height={150} className="header-shrimp header-shrimp-2" aria-hidden unoptimized />
-      </div>
-
       <div className="relative z-10 flex items-center gap-3">
         <Image
           src="/assets/gcm.jpg"
