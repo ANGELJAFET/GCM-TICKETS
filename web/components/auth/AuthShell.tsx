@@ -90,14 +90,14 @@ export function AuthShell({
     'focus:border-[#e23b3b] focus:bg-white/[0.08] focus:shadow-[0_0_0_3px_rgba(226,59,59,0.18)] focus-visible:outline-[#ef4444]';
   const accentButton =
     'bg-linear-to-br from-[#c81e2d] to-[#e23b3b] shadow-[0_10px_28px_-8px_rgba(204,34,34,0.55)] hover:shadow-[0_16px_36px_-8px_rgba(204,34,34,0.6)] active:shadow-[0_6px_16px_-8px_rgba(204,34,34,0.5)] focus-visible:outline-[#ef4444]';
-  const accentBrandGradient = 'from-[#1a1b20]/90 via-[#202126]/90 to-[#141519]/90';
+  const accentBrandGradient = 'from-[#1a1b20]/60 via-[#202126]/58 to-[#141519]/60';
   const accentFocusVisible = 'focus-visible:outline-[#ef4444]';
 
   const inputBase =
     'w-full rounded-[10px] border-[1.5px] border-white/12 bg-white/[0.06] py-3 pr-3.5 pl-11 text-sm text-white outline-none transition-all placeholder:text-slate-400 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60';
 
   return (
-    <div className="relative flex min-h-[100dvh] items-stretch justify-start overflow-y-auto overflow-x-hidden bg-[#0b1a2e]">
+    <div className="relative flex min-h-[100dvh] items-center justify-center overflow-y-auto bg-[#0b1a2e] p-5">
       {/* Foto de fondo con next/image, detrás de la capa de oscurecimiento. */}
       <Image
         src="/assets/login-bg.jpg"
@@ -108,13 +108,14 @@ export function AuthShell({
         aria-hidden
         className="pointer-events-none object-cover [filter:saturate(1.1)_contrast(1.05)_brightness(1.02)]"
       />
-      {/* Degradado de separación junto al panel izquierdo. */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/35 via-transparent to-transparent dark:from-black/50" />
+      {/* Oscurecimiento suave y parejo para que la tarjeta translúcida centrada
+          resalte sobre la foto sin ocultarla. */}
+      <div className="pointer-events-none absolute inset-0 bg-black/25 dark:bg-black/40" />
 
-      <main className="relative z-10 flex w-full max-w-[34rem] overflow-hidden shadow-[0_25px_80px_-15px_rgba(0,0,0,0.55)] max-[620px]:max-w-full max-[620px]:flex-col">
+      <main className="relative z-10 flex w-full max-w-[52rem] overflow-hidden rounded-2xl shadow-[0_25px_80px_-15px_rgba(0,0,0,0.6)] ring-1 ring-white/10 max-[620px]:flex-col">
         {/* Panel izquierdo: marca. Velo navy ~/95 para contraste independiente de la foto. */}
         <div
-          className={`relative flex w-[40%] shrink-0 flex-col items-center justify-center overflow-hidden bg-linear-to-br ${accentBrandGradient} px-10 py-14 text-center backdrop-blur-md max-[620px]:w-full max-[620px]:px-7 max-[620px]:py-9`}
+          className={`relative flex w-[40%] shrink-0 flex-col items-center justify-center overflow-hidden bg-linear-to-br ${accentBrandGradient} px-10 py-14 text-center backdrop-blur-xl max-[620px]:w-full max-[620px]:px-7 max-[620px]:py-9`}
         >
           {!isPortal && (
             <div
@@ -143,7 +144,7 @@ export function AuthShell({
         </div>
 
         {/* Panel derecho: formulario. */}
-        <div className="flex flex-1 flex-col justify-center bg-[#17181d]/80 px-11 py-14 backdrop-blur-md max-[620px]:px-7 max-[620px]:py-8">
+        <div className="flex flex-1 flex-col justify-center bg-[#17181d]/55 px-11 py-14 backdrop-blur-xl max-[620px]:px-7 max-[620px]:py-8">
           <h1 className="mb-1.5 text-2xl font-bold tracking-tight text-white max-[620px]:text-xl">
             {formTitle}
           </h1>
