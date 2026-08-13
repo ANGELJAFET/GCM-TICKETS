@@ -65,6 +65,13 @@ const MODULO_A_CAMPO = {
  */
 function makeAuthContext(namespace: 'admin' | 'portal', portalParam: 'admin' | 'empleado') {
   const STORAGE_KEY = `gcm_${namespace}_session`;
+  // Clave del OTRO portal: al iniciar sesión en uno se limpia el otro, para que
+  // en un equipo compartido no queden dos sesiones activas a la vez (ver login()).
+  const OTHER_KEY = `gcm_${namespace === 'admin' ? 'portal' : 'admin'}_session`;
+  // Nivel de rol que corresponde a este portal (el backend ya lo valida en el
+  // login: admin/panel = rol_nivel >= 2, empleado/portal = rol_nivel < 2). Se
+  // reverifica en el cliente como defensa en profundidad al restaurar la sesión.
+  const roleMatchesPortal = (u: AuthUser) => (portalParam === 'admin' ? u.rol_nivel >= 2 : u.rol_nivel < 2);
   const Ctx = createContext<AuthContextValue | null>(null);
 
   function AuthProvider({ children }: { children: ReactNode }) {
@@ -74,7 +81,13 @@ function makeAuthContext(namespace: 'admin' | 'portal', portalParam: 'admin' | '
     useEffect(() => {
       try {
         const raw = sessionStorage.getItem(STORAGE_KEY);
-        if (raw) setSession(JSON.parse(raw));
+        if (raw) {
+          const parsed = JSON.parse(raw) as StoredSession;
+          // Sólo se restaura si el rol corresponde a este portal; una sesión que
+          // no coincide (p. ej. manipulada o de otro portal) se descarta.
+          if (parsed?.user && roleMatchesPortal(parsed.user)) setSession(parsed);
+          else sessionStorage.removeItem(STORAGE_KEY);
+        }
       } catch {
         // sesión corrupta o sessionStorage no disponible — se trata como no autenticado.
       }
@@ -129,6 +142,9 @@ function makeAuthContext(namespace: 'admin' | 'portal', portalParam: 'admin' | '
         setSession(next);
         try {
           sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+          // Cierra cualquier sesión del otro portal en este navegador: un mismo
+          // equipo no debe quedar con sesión de admin y de empleado a la vez.
+          sessionStorage.removeItem(OTHER_KEY);
         } catch {
           // no-op
         }
