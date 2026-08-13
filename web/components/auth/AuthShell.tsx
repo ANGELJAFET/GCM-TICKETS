@@ -108,10 +108,6 @@ export function AuthShell({
         aria-hidden
         className="pointer-events-none object-cover [filter:saturate(1.1)_contrast(1.05)_brightness(1.02)]"
       />
-      {/* Oscurecimiento suave y parejo para que la tarjeta translúcida centrada
-          resalte sobre la foto sin ocultarla. */}
-      <div className="pointer-events-none absolute inset-0 bg-black/25 dark:bg-black/40" />
-
       <main className="relative z-10 flex w-full max-w-[52rem] overflow-hidden rounded-2xl shadow-[0_25px_80px_-15px_rgba(0,0,0,0.6)] ring-1 ring-white/10 max-[620px]:flex-col">
         {/* Panel izquierdo: marca. Velo navy ~/95 para contraste independiente de la foto. */}
         <div
@@ -247,10 +243,6 @@ export function AuthShell({
           </form>
 
           {footer && <div className="mt-6 text-center text-sm">{footer}</div>}
-
-          <p className="mt-4 flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
-            Conexión en red interna
-          </p>
         </div>
       </main>
     </div>
