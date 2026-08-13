@@ -41,7 +41,7 @@ export function IdentScreen() {
 
       <div className="relative z-10 flex w-full max-w-[33rem] overflow-hidden shadow-[0_0_70px_rgba(0,0,0,0.65)] max-[620px]:flex-col">
         {/* Panel izquierdo: marca */}
-        <div className="relative flex w-[38%] shrink-0 flex-col items-center justify-center overflow-hidden bg-linear-to-br from-[#0b1838] via-[#162660] to-portal-navy-mid px-9 py-13 text-center max-[620px]:w-auto max-[620px]:px-7 max-[620px]:py-9">
+        <div className="relative flex w-[38%] shrink-0 flex-col items-center justify-center overflow-hidden bg-linear-to-br from-[#0b1838]/90 via-[#162660]/88 to-portal-navy-mid/88 px-9 py-13 text-center backdrop-blur-xl max-[620px]:w-auto max-[620px]:px-7 max-[620px]:py-9">
           <Image
             src="/assets/gcm.jpg"
             alt="GCM Grupo Milcien"
@@ -61,7 +61,7 @@ export function IdentScreen() {
         </div>
 
         {/* Panel derecho: formulario */}
-        <div className="flex flex-1 flex-col justify-center bg-white/95 px-11 py-13 backdrop-blur-md max-[620px]:px-7 max-[620px]:py-8 dark:bg-admin-dark-surface/90">
+        <div className="flex flex-1 flex-col justify-center bg-white/85 px-11 py-13 backdrop-blur-xl max-[620px]:px-7 max-[620px]:py-8 dark:bg-admin-dark-surface/80">
           <div className="mb-1 text-[27px] font-extrabold tracking-tight text-portal-navy max-[620px]:text-[22px] dark:text-admin-dark-text">
             Bienvenido
           </div>

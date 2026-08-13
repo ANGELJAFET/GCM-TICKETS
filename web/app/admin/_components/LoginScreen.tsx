@@ -38,7 +38,7 @@ export function LoginScreen() {
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/25 via-transparent to-transparent dark:from-black/45" />
 
       <div className="relative z-10 flex w-full max-w-[33rem] overflow-hidden shadow-[0_0_70px_rgba(0,0,0,0.65)] max-[620px]:flex-col">
-        <div className="relative flex w-[38%] shrink-0 flex-col items-center justify-center overflow-hidden bg-linear-to-br from-[#0b1838] via-[#162660] to-admin-brand2 px-9 py-13 text-center max-[620px]:w-auto max-[620px]:px-7 max-[620px]:py-9">
+        <div className="relative flex w-[38%] shrink-0 flex-col items-center justify-center overflow-hidden bg-linear-to-br from-[#0b1838]/90 via-[#162660]/88 to-admin-brand2/88 px-9 py-13 text-center backdrop-blur-xl max-[620px]:w-auto max-[620px]:px-7 max-[620px]:py-9">
           <div className="absolute top-0 bottom-0 left-0 w-1 bg-linear-to-b from-transparent via-[#cc2222] to-transparent" style={{ backgroundImage: 'linear-gradient(180deg, transparent 0%, #cc2222 35%, #ef4444 65%, transparent 100%)' }} />
           <Image
             src="/assets/gcm.jpg"
@@ -58,7 +58,7 @@ export function LoginScreen() {
           </div>
         </div>
 
-        <div className="flex flex-1 flex-col justify-center bg-white/95 px-11 py-13 backdrop-blur-md max-[620px]:px-7 max-[620px]:py-8 dark:bg-admin-dark-surface/90">
+        <div className="flex flex-1 flex-col justify-center bg-white/85 px-11 py-13 backdrop-blur-xl max-[620px]:px-7 max-[620px]:py-8 dark:bg-admin-dark-surface/80">
           <div className="mb-1.25 text-[27px] font-extrabold tracking-tight text-admin-text max-[620px]:text-[22px] dark:text-admin-dark-text">
             Iniciar sesión
           </div>
