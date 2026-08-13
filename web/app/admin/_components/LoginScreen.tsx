@@ -29,7 +29,7 @@ export function LoginScreen() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#0b1a2e] bg-[url('/assets/login-bg.jpg')] bg-cover bg-center bg-no-repeat p-5">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#0b1a2e] bg-[url('/assets/login-bg.jpg')] bg-cover bg-center bg-no-repeat p-5 lg:justify-start lg:pl-[7%]">
       {/* Capa de contraste sobre la foto: la oscurece lo justo para que la
           tarjeta resalte sin ocultar el paisaje de fondo (más oscura en modo oscuro). */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-black/55 via-black/35 to-[#081226]/65 dark:from-black/75 dark:via-black/60 dark:to-[#081226]/85" />
