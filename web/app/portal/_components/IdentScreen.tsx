@@ -31,12 +31,15 @@ export function IdentScreen() {
   }
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-stretch justify-start overflow-hidden bg-[#0b1a2e] bg-[url('/assets/login-bg.jpg')] bg-cover bg-center bg-no-repeat">
-      {/* Degradado suave hacia la derecha: da cohesión con el panel izquierdo
-          sin oscurecer la foto (más marcado en modo oscuro). */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/30 via-transparent to-transparent dark:from-black/55" />
+    <div className="fixed inset-0 z-[1000] flex items-stretch justify-start overflow-hidden bg-[#0b1a2e]">
+      {/* Foto de fondo en capa propia con un ligero realce (más viva, con más
+          saturación y contraste) para que resalte. */}
+      <div className="pointer-events-none absolute inset-0 bg-[url('/assets/login-bg.jpg')] bg-cover bg-center bg-no-repeat [filter:saturate(1.22)_contrast(1.1)_brightness(1.04)]" />
+      {/* Sombra/degradado solo junto al panel izquierdo: separa el panel de la
+          foto y ayuda a que su texto se note, sin oscurecer el resto de la imagen. */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/25 via-transparent to-transparent dark:from-black/45" />
 
-      <div className="relative z-10 flex w-full max-w-[33rem] overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.5)] max-[620px]:flex-col">
+      <div className="relative z-10 flex w-full max-w-[33rem] overflow-hidden shadow-[0_0_70px_rgba(0,0,0,0.65)] max-[620px]:flex-col">
         {/* Panel izquierdo: marca */}
         <div className="relative flex w-[38%] shrink-0 flex-col items-center justify-center overflow-hidden bg-linear-to-br from-[#0b1838] via-[#162660] to-portal-navy-mid px-9 py-13 text-center max-[620px]:w-auto max-[620px]:px-7 max-[620px]:py-9">
           <Image
