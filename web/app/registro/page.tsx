@@ -31,8 +31,8 @@ const FINCAS = [
 ];
 
 const inputClass =
-  'rounded-[10px] border-[1.5px] border-slate-200 bg-slate-50 px-3.25 py-2.5 text-[13px] text-slate-900 outline-none transition-colors focus:border-portal-navy focus:bg-white';
-const labelClass = 'text-[11px] font-bold tracking-wide text-slate-700 uppercase';
+  'rounded-[10px] border-[1.5px] border-white/15 bg-white/[0.06] px-3.25 py-2.5 text-[13px] text-white outline-none transition-colors placeholder:text-white/40 focus:border-white/70 focus:bg-white/[0.1] disabled:opacity-60 [&>option]:text-slate-900';
+const labelClass = 'text-[11px] font-bold tracking-wide text-slate-200 uppercase';
 
 /**
  * Página `/registro`: formulario de solicitud de acceso de empleados
@@ -91,13 +91,21 @@ export default function RegistroPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#0a1628] px-3 py-7">
-      <div className="ident-orb ident-orb-1" />
-      <div className="ident-orb ident-orb-2" />
-      <div className="ident-orb ident-orb-3" />
-      <div className="relative z-1 flex w-[900px] max-w-full overflow-hidden rounded-3xl shadow-[0_40px_100px_rgba(0,0,0,0.65),0_0_0_1px_rgba(255,255,255,0.06)] max-[700px]:flex-col">
+    <div className="relative flex min-h-[100dvh] items-center justify-center overflow-y-auto bg-[#0b1a2e] p-6">
+      {/* Misma foto de fondo que el login. */}
+      <Image
+        src="/assets/login-bg.jpg"
+        alt=""
+        fill
+        priority
+        sizes="100vw"
+        aria-hidden
+        className="pointer-events-none object-cover [filter:saturate(1.12)_contrast(1.06)_brightness(1.03)]"
+      />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_60%_at_50%_50%,rgba(0,0,0,0.45),transparent_75%)]" />
+      <div className="relative z-10 flex w-[900px] max-w-full overflow-hidden rounded-2xl border border-white/15 bg-white/[0.08] shadow-[0_25px_80px_-15px_rgba(0,0,0,0.6)] backdrop-blur-2xl max-[700px]:flex-col">
         {/* Panel izquierdo: marca */}
-        <div className="relative flex w-[38%] shrink-0 flex-col items-center justify-center overflow-hidden bg-linear-to-br from-[#0b1838] via-[#162660] to-portal-navy-mid px-9 py-13 text-center max-[700px]:w-full max-[700px]:px-7 max-[700px]:py-9">
+        <div className="relative flex w-[38%] shrink-0 flex-col items-center justify-center overflow-hidden border-r border-white/10 bg-white/[0.03] px-9 py-13 text-center max-[700px]:w-full max-[700px]:border-r-0 max-[700px]:border-b max-[700px]:border-white/10 max-[700px]:px-7 max-[700px]:py-9">
           <Image
             src="/assets/gcm.jpg"
             alt="GCM Grupo Milcien"
@@ -143,14 +151,14 @@ export default function RegistroPage() {
         </div>
 
         {/* Panel derecho: formulario */}
-        <div className="flex max-h-[90vh] flex-1 flex-col overflow-y-auto bg-white px-11 py-10 max-[700px]:max-h-none max-[700px]:overflow-visible max-[700px]:px-6 max-[700px]:py-7">
+        <div className="flex max-h-[90vh] flex-1 flex-col overflow-y-auto px-11 py-10 max-[700px]:max-h-none max-[700px]:overflow-visible max-[700px]:px-6 max-[700px]:py-7">
           {!success ? (
             <>
-              <div className="mb-1 text-[22px] font-extrabold tracking-tight text-slate-900">Crear cuenta</div>
-              <div className="mb-6.5 text-[13px] text-slate-500">Completa el formulario y un administrador aprobará tu acceso</div>
+              <div className="mb-1 text-[22px] font-extrabold tracking-tight text-white">Crear cuenta</div>
+              <div className="mb-6.5 text-[13px] text-slate-300">Completa el formulario y un administrador aprobará tu acceso</div>
 
               {error && (
-                <div className="mb-4 flex items-center gap-2 rounded-[10px] border border-red-200 bg-red-50 px-3.5 py-2.5 text-[13px] text-red-800">
+                <div className="mb-4 flex items-center gap-2 rounded-[10px] border border-red-300/30 bg-red-500/20 px-3.5 py-2.5 text-[13px] text-red-50">
                   <IconAlertCircle size={16} /> <span>{error}</span>
                 </div>
               )}
@@ -223,7 +231,7 @@ export default function RegistroPage() {
                     inputMode="numeric"
                     className={inputClass}
                   />
-                  <span className="text-[11px] text-slate-500">
+                  <span className="text-[11px] text-slate-300">
                     Necesario para brindarte soporte remoto. Ábrelo en AnyDesk: es el número que aparece en “Este puesto de trabajo”.
                   </span>
                 </div>
@@ -271,25 +279,25 @@ export default function RegistroPage() {
                 </button>
               </form>
 
-              <p className="mt-5 text-center text-[13px] text-slate-500">
+              <p className="mt-5 text-center text-[13px] text-slate-300">
                 ¿Ya tienes cuenta?{' '}
-                <Link href="/portal" className="font-bold text-portal-navy hover:underline">
+                <Link href="/portal" className="font-bold text-emerald-300 hover:text-white hover:underline">
                   Inicia sesión aquí
                 </Link>
               </p>
             </>
           ) : (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 py-5 text-center">
-              <div className="flex h-18 w-18 items-center justify-center rounded-full border-2 border-emerald-200 bg-emerald-50 text-emerald-600">
+              <div className="flex h-18 w-18 items-center justify-center rounded-full border-2 border-emerald-400/40 bg-emerald-400/15 text-emerald-300">
                 <IconCircleCheck size={36} />
               </div>
-              <h2 className="text-xl font-extrabold text-emerald-800">¡Solicitud enviada!</h2>
-              <p className="max-w-80 text-[13px] leading-relaxed text-slate-600">
+              <h2 className="text-xl font-extrabold text-emerald-300">¡Solicitud enviada!</h2>
+              <p className="max-w-80 text-[13px] leading-relaxed text-slate-300">
                 Tu solicitud fue recibida correctamente.
                 <br />
                 Un administrador la revisará y aprobará tu acceso pronto.
               </p>
-              <Link href="/portal" className="flex items-center gap-1.5 text-[13px] font-bold text-portal-navy hover:underline">
+              <Link href="/portal" className="flex items-center gap-1.5 text-[13px] font-bold text-emerald-300 hover:text-white hover:underline">
                 <IconArrowLeft size={14} /> Volver al portal
               </Link>
             </div>
