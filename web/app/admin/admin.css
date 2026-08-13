@@ -9,11 +9,5 @@
 .adm-orb-2 { width: 420px; height: 420px; background: #6b0f1a; opacity: .16; bottom: -120px; right: -100px; animation: admOrbDrift 13s ease-in-out infinite reverse; }
 .adm-orb-3 { width: 260px; height: 260px; background: #2d5be3; opacity: .10; top: 55%; left: 52%; animation: admOrbDrift 9s ease-in-out infinite 3s; }
 
-/* Versión clara de los orbes (modo claro): azules suaves de la marca sobre
-   el degradado blanco, para dar profundidad sin recargar. */
-.adm-orb-l1 { width: 560px; height: 560px; background: #93c5fd; opacity: .30; top: -160px; left: -160px; animation: admOrbDrift 10s ease-in-out infinite; }
-.adm-orb-l2 { width: 420px; height: 420px; background: #bfdbfe; opacity: .34; bottom: -120px; right: -100px; animation: admOrbDrift 13s ease-in-out infinite reverse; }
-.adm-orb-l3 { width: 300px; height: 300px; background: #c7d2fe; opacity: .26; top: 55%; left: 52%; animation: admOrbDrift 9s ease-in-out infinite 3s; }
-
 @keyframes pulse-sla { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
 .sla-critical-pulse { animation: pulse-sla 2s infinite; }

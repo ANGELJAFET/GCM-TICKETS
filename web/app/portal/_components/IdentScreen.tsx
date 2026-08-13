@@ -31,15 +31,12 @@ export function IdentScreen() {
   }
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center overflow-hidden bg-linear-to-br from-slate-50 via-white to-blue-50 p-5 dark:from-[#060b18] dark:via-[#0d1829] dark:to-[#091535]">
-      <div className="ident-orb ident-orb-l1 dark:hidden" />
-      <div className="ident-orb ident-orb-l2 dark:hidden" />
-      <div className="ident-orb ident-orb-l3 dark:hidden" />
-      <div className="ident-orb ident-orb-1 hidden dark:block" />
-      <div className="ident-orb ident-orb-2 hidden dark:block" />
-      <div className="ident-orb ident-orb-3 hidden dark:block" />
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center overflow-hidden bg-[#0b1a2e] bg-[url('/assets/login-bg.jpg')] bg-cover bg-center bg-no-repeat p-5">
+      {/* Capa de contraste sobre la foto: la oscurece lo justo para que la
+          tarjeta resalte sin ocultar el paisaje de fondo (más oscura en modo oscuro). */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-black/55 via-black/35 to-[#081226]/65 dark:from-black/75 dark:via-black/60 dark:to-[#081226]/85" />
 
-      <div className="relative z-1 flex w-[880px] max-w-full overflow-hidden rounded-3xl shadow-[0_30px_80px_rgba(15,23,42,0.18)] max-[620px]:flex-col dark:shadow-[0_40px_100px_rgba(0,0,0,0.65),0_0_0_1px_rgba(255,255,255,0.06)]">
+      <div className="relative z-10 flex w-[880px] max-w-full overflow-hidden rounded-3xl shadow-[0_30px_90px_rgba(0,0,0,0.6),0_0_0_1px_rgba(255,255,255,0.12)] max-[620px]:flex-col">
         {/* Panel izquierdo: marca */}
         <div className="relative flex w-[38%] shrink-0 flex-col items-center justify-center overflow-hidden bg-linear-to-br from-[#0b1838] via-[#162660] to-portal-navy-mid px-9 py-13 text-center max-[620px]:w-auto max-[620px]:px-7 max-[620px]:py-9">
           <Image
@@ -61,7 +58,7 @@ export function IdentScreen() {
         </div>
 
         {/* Panel derecho: formulario */}
-        <div className="flex flex-1 flex-col justify-center bg-white px-11 py-13 max-[620px]:px-7 max-[620px]:py-8 dark:bg-admin-dark-surface">
+        <div className="flex flex-1 flex-col justify-center bg-white/95 px-11 py-13 backdrop-blur-md max-[620px]:px-7 max-[620px]:py-8 dark:bg-admin-dark-surface/90">
           <div className="mb-1 text-[27px] font-extrabold tracking-tight text-portal-navy max-[620px]:text-[22px] dark:text-admin-dark-text">
             Bienvenido
           </div>
