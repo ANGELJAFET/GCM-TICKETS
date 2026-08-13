@@ -34,7 +34,7 @@ export function LoginScreen() {
           sin oscurecer la foto (más marcado en modo oscuro). */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/30 via-transparent to-transparent dark:from-black/55" />
 
-      <div className="relative z-10 flex w-full max-w-[54rem] overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.5)] max-[620px]:flex-col">
+      <div className="relative z-10 flex w-full max-w-[33rem] overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.5)] max-[620px]:flex-col">
         <div className="relative flex w-[38%] shrink-0 flex-col items-center justify-center overflow-hidden bg-linear-to-br from-[#0b1838] via-[#162660] to-admin-brand2 px-9 py-13 text-center max-[620px]:w-auto max-[620px]:px-7 max-[620px]:py-9">
           <div className="absolute top-0 bottom-0 left-0 w-1 bg-linear-to-b from-transparent via-[#cc2222] to-transparent" style={{ backgroundImage: 'linear-gradient(180deg, transparent 0%, #cc2222 35%, #ef4444 65%, transparent 100%)' }} />
           <Image

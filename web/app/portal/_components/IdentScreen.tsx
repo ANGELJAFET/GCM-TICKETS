@@ -36,7 +36,7 @@ export function IdentScreen() {
           sin oscurecer la foto (más marcado en modo oscuro). */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/30 via-transparent to-transparent dark:from-black/55" />
 
-      <div className="relative z-10 flex w-full max-w-[55rem] overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.5)] max-[620px]:flex-col">
+      <div className="relative z-10 flex w-full max-w-[33rem] overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.5)] max-[620px]:flex-col">
         {/* Panel izquierdo: marca */}
         <div className="relative flex w-[38%] shrink-0 flex-col items-center justify-center overflow-hidden bg-linear-to-br from-[#0b1838] via-[#162660] to-portal-navy-mid px-9 py-13 text-center max-[620px]:w-auto max-[620px]:px-7 max-[620px]:py-9">
           <Image
