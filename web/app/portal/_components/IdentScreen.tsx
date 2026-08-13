@@ -31,12 +31,12 @@ export function IdentScreen() {
   }
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center overflow-hidden bg-[#0b1a2e] bg-[url('/assets/login-bg.jpg')] bg-cover bg-center bg-no-repeat p-5 lg:justify-start lg:pl-[7%]">
-      {/* Capa de contraste sobre la foto: la oscurece lo justo para que la
-          tarjeta resalte sin ocultar el paisaje de fondo (más oscura en modo oscuro). */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-black/55 via-black/35 to-[#081226]/65 dark:from-black/75 dark:via-black/60 dark:to-[#081226]/85" />
+    <div className="fixed inset-0 z-[1000] flex items-stretch justify-start overflow-hidden bg-[#0b1a2e] bg-[url('/assets/login-bg.jpg')] bg-cover bg-center bg-no-repeat">
+      {/* Degradado suave hacia la derecha: da cohesión con el panel izquierdo
+          sin oscurecer la foto (más marcado en modo oscuro). */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/30 via-transparent to-transparent dark:from-black/55" />
 
-      <div className="relative z-10 flex w-[880px] max-w-full overflow-hidden rounded-3xl shadow-[0_30px_90px_rgba(0,0,0,0.6),0_0_0_1px_rgba(255,255,255,0.12)] max-[620px]:flex-col">
+      <div className="relative z-10 flex w-full max-w-[55rem] overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.5)] max-[620px]:flex-col">
         {/* Panel izquierdo: marca */}
         <div className="relative flex w-[38%] shrink-0 flex-col items-center justify-center overflow-hidden bg-linear-to-br from-[#0b1838] via-[#162660] to-portal-navy-mid px-9 py-13 text-center max-[620px]:w-auto max-[620px]:px-7 max-[620px]:py-9">
           <Image
