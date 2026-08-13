@@ -195,16 +195,20 @@ export function AuthShell({
         </form>
 
         {whatsapp && (
-          <a
-            href={`https://wa.me/${whatsapp}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Escríbenos por WhatsApp"
-            className="mt-6 inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.35)] transition hover:-translate-y-0.5 hover:bg-[#20b858] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-          >
-            <IconBrandWhatsapp size={20} aria-hidden />
-            Soporte por WhatsApp
-          </a>
+          <div className="mt-6 flex items-center justify-center gap-2.5">
+            <a
+              href={`https://wa.me/${whatsapp}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Escríbenos por WhatsApp"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#25D366] text-white shadow-[0_6px_18px_rgba(0,0,0,0.35)] transition hover:-translate-y-0.5 hover:bg-[#20b858] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            >
+              <IconBrandWhatsapp size={18} aria-hidden />
+            </a>
+            <span className="max-w-[15rem] text-left text-[11px] leading-snug text-white/70 [text-shadow:0_1px_8px_rgba(0,0,0,0.6)]">
+              Solo urgencias: si tienes problemas para iniciar sesión o entrar a la app, escríbenos por WhatsApp.
+            </span>
+          </div>
         )}
 
         {footer && <div className="mt-8 text-center text-sm [text-shadow:0_1px_10px_rgba(0,0,0,0.55)]">{footer}</div>}
