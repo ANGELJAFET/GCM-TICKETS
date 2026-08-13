@@ -9,10 +9,15 @@ import { invDisponible } from '../_lib/invHelpers';
 import { QRPhotosModal } from './QRPhotosModal';
 import type { MobilePhoto } from './QRPhotoModal';
 
-/** Valores del formulario de registro de un préstamo. */
-export interface LoanFormValues {
+/** Un equipo del préstamo (con su cantidad para artículos por lote). */
+export interface LoanItemLine {
   inventoryId: string;
-  cantidad: string;
+  cantidad: number;
+}
+
+/** Valores del formulario de registro de un préstamo (uno o varios equipos). */
+export interface LoanFormValues {
+  items: LoanItemLine[];
   empleado: string;
   departamento: string;
   fechaDevolucion: string;
@@ -22,7 +27,7 @@ export interface LoanFormValues {
   mobileTokens: string[];
 }
 
-const EMPTY_FORM: LoanFormValues = { inventoryId: '', cantidad: '1', empleado: '', departamento: '', fechaDevolucion: '', autorizadoPorId: '', notas: '', mobileTokens: [] };
+const EMPTY_FORM: LoanFormValues = { items: [], empleado: '', departamento: '', fechaDevolucion: '', autorizadoPorId: '', notas: '', mobileTokens: [] };
 
 interface LoanModalProps {
   open: boolean;
@@ -35,21 +40,20 @@ interface LoanModalProps {
 }
 
 /**
- * Modal de registro de préstamo. Solo ofrece equipos disponibles
- * (`invDisponible(i) > 0`) en el autocompletado; si el equipo elegido es de
- * tipo `'cantidad'`, muestra un campo adicional para elegir cuántas
- * unidades prestar (acotado a lo disponible).
- * @param preselectedItemId Id de equipo preseleccionado (ej. al presionar "Prestar" desde una tarjeta de inventario).
+ * Modal de registro de préstamo. Permite agregar VARIOS equipos distintos a la
+ * misma persona (laptop + mouse + teclado) para generar un solo comprobante.
+ * Solo ofrece equipos disponibles y que aún no estén en la lista; si un equipo
+ * es de tipo `'cantidad'`, muestra un campo para elegir cuántas unidades prestar.
+ * @param preselectedItemId Equipo preseleccionado (ej. "Prestar" desde una tarjeta de inventario), se agrega como primer renglón.
  */
 export function LoanModal({ open, preselectedItemId, inventory, usuarios, admins, onClose, onSave }: LoanModalProps) {
-  // El padre remonta este componente (key en base a open/preselectedItemId)
-  // cada vez que se abre, así que el estado se inicializa perezosamente a
-  // partir de props en vez de sincronizarlo con un efecto.
-  const [form, setForm] = useState<LoanFormValues>(() => ({ ...EMPTY_FORM, inventoryId: preselectedItemId || '' }));
-  const [itemSearch, setItemSearch] = useState(() => {
-    const pre = preselectedItemId ? inventory.find((i) => i.id === preselectedItemId) : null;
-    return pre ? `${pre.marca} ${pre.modelo || pre.tipo} (${pre.id})` : '';
-  });
+  // El padre remonta este componente cada vez que se abre, así que el estado se
+  // inicializa perezosamente a partir de props en vez de sincronizarlo con un efecto.
+  const [form, setForm] = useState<LoanFormValues>(() => ({
+    ...EMPTY_FORM,
+    items: preselectedItemId ? [{ inventoryId: preselectedItemId, cantidad: 1 }] : [],
+  }));
+  const [itemSearch, setItemSearch] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   // Fotos del estado del equipo al entregarlo, capturadas por QR. `photos`
@@ -57,27 +61,43 @@ export function LoanModal({ open, preselectedItemId, inventory, usuarios, admins
   const [photos, setPhotos] = useState<MobilePhoto[]>([]);
   const [qrOpen, setQrOpen] = useState(false);
 
-  const availableItems = inventory.filter((i) => i.estado === 'disponible' && invDisponible(i) > 0);
-  const selectedItem = inventory.find((i) => i.id === form.inventoryId) || null;
+  const addedIds = new Set(form.items.map((it) => it.inventoryId));
+  const availableItems = inventory.filter((i) => i.estado === 'disponible' && invDisponible(i) > 0 && !addedIds.has(i.id));
 
   function set<K extends keyof LoanFormValues>(key: K, value: LoanFormValues[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
+  function addItem(i: InventoryItem) {
+    setForm((f) => (f.items.some((x) => x.inventoryId === i.id) ? f : { ...f, items: [...f.items, { inventoryId: i.id, cantidad: 1 }] }));
+    setItemSearch('');
+    setError('');
+  }
+
+  function removeItem(id: string) {
+    setForm((f) => ({ ...f, items: f.items.filter((x) => x.inventoryId !== id) }));
+  }
+
+  function setItemCantidad(id: string, cantidad: number) {
+    setForm((f) => ({ ...f, items: f.items.map((x) => (x.inventoryId === id ? { ...x, cantidad } : x)) }));
+  }
+
   async function handleSave() {
-    if (!form.inventoryId) return setError('Selecciona un equipo.');
+    if (!form.items.length) return setError('Agrega al menos un equipo.');
     if (!form.empleado.trim()) return setError('El nombre del empleado es requerido.');
-    if (selectedItem?.tipoManejo === 'cantidad') {
-      const cant = parseInt(form.cantidad, 10);
-      if (!Number.isInteger(cant) || cant < 1) return setError('Indica una cantidad válida.');
-      if (cant > invDisponible(selectedItem)) return setError(`Solo hay ${invDisponible(selectedItem)} unidades disponibles.`);
+    for (const line of form.items) {
+      const it = inventory.find((i) => i.id === line.inventoryId);
+      if (it?.tipoManejo === 'cantidad') {
+        if (!Number.isInteger(line.cantidad) || line.cantidad < 1) return setError('Indica una cantidad válida en cada equipo por lote.');
+        if (line.cantidad > invDisponible(it)) return setError(`Solo hay ${invDisponible(it)} unidades de ${it.marca} ${it.modelo || it.tipo}.`);
+      }
     }
     setError('');
     setSaving(true);
     try {
       await onSave(form);
     } catch (e) {
-      setError(e instanceof Error && e.message.includes('409') ? 'No hay suficiente disponibilidad de este equipo.' : 'Error al registrar préstamo.');
+      setError(e instanceof Error && e.message.includes('409') ? 'No hay suficiente disponibilidad de algún equipo.' : 'Error al registrar préstamo.');
     } finally {
       setSaving(false);
     }
@@ -110,31 +130,64 @@ export function LoanModal({ open, preselectedItemId, inventory, usuarios, admins
       }
     >
       <div className="flex flex-col gap-3.5">
-        <FormField label="Equipo a prestar" required>
+        <FormField label="Equipos a prestar" required>
           <Autocomplete
             items={availableItems}
             value={itemSearch}
-            onChange={(v) => {
-              setItemSearch(v);
-              if (!v) set('inventoryId', '');
-            }}
-            onSelect={(i) => {
-              set('inventoryId', i.id);
-              set('cantidad', '1');
-              setItemSearch(`${i.marca} ${i.modelo || i.tipo} (${i.id})`);
-            }}
+            onChange={setItemSearch}
+            onSelect={addItem}
             getLabel={(i) => `${i.marca} ${i.modelo || ''} ${i.tipo}`}
             getDetail={(i) => `${i.id}${i.tipoManejo === 'cantidad' ? ` · ${invDisponible(i)} disponibles de ${i.cantidadTotal}` : ' · Unidad individual'}${i.ubicacion ? ` · ${i.ubicacion}` : ''}`}
-            placeholder="Buscar por marca, modelo, tipo, ubicación…"
+            placeholder="Buscar y agregar equipo (laptop, mouse, teclado…)"
           />
-          {!availableItems.length && <div className="mt-1.5 rounded-lg border border-admin-red/20 bg-admin-red-light px-3 py-2 text-xs font-semibold text-red-800">No hay equipos disponibles para préstamo.</div>}
-        </FormField>
+          {!availableItems.length && !form.items.length && (
+            <div className="mt-1.5 rounded-lg border border-admin-red/20 bg-admin-red-light px-3 py-2 text-xs font-semibold text-red-800">No hay equipos disponibles para préstamo.</div>
+          )}
 
-        {selectedItem?.tipoManejo === 'cantidad' && (
-          <FormField label="Cantidad a prestar" required>
-            <Input type="number" min={1} max={invDisponible(selectedItem)} step={1} value={form.cantidad} onChange={(e) => set('cantidad', e.target.value)} />
-          </FormField>
-        )}
+          {form.items.length > 0 && (
+            <div className="mt-2 flex flex-col divide-y divide-admin-border overflow-hidden rounded-[10px] border border-admin-border dark:divide-white/10 dark:border-white/10">
+              {form.items.map((line) => {
+                const it = inventory.find((i) => i.id === line.inventoryId);
+                if (!it) return null;
+                return (
+                  <div key={line.inventoryId} className="flex items-center gap-2.5 bg-white px-3 py-2 dark:bg-admin-dark-surface">
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[13px] font-semibold">
+                        {it.marca} {it.modelo || it.tipo}
+                      </div>
+                      <div className="font-mono text-[11px] text-admin-text-sec dark:text-admin-dark-text-sec">
+                        {it.id}
+                        {it.tipoManejo === 'cantidad' ? ` · ${invDisponible(it)} disponibles` : ' · Unidad'}
+                      </div>
+                    </div>
+                    {it.tipoManejo === 'cantidad' && (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] text-admin-text-sec dark:text-admin-dark-text-sec">Cant.</span>
+                        <input
+                          type="number"
+                          min={1}
+                          max={invDisponible(it)}
+                          step={1}
+                          value={line.cantidad}
+                          onChange={(e) => setItemCantidad(line.inventoryId, parseInt(e.target.value, 10) || 1)}
+                          className="w-16 rounded-lg border-[1.5px] border-admin-border bg-admin-light px-2 py-1 text-[13px] outline-none focus:border-admin-blue dark:border-white/10 dark:bg-admin-dark-bg"
+                        />
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeItem(line.inventoryId)}
+                      title="Quitar equipo"
+                      className="inline-flex items-center rounded-lg p-1.5 text-admin-red hover:bg-admin-red-light"
+                    >
+                      <IconTrash size={15} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </FormField>
 
         <div className="grid grid-cols-2 gap-3.5 max-[560px]:grid-cols-1">
           <FormField label="Empleado / Responsable" required>
@@ -214,7 +267,7 @@ export function LoanModal({ open, preselectedItemId, inventory, usuarios, admins
               )}
             </div>
             <p className="text-[11px] text-admin-gray">
-              Se generará un QR para fotografiar el estado del equipo desde el celular; las fotos se adjuntan al comprobante de entrega.
+              Se generará un QR para fotografiar el estado de los equipos desde el celular; las fotos se adjuntan al comprobante de entrega.
             </p>
           </div>
         </FormField>

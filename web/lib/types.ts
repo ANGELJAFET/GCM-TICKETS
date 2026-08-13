@@ -119,6 +119,8 @@ export interface Loan {
   /** Rutas (`/uploads/...`) de las fotos del estado del equipo al entregarlo; se incrustan en el comprobante de préstamo. */
   fotosEntrega: string[];
   equipoDesc: string;
+  /** Id de grupo cuando varios equipos se prestaron juntos a la misma persona (comprobante único); `null` si es un préstamo de un solo equipo. */
+  grupoId: string | null;
 }
 
 /** Fila ligera de usuario para autocompletados (asignar ticket, responsable de inventario, etc.). */

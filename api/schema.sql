@@ -337,6 +337,7 @@ IF NOT EXISTS (SELECT 1 FROM contadores WHERE nombre = 'tickets')      INSERT IN
 IF NOT EXISTS (SELECT 1 FROM contadores WHERE nombre = 'dispositivos') INSERT INTO contadores VALUES ('dispositivos', 0);
 IF NOT EXISTS (SELECT 1 FROM contadores WHERE nombre = 'inventario')   INSERT INTO contadores VALUES ('inventario',   0);
 IF NOT EXISTS (SELECT 1 FROM contadores WHERE nombre = 'prestamos')    INSERT INTO contadores VALUES ('prestamos',    0);
+IF NOT EXISTS (SELECT 1 FROM contadores WHERE nombre = 'grupos')       INSERT INTO contadores VALUES ('grupos',       0);
 GO
 
 -- ============================================================
@@ -727,6 +728,20 @@ GO
 -- ============================================================
 IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('prestamos') AND name = 'fotos_entrega')
   ALTER TABLE prestamos ADD fotos_entrega NVARCHAR(MAX) NULL;
+GO
+
+-- ============================================================
+-- 14. Préstamos agrupados (varios equipos distintos en un mismo comprobante)
+--     grupo_id enlaza los préstamos entregados juntos a la misma persona
+--     (ej. laptop + mouse + teclado). Es NULL para préstamos de un solo
+--     equipo (comportamiento anterior). El correlativo lo genera db.nextId
+--     con el contador 'grupos' (GRP-001, GRP-002, ...). Cada equipo sigue
+--     siendo una fila propia en 'prestamos' (con su cantidad y devolución),
+--     así que la disponibilidad y el historial no cambian; grupo_id solo
+--     agrupa para el comprobante y la devolución conjunta.
+-- ============================================================
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('prestamos') AND name = 'grupo_id')
+  ALTER TABLE prestamos ADD grupo_id NVARCHAR(20) NULL;
 GO
 
 -- ============================================================

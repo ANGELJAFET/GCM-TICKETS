@@ -75,6 +75,9 @@ function InventarioApp() {
 
   const [returnConfirmLoan, setReturnConfirmLoan] = useState<Loan | null>(null);
   const [partialReturnLoan, setPartialReturnLoan] = useState<Loan | null>(null);
+  // Cuando se devuelve un grupo completo, guarda su id para aplicar la misma
+  // condición/nota a todos sus equipos activos al confirmar (ver confirmReturnFull).
+  const [returnGroupId, setReturnGroupId] = useState<string | null>(null);
 
   const filteredEquipos = useMemo(() => filterInventory(items, query, estadoFilter, fechaDesde, fechaHasta), [items, query, estadoFilter, fechaDesde, fechaHasta]);
   const filteredLoans = useMemo(() => filterLoans(loanList, loanQuery, loanEstadoFilter, loanFechaDesde, loanFechaHasta), [loanList, loanQuery, loanEstadoFilter, loanFechaDesde, loanFechaHasta]);
@@ -144,17 +147,16 @@ function InventarioApp() {
       method: 'POST',
       token,
       body: {
-        inventoryId: values.inventoryId,
+        items: values.items.map((it) => ({ inventoryId: it.inventoryId, cantidad: it.cantidad })),
         empleado: values.empleado.trim(),
         departamento: values.departamento.trim(),
         fechaDevolucion: values.fechaDevolucion || null,
         autorizadoPorId: values.autorizadoPorId ? parseInt(values.autorizadoPorId, 10) : null,
         notas: values.notas.trim(),
-        cantidad: parseInt(values.cantidad, 10) || 1,
         mobileTokens: values.mobileTokens,
       },
     });
-    showToast('Préstamo registrado ✓');
+    showToast(values.items.length > 1 ? `Préstamo de ${values.items.length} equipos registrado ✓` : 'Préstamo registrado ✓');
     setLoanModalOpen(false);
     setLoanPreselectId(null);
     await reload();
@@ -166,8 +168,18 @@ function InventarioApp() {
   }
 
   async function confirmReturnFull(loanId: string, condicionDevolucion: InvCondicion, notaDevolucion: string) {
-    await api(`/loans/${loanId}`, { method: 'PATCH', token, body: { estado: 'devuelto', condicionDevolucion, notaDevolucion: notaDevolucion || undefined } });
-    showToast('Devolución registrada ✓');
+    if (returnGroupId) {
+      // Devolución del grupo completo: misma condición/nota para todos los equipos activos.
+      const activos = loanList.filter((l) => l.grupoId === returnGroupId && l.estado === 'activo');
+      for (const l of activos) {
+        await api(`/loans/${l.id}`, { method: 'PATCH', token, body: { estado: 'devuelto', condicionDevolucion, notaDevolucion: notaDevolucion || undefined } });
+      }
+      showToast(`Devolución de ${activos.length} equipos registrada ✓`);
+    } else {
+      await api(`/loans/${loanId}`, { method: 'PATCH', token, body: { estado: 'devuelto', condicionDevolucion, notaDevolucion: notaDevolucion || undefined } });
+      showToast('Devolución registrada ✓');
+    }
+    setReturnGroupId(null);
     setReturnConfirmLoan(null);
     await reload();
   }
@@ -196,14 +208,24 @@ function InventarioApp() {
   async function handleGenerateWord(loanId: string) {
     const loan = loanList.find((l) => l.id === loanId);
     if (!loan) return showToast('Préstamo no encontrado');
-    const item = items.find((i) => i.id === loan.inventoryId);
+    // Si el préstamo pertenece a un grupo, el comprobante incluye todos sus equipos.
+    const group = loan.grupoId ? loanList.filter((l) => l.grupoId === loan.grupoId) : [loan];
+    const itemsById = Object.fromEntries(group.map((l) => [l.inventoryId, items.find((i) => i.id === l.inventoryId)]));
     try {
-      if (loan.estado === 'devuelto') generateReturnWord(loan, item, user?.nombre || '');
-      else await generateLoanWord(loan, item, user?.nombre || '');
+      if (loan.estado === 'devuelto') generateReturnWord(group, itemsById, user?.nombre || '');
+      else await generateLoanWord(group, itemsById, user?.nombre || '');
       showToast('Comprobante generado ✓');
     } catch {
       showToast('Error al generar comprobante');
     }
+  }
+
+  /** Devuelve todos los equipos activos de un grupo con la misma condición/nota. */
+  function handleReturnGroup(grupoId: string) {
+    const first = loanList.find((l) => l.grupoId === grupoId && l.estado === 'activo');
+    if (!first) return showToast('No hay equipos pendientes en este grupo');
+    setReturnGroupId(grupoId);
+    setReturnConfirmLoan(first);
   }
 
   function openSimilar(id: string) {
@@ -322,6 +344,7 @@ function InventarioApp() {
               onFechaHastaChange={setLoanFechaHasta}
               onReturnFull={handleReturnFull}
               onReturnPartial={handleReturnPartial}
+              onReturnGroup={handleReturnGroup}
               onGenerateWord={handleGenerateWord}
             />
           )}
@@ -397,7 +420,10 @@ function InventarioApp() {
         open={!!returnConfirmLoan}
         loan={returnConfirmLoan}
         item={returnConfirmLoan ? items.find((i) => i.id === returnConfirmLoan.inventoryId) : undefined}
-        onClose={() => setReturnConfirmLoan(null)}
+        onClose={() => {
+          setReturnConfirmLoan(null);
+          setReturnGroupId(null);
+        }}
         onConfirm={confirmReturnFull}
       />
 

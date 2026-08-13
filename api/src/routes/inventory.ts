@@ -490,7 +490,8 @@ router.get('/loans', ...requireSuperadminOrAcceso('prestamos'), async (req: Requ
       condicionDevolucion: l.condicion_devolucion || null,
       notaDevolucion: l.nota_devolucion || null,
       fotosEntrega: l.fotos_entrega ? JSON.parse(l.fotos_entrega) : [],
-      equipoDesc: l.equipoDesc
+      equipoDesc: l.equipoDesc,
+      grupoId: l.grupo_id || null
     })));
   } catch (err) {
     console.error(err);
@@ -507,12 +508,16 @@ router.get('/loans', ...requireSuperadminOrAcceso('prestamos'), async (req: Requ
  *
  * Auth: superadmin, o acceso al módulo `'prestamos'`.
  *
- * Body: `{ inventoryId, empleado, departamento?, fechaDevolucion?, autorizadoPorId?, notas?, cantidad?, mobileTokens? }`
+ * Body: `{ empleado, departamento?, fechaDevolucion?, autorizadoPorId?, notas?, mobileTokens?, items?: [{ inventoryId, cantidad }] }`
+ * - `items`: uno o varios equipos a prestar juntos a la misma persona. Si hay
+ *   más de uno, se crea un préstamo por equipo con un `grupo_id` compartido
+ *   (para el comprobante único). Compatibilidad: si no se envía `items`, se
+ *   aceptan `inventoryId`/`cantidad` sueltos (un solo equipo, `grupo_id` NULL).
  * - `empleado`: nombre completo o username (resuelto vía `db.findUserByNombre`).
- * - `cantidad`: requerida y validada solo si el equipo es de tipo `'cantidad'`.
- * - `mobileTokens`: arreglo de tokens de sesiones de subida por QR (ver `resolveMobilePhotos`); sus fotos se guardan como `fotos_entrega` (estado del equipo al entregarlo).
+ * - `cantidad`: por equipo, requerida y validada solo si el equipo es de tipo `'cantidad'`.
+ * - `mobileTokens`: tokens de subida por QR (ver `resolveMobilePhotos`); sus fotos se guardan como `fotos_entrega` en el primer préstamo del grupo.
  *
- * Respuesta 201: `{ loan: <fila de préstamos>, item: <fila de inventario actualizada> }`
+ * Respuesta 201: `{ loans: <filas de préstamos creadas>, grupoId: string | null }`
  *
  * Códigos de estado:
  * - 201 — préstamo registrado.
@@ -524,64 +529,89 @@ router.get('/loans', ...requireSuperadminOrAcceso('prestamos'), async (req: Requ
  */
 router.post('/loans', ...requireSuperadminOrAcceso('prestamos'), async (req: Request, res: Response) => {
   try {
-    const { inventoryId, empleado, departamento, fechaDevolucion, autorizadoPorId, notas, cantidad, mobileTokens } = req.body;
-    if (!inventoryId || !empleado)
-      return res.status(400).json({ error: 'inventoryId y empleado son requeridos' });
+    const { empleado, departamento, fechaDevolucion, autorizadoPorId, notas, mobileTokens } = req.body;
+    // Compatibilidad: acepta un solo equipo (inventoryId/cantidad, flujo
+    // anterior) o un arreglo `items = [{ inventoryId, cantidad }]` para
+    // prestar varios equipos distintos a la misma persona en una operación.
+    const rawItems: any[] = Array.isArray(req.body.items) && req.body.items.length
+      ? req.body.items
+      : [{ inventoryId: req.body.inventoryId, cantidad: req.body.cantidad }];
 
-    const item = await db.queryOne<any>('SELECT * FROM inventario WHERE id = ?', [inventoryId]);
-    if (!item) return res.status(404).json({ error: 'Equipo no encontrado en inventario' });
+    if (!empleado) return res.status(400).json({ error: 'empleado es requerido' });
+    if (!rawItems.every((it: any) => it && it.inventoryId))
+      return res.status(400).json({ error: 'Cada equipo requiere inventoryId' });
 
-    let cantSolicitada = 1;
-    if (item.tipo_manejo === 'unidad') {
-      if (item.estado === 'en_prestamo') return res.status(409).json({ error: 'El equipo ya está prestado' });
-    } else {
-      cantSolicitada = parseInt(cantidad, 10);
-      if (!Number.isInteger(cantSolicitada) || cantSolicitada < 1)
-        return res.status(400).json({ error: 'La cantidad a prestar debe ser un número entero mayor o igual a 1' });
-      const prestado    = await getCantidadPrestada(inventoryId);
-      const disponible  = (item.cantidad_total || 0) - prestado;
-      if (cantSolicitada > disponible)
-        return res.status(409).json({ error: `Solo hay ${disponible} unidades disponibles de este artículo` });
+    // Cargar y validar TODOS los equipos antes de crear nada, para no dejar un
+    // préstamo a medias si alguno no está disponible.
+    const preparados: { item: any; cantSolicitada: number }[] = [];
+    for (const it of rawItems) {
+      const item = await db.queryOne<any>('SELECT * FROM inventario WHERE id = ?', [it.inventoryId]);
+      if (!item) return res.status(404).json({ error: `Equipo ${it.inventoryId} no encontrado en inventario` });
+
+      let cantSolicitada = 1;
+      if (item.tipo_manejo === 'unidad') {
+        if (item.estado === 'en_prestamo')
+          return res.status(409).json({ error: `El equipo ${item.marca} ${item.modelo || item.tipo} ya está prestado` });
+      } else {
+        cantSolicitada = parseInt(it.cantidad, 10);
+        if (!Number.isInteger(cantSolicitada) || cantSolicitada < 1)
+          return res.status(400).json({ error: 'La cantidad a prestar debe ser un número entero mayor o igual a 1' });
+        const prestado   = await getCantidadPrestada(it.inventoryId);
+        const disponible = (item.cantidad_total || 0) - prestado;
+        if (cantSolicitada > disponible)
+          return res.status(409).json({ error: `Solo hay ${disponible} unidades disponibles de ${item.marca} ${item.modelo || item.tipo}` });
+      }
+      preparados.push({ item, cantSolicitada });
     }
-
-    const id = await db.nextId('prestamos', 'PREST');
 
     let empleadoId: number | null = null;
     const u = await db.findUserByNombre(empleado);
     if (u) empleadoId = u.id;
-
     const autorizadoId = autorizadoPorId ? parseInt(autorizadoPorId, 10) || null : null;
 
     const fotosEntrega = resolveMobilePhotos(mobileTokens);
     const fotosJson = fotosEntrega.length ? JSON.stringify(fotosEntrega) : null;
 
-    await db.query(
-      `INSERT INTO prestamos (id, inventario_id, empleado_id, empleado_nombre, departamento,
-                              fecha_prestamo, fecha_devolucion_estimada, estado, autorizado_por_id, notas, cantidad, fotos_entrega)
-       VALUES (?, ?, ?, ?, ?, NOW(), ?, 'activo', ?, ?, ?, ?)`,
-      [id, inventoryId, empleadoId, empleado, departamento || '',
-       fechaDevolucion || null, autorizadoId, notas || '', cantSolicitada, fotosJson]
-    );
+    // grupo_id solo cuando hay más de un equipo; un solo equipo mantiene el
+    // comportamiento anterior (grupo_id NULL).
+    const grupoId = preparados.length > 1 ? await db.nextId('grupos', 'GRP') : null;
 
-    if (item.tipo_manejo === 'unidad') {
+    const createdIds: string[] = [];
+    for (let idx = 0; idx < preparados.length; idx++) {
+      const { item, cantSolicitada } = preparados[idx];
+      const id = await db.nextId('prestamos', 'PREST');
+      // Las fotos de entrega se guardan una sola vez, en el primer préstamo del grupo.
+      const fotosParaEste = idx === 0 ? fotosJson : null;
       await db.query(
-        `UPDATE inventario SET estado = 'en_prestamo', responsable_id = ?, updated_at = NOW() WHERE id = ?`,
-        [empleadoId, inventoryId]
+        `INSERT INTO prestamos (id, inventario_id, empleado_id, empleado_nombre, departamento,
+                                fecha_prestamo, fecha_devolucion_estimada, estado, autorizado_por_id, notas, cantidad, fotos_entrega, grupo_id)
+         VALUES (?, ?, ?, ?, ?, NOW(), ?, 'activo', ?, ?, ?, ?, ?)`,
+        [id, item.id, empleadoId, empleado, departamento || '',
+         fechaDevolucion || null, autorizadoId, notas || '', cantSolicitada, fotosParaEste, grupoId]
       );
+
+      if (item.tipo_manejo === 'unidad') {
+        await db.query(
+          `UPDATE inventario SET estado = 'en_prestamo', responsable_id = ?, updated_at = NOW() WHERE id = ?`,
+          [empleadoId, item.id]
+        );
+      }
+
+      await db.query(
+        'INSERT INTO historial_inventario (inventario_id, usuario_id, accion) VALUES (?, ?, ?)',
+        [item.id, empleadoId,
+         item.tipo_manejo === 'cantidad' ? `Préstamo ${id} — ${cantSolicitada} unidades a ${empleado}` : `Préstamo ${id} — ${empleado}`]
+      );
+      createdIds.push(id);
     }
 
-    await db.query(
-      'INSERT INTO historial_inventario (inventario_id, usuario_id, accion) VALUES (?, ?, ?)',
-      [inventoryId, empleadoId,
-       item.tipo_manejo === 'cantidad' ? `Préstamo ${id} — ${cantSolicitada} unidades a ${empleado}` : `Préstamo ${id} — ${empleado}`]
-    );
-
-    const loan = await db.queryOne('SELECT * FROM prestamos WHERE id = ?', [id]);
-    const inv  = await db.queryOne('SELECT * FROM inventario WHERE id = ?', [inventoryId]);
     await logAudit(req.user!.nombre,
-      'Registró préstamo', 'prestamo', id,
-      `${id}: ${inventoryId} → ${empleado}${departamento ? ' (' + departamento + ')' : ''}${item.tipo_manejo === 'cantidad' ? ` (${cantSolicitada} uds.)` : ''}`);
-    res.status(201).json({ loan, item: inv });
+      'Registró préstamo', 'prestamo', grupoId || createdIds[0],
+      `${grupoId ? `${grupoId} (${createdIds.length} equipos)` : `${createdIds[0]}: ${preparados[0].item.id}`} → ${empleado}${departamento ? ' (' + departamento + ')' : ''}`);
+
+    const loans = await db.query(
+      `SELECT * FROM prestamos WHERE id IN (${createdIds.map(() => '?').join(',')})`, createdIds);
+    res.status(201).json({ loans, grupoId });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al registrar préstamo' });

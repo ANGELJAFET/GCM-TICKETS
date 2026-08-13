@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { IconExchangeOff, IconPackage, IconUser, IconUserCheck, IconCalendarPlus, IconCalendarMinus, IconCheck, IconFileTypeDoc, IconClock, IconHistory, IconSearch } from '@tabler/icons-react';
+import { IconExchangeOff, IconPackage, IconPackages, IconUser, IconUserCheck, IconCalendarPlus, IconCalendarMinus, IconCheck, IconFileTypeDoc, IconClock, IconHistory, IconSearch } from '@tabler/icons-react';
 import type { Loan } from '@/lib/types';
 import { DateRangeFilter } from './DateRangeFilter';
 
@@ -16,15 +16,28 @@ interface PrestamosViewProps {
   onFechaHastaChange: (v: string) => void;
   onReturnFull: (loanId: string) => void;
   onReturnPartial: (loanId: string) => void;
+  onReturnGroup: (grupoId: string) => void;
   onGenerateWord: (loanId: string) => void;
 }
 
-/** Fila de un préstamo: resaltada en rojo si está activo y venció su fecha estimada de devolución. Ofrece devolución total o parcial (según `loan.cantidad`) y generación del comprobante Word. */
-function LoanRow({ loan, onReturnFull, onReturnPartial, onGenerateWord }: { loan: Loan; onReturnFull: (id: string) => void; onReturnPartial: (id: string) => void; onGenerateWord: (id: string) => void }) {
+/** ¿El préstamo está activo y venció su fecha estimada de devolución? */
+function isVencido(loan: Loan): boolean {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const devEst = loan.fechaDevolucionEstimada ? new Date(loan.fechaDevolucionEstimada) : null;
-  const vencido = loan.estado === 'activo' && !!devEst && devEst < today;
+  return loan.estado === 'activo' && !!devEst && devEst < today;
+}
+
+/** Etiqueta de estado (Vencido / Activo / Devuelto). */
+function EstadoBadge({ vencido, activo }: { vencido: boolean; activo: boolean }) {
+  if (vencido) return <span className="rounded-full bg-admin-red-light px-2.25 py-0.75 text-[10px] font-bold text-admin-red uppercase">Vencido</span>;
+  if (activo) return <span className="rounded-full bg-admin-amber-light px-2.25 py-0.75 text-[10px] font-bold text-admin-amber uppercase">Activo</span>;
+  return <span className="rounded-full bg-admin-green-light px-2.25 py-0.75 text-[10px] font-bold text-admin-green uppercase">Devuelto</span>;
+}
+
+/** Fila de un préstamo individual (sin grupo). Ofrece devolución total o parcial y generación del comprobante Word. */
+function LoanRow({ loan, onReturnFull, onReturnPartial, onGenerateWord }: { loan: Loan; onReturnFull: (id: string) => void; onReturnPartial: (id: string) => void; onGenerateWord: (id: string) => void }) {
+  const vencido = isVencido(loan);
 
   return (
     <div
@@ -75,13 +88,7 @@ function LoanRow({ loan, onReturnFull, onReturnPartial, onGenerateWord }: { loan
         )}
       </div>
       <div className="flex justify-center">
-        {vencido ? (
-          <span className="rounded-full bg-admin-red-light px-2.25 py-0.75 text-[10px] font-bold text-admin-red uppercase">Vencido</span>
-        ) : loan.estado === 'activo' ? (
-          <span className="rounded-full bg-admin-amber-light px-2.25 py-0.75 text-[10px] font-bold text-admin-amber uppercase">Activo</span>
-        ) : (
-          <span className="rounded-full bg-admin-green-light px-2.25 py-0.75 text-[10px] font-bold text-admin-green uppercase">Devuelto</span>
-        )}
+        <EstadoBadge vencido={vencido} activo={loan.estado === 'activo'} />
       </div>
       <div className="flex flex-col gap-1.5">
         {loan.estado === 'activo' &&
@@ -107,8 +114,121 @@ function LoanRow({ loan, onReturnFull, onReturnPartial, onGenerateWord }: { loan
   );
 }
 
-/** Vista "Préstamos": buscador + filtro de estado, y listado separado en "Activos" e "Historial" (devueltos). */
-export function PrestamosView({ allCount, loans, query, estado, fechaDesde, fechaHasta, onQueryChange, onEstadoChange, onFechaDesdeChange, onFechaHastaChange, onReturnFull, onReturnPartial, onGenerateWord }: PrestamosViewProps) {
+/** Tarjeta de un préstamo agrupado: varios equipos entregados juntos a la misma persona (un solo comprobante y devolución conjunta). */
+function GroupCard({ grupoId, loans, onReturnGroup, onGenerateWord }: { grupoId: string; loans: Loan[]; onReturnGroup: (grupoId: string) => void; onGenerateWord: (loanId: string) => void }) {
+  const base = loans[0];
+  const anyActive = loans.some((l) => l.estado === 'activo');
+  const anyVencido = loans.some((l) => isVencido(l));
+
+  return (
+    <div className={clsx('border-b border-admin-border px-4.5 py-3.5 last:border-b-0 dark:border-white/10', anyVencido ? 'bg-red-50 dark:bg-red-950/20' : '')}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-admin-blue-light text-admin-blue dark:bg-admin-blue/15">
+              <IconPackages size={20} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[13px] font-bold">
+                {loans.length} equipos · <span className="font-extrabold text-admin-blue">{grupoId}</span>
+              </div>
+              <div className="flex items-center gap-1 text-[12.5px] font-semibold">
+                <IconUser size={11} /> {base.empleado}
+                {base.departamento && <span className="font-normal text-admin-gray"> · {base.departamento}</span>}
+              </div>
+            </div>
+            <div className="ml-auto">
+              <EstadoBadge vencido={anyVencido} activo={anyActive} />
+            </div>
+          </div>
+
+          <ul className="mt-2 flex flex-col gap-1 pl-1">
+            {loans.map((l) => (
+              <li key={l.id} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12.5px]">
+                <IconPackage size={12} className="shrink-0 text-admin-gray" />
+                <span className="font-semibold">{l.equipoDesc || l.inventoryId}</span>
+                <span className="font-mono text-[11px] text-admin-text-sec dark:text-admin-dark-text-sec">
+                  {l.inventoryId}
+                  {l.cantidad > 1 ? ` · x${l.cantidad}` : ''}
+                </span>
+                {l.estado === 'devuelto' && <span className="text-[10px] font-bold text-admin-green uppercase">Devuelto</span>}
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-0.5 pl-1">
+            <span className="flex items-center gap-1 text-[11px] text-admin-text-sec dark:text-admin-dark-text-sec">
+              <IconCalendarPlus size={10} /> {base.fechaPrestamo}
+            </span>
+            {base.fechaDevolucionEstimada && (
+              <span className={clsx('flex items-center gap-1 text-[11px]', anyVencido ? 'font-semibold text-admin-red dark:text-red-300' : 'text-admin-text-sec dark:text-admin-dark-text-sec')}>
+                <IconCalendarMinus size={10} /> Est. {base.fechaDevolucionEstimada}
+              </span>
+            )}
+            {base.autorizadoPor && (
+              <span className="flex items-center gap-1 text-[11px] text-admin-gray">
+                <IconUserCheck size={10} /> Autorizado por: {base.autorizadoPor}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          {anyActive && (
+            <button type="button" onClick={() => onReturnGroup(grupoId)} className="inline-flex items-center gap-1.25 rounded-lg bg-linear-to-br from-emerald-600 to-admin-green px-3 py-1.5 text-[11px] font-bold whitespace-nowrap text-white">
+              <IconCheck size={12} /> Devolver todo
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => onGenerateWord(base.id)}
+            title={anyActive ? 'Generar comprobante de préstamo (Word)' : 'Generar comprobante de devolución (Word)'}
+            className="inline-flex items-center gap-1.25 rounded-lg border-[1.5px] border-admin-border bg-white px-3 py-1.5 text-[11px] font-bold whitespace-nowrap text-admin-text-sec hover:border-admin-blue hover:text-admin-blue dark:bg-admin-dark-alt dark:text-admin-dark-text-sec"
+          >
+            <IconFileTypeDoc size={12} /> {anyActive ? 'Comprobante' : 'Comprobante devolución'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type Entry = { type: 'single'; loan: Loan } | { type: 'group'; grupoId: string; loans: Loan[] };
+
+/** Agrupa los préstamos por `grupoId` conservando el orden; los sueltos quedan individuales. */
+function buildEntries(loans: Loan[]): Entry[] {
+  const entries: Entry[] = [];
+  const groupIndex = new Map<string, number>();
+  for (const l of loans) {
+    if (!l.grupoId) {
+      entries.push({ type: 'single', loan: l });
+      continue;
+    }
+    const idx = groupIndex.get(l.grupoId);
+    if (idx === undefined) {
+      groupIndex.set(l.grupoId, entries.length);
+      entries.push({ type: 'group', grupoId: l.grupoId, loans: [l] });
+    } else {
+      (entries[idx] as { type: 'group'; grupoId: string; loans: Loan[] }).loans.push(l);
+    }
+  }
+  return entries;
+}
+
+/** ¿Una entrada (préstamo suelto o grupo) sigue activa (algún equipo sin devolver)? */
+function entryActiva(e: Entry): boolean {
+  return e.type === 'single' ? e.loan.estado === 'activo' : e.loans.some((l) => l.estado === 'activo');
+}
+
+function renderEntry(e: Entry, props: Pick<PrestamosViewProps, 'onReturnFull' | 'onReturnPartial' | 'onReturnGroup' | 'onGenerateWord'>) {
+  if (e.type === 'single') {
+    return <LoanRow key={e.loan.id} loan={e.loan} onReturnFull={props.onReturnFull} onReturnPartial={props.onReturnPartial} onGenerateWord={props.onGenerateWord} />;
+  }
+  return <GroupCard key={e.grupoId} grupoId={e.grupoId} loans={e.loans} onReturnGroup={props.onReturnGroup} onGenerateWord={props.onGenerateWord} />;
+}
+
+/** Vista "Préstamos": buscador + filtro de estado, y listado separado en "Activos" e "Historial" (devueltos). Los equipos prestados juntos se muestran agrupados. */
+export function PrestamosView({ allCount, loans, query, estado, fechaDesde, fechaHasta, onQueryChange, onEstadoChange, onFechaDesdeChange, onFechaHastaChange, onReturnFull, onReturnPartial, onReturnGroup, onGenerateWord }: PrestamosViewProps) {
   const toolbar = (
     <div className="flex flex-wrap items-center gap-2.5">
       <div className="relative min-w-50 flex-1">
@@ -155,8 +275,10 @@ export function PrestamosView({ allCount, loans, query, estado, fechaDesde, fech
     );
   }
 
-  const activos = loans.filter((l) => l.estado === 'activo');
-  const devueltos = loans.filter((l) => l.estado === 'devuelto');
+  const entries = buildEntries(loans);
+  const activos = entries.filter(entryActiva);
+  const devueltos = entries.filter((e) => !entryActiva(e));
+  const handlers = { onReturnFull, onReturnPartial, onReturnGroup, onGenerateWord };
 
   return (
     <div className="flex flex-col gap-5">
@@ -167,9 +289,7 @@ export function PrestamosView({ allCount, loans, query, estado, fechaDesde, fech
             <IconClock size={14} /> Activos — {activos.length}
           </div>
           <div className="overflow-hidden rounded-2xl border border-admin-border bg-white shadow-[var(--shadow-adm-sm)] dark:border-white/10 dark:bg-admin-dark-surface">
-            {activos.map((l) => (
-              <LoanRow key={l.id} loan={l} onReturnFull={onReturnFull} onReturnPartial={onReturnPartial} onGenerateWord={onGenerateWord} />
-            ))}
+            {activos.map((e) => renderEntry(e, handlers))}
           </div>
         </div>
       )}
@@ -179,9 +299,7 @@ export function PrestamosView({ allCount, loans, query, estado, fechaDesde, fech
             <IconHistory size={14} /> Historial — {devueltos.length}
           </div>
           <div className="overflow-hidden rounded-2xl border border-admin-border bg-white shadow-[var(--shadow-adm-sm)] dark:border-white/10 dark:bg-admin-dark-surface">
-            {devueltos.map((l) => (
-              <LoanRow key={l.id} loan={l} onReturnFull={onReturnFull} onReturnPartial={onReturnPartial} onGenerateWord={onGenerateWord} />
-            ))}
+            {devueltos.map((e) => renderEntry(e, handlers))}
           </div>
         </div>
       )}
