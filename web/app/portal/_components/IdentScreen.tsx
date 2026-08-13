@@ -42,6 +42,7 @@ export function IdentScreen() {
       loading={loading}
       error={error}
       submitLabel="Iniciar sesión"
+      whatsapp="50494202117"
       footer={
         <div className="flex flex-col gap-1.5">
           <span className="text-slate-300">

@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import Image from 'next/image';
-import { IconEye, IconEyeOff, IconLoader2, IconAlertCircle, IconArrowRight } from '@tabler/icons-react';
+import { IconEye, IconEyeOff, IconLoader2, IconAlertCircle, IconArrowRight, IconBrandWhatsapp } from '@tabler/icons-react';
 
 export interface AuthShellProps {
   /** Controla detalles por variante (admin/portal). */
@@ -20,6 +20,8 @@ export interface AuthShellProps {
   footer?: ReactNode;
   submitLabel?: string;
   loadingLabel?: string;
+  /** Si se define, muestra un botón flotante de WhatsApp (solo dígitos, formato wa.me). */
+  whatsapp?: string;
 }
 
 /**
@@ -39,6 +41,7 @@ export function AuthShell({
   footer,
   submitLabel = 'Iniciar sesión',
   loadingLabel = 'Verificando…',
+  whatsapp,
 }: AuthShellProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -193,6 +196,19 @@ export function AuthShell({
 
         {footer && <div className="mt-8 text-center text-sm [text-shadow:0_1px_10px_rgba(0,0,0,0.55)]">{footer}</div>}
       </main>
+
+      {whatsapp && (
+        <a
+          href={`https://wa.me/${whatsapp}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Escríbenos por WhatsApp"
+          className="fixed right-5 bottom-5 z-20 flex items-center gap-2 rounded-full bg-[#25D366] px-4 py-3 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(0,0,0,0.4)] transition hover:-translate-y-0.5 hover:bg-[#20b858] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+        >
+          <IconBrandWhatsapp size={22} aria-hidden />
+          <span className="max-[620px]:hidden">WhatsApp</span>
+        </a>
+      )}
     </div>
   );
 }
