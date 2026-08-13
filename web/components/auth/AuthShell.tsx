@@ -108,7 +108,7 @@ export function AuthShell({
         priority
         sizes="100vw"
         aria-hidden
-        className="pointer-events-none object-cover [filter:saturate(1.1)_contrast(1.05)_brightness(1.02)] -z-10"
+        className="pointer-events-none object-cover [filter:saturate(1.1)_contrast(1.05)_brightness(1.02)]"
       />
       {/* Degradado de separación junto al panel izquierdo. */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/35 via-transparent to-transparent dark:from-black/50" />
