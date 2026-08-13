@@ -159,11 +159,11 @@ export default function RegistroPage() {
                 <div className="mb-3.5 grid grid-cols-2 gap-3 max-[480px]:grid-cols-1">
                   <div className="flex flex-col gap-1.25">
                     <label className={labelClass}>Nombre *</label>
-                    <input name="nombre" required placeholder="Juan" className={inputClass} />
+                    <input name="nombre" required className={inputClass} />
                   </div>
                   <div className="flex flex-col gap-1.25">
                     <label className={labelClass}>Apellido</label>
-                    <input name="apellido" placeholder="López" className={inputClass} />
+                    <input name="apellido" className={inputClass} />
                   </div>
                 </div>
 
@@ -172,7 +172,6 @@ export default function RegistroPage() {
                   <input
                     name="username"
                     required
-                    placeholder="jlopez"
                     autoComplete="username"
                     pattern="[a-zA-Z0-9_\-]+"
                     title="Solo letras, números, _ y -"
@@ -182,17 +181,17 @@ export default function RegistroPage() {
 
                 <div className="mb-3.5 flex flex-col gap-1.25">
                   <label className={labelClass}>Correo electrónico *</label>
-                  <input type="email" name="email" required placeholder="correo empresarial" className={inputClass} />
+                  <input type="email" name="email" required className={inputClass} />
                 </div>
 
                 <div className="mb-3.5 grid grid-cols-2 gap-3 max-[480px]:grid-cols-1">
                   <div className="flex flex-col gap-1.25">
                     <label className={labelClass}>Teléfono</label>
-                    <input type="tel" name="telefono" placeholder="+504 9999-9999" className={inputClass} />
+                    <input type="tel" name="telefono" className={inputClass} />
                   </div>
                   <div className="flex flex-col gap-1.25">
                     <label className={labelClass}>Departamento</label>
-                    <input name="departamento" placeholder="Ej: Contabilidad" className={inputClass} />
+                    <input name="departamento" className={inputClass} />
                   </div>
                 </div>
 
@@ -212,7 +211,7 @@ export default function RegistroPage() {
                   </div>
                   <div className="flex flex-col gap-1.25">
                     <label className={labelClass}>Área</label>
-                    <input name="area" placeholder="Ej: Producción" className={inputClass} />
+                    <input name="area" className={inputClass} />
                   </div>
                 </div>
 
@@ -222,7 +221,6 @@ export default function RegistroPage() {
                     name="anydesk"
                     required
                     inputMode="numeric"
-                    placeholder="Ej: 123 456 789"
                     className={inputClass}
                   />
                   <span className="text-[11px] text-slate-500">

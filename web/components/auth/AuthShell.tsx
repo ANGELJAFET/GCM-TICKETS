@@ -30,7 +30,6 @@ export interface AuthShellProps {
  * autenticación la aporta cada pantalla vía `onSubmit`.
  */
 export function AuthShell({
-  accent,
   brandTitle,
   formTitle,
   formSubtitle,
@@ -54,7 +53,6 @@ export function AuthShell({
   const passId = `${uid}-pass`;
   const errorId = `${uid}-error`;
 
-  const isPortal = accent === 'portal';
   const shownError = error || localError;
 
   // Autofocus en el campo Usuario al montar.
@@ -128,7 +126,7 @@ export function AuthShell({
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder={isPortal ? 'Usuario (p. ej. jlopez)' : 'Usuario'}
+                placeholder="Usuario"
                 autoComplete="username"
                 autoCapitalize="none"
                 autoCorrect="off"
