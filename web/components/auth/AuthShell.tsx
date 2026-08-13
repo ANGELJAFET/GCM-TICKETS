@@ -2,10 +2,10 @@
 
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import Image from 'next/image';
-import { IconEye, IconEyeOff, IconLogin, IconLoader2, IconAlertCircle, IconUser, IconLock } from '@tabler/icons-react';
+import { IconEye, IconEyeOff, IconLoader2, IconAlertCircle, IconArrowRight } from '@tabler/icons-react';
 
 export interface AuthShellProps {
-  /** Controla el color de acento del CTA, foco y detalles. */
+  /** Controla detalles por variante (admin/portal). */
   accent: 'admin' | 'portal';
   brandTitle: string;
   brandSubtitle: ReactNode;
@@ -23,16 +23,15 @@ export interface AuthShellProps {
 }
 
 /**
- * Estructura visual compartida por los dos logins (admin y portal): foto de
- * fondo, capa de realce, panel de marca navy translúcido a la izquierda y panel
- * de formulario translúcido a la derecha. Sólo parametriza acento, textos y
- * handlers; la lógica de autenticación la aporta cada pantalla vía `onSubmit`.
+ * Estructura visual compartida por los dos logins (admin y portal): estilo
+ * "transparente" (sin tarjeta) — logo y textos centrados, campos con línea
+ * inferior y botón fantasma flotando sobre la foto de fondo, para que la
+ * imagen resalte. Sólo parametriza textos y handlers; la lógica de
+ * autenticación la aporta cada pantalla vía `onSubmit`.
  */
 export function AuthShell({
   accent,
   brandTitle,
-  brandSubtitle,
-  badge,
   formTitle,
   formSubtitle,
   onSubmit,
@@ -79,26 +78,15 @@ export function AuthShell({
     await onSubmit(username.trim(), password);
   }
 
-  // Acentos por variante. Se usan clases estáticas completas para que Tailwind
-  // las detecte en compilación.
-  // Ambos acentos comparten el navy de marca (#1a2e6b) para foco y CTA; sólo el
-  // detalle rojo del admin los diferencia. Clases estáticas completas para que
-  // Tailwind las detecte en compilación.
-  // Paleta grafito/carbón oscuro con acento rojo GCM: contrasta fuerte con la
-  // foto de fondo (verdes/turquesas) y mantiene el texto blanco muy legible.
-  const accentFocusInput =
-    'focus:border-[#e23b3b] focus:bg-white/[0.08] focus:shadow-[0_0_0_3px_rgba(226,59,59,0.18)] focus-visible:outline-[#ef4444]';
-  const accentButton =
-    'bg-linear-to-br from-[#c81e2d] to-[#e23b3b] shadow-[0_10px_28px_-8px_rgba(204,34,34,0.55)] hover:shadow-[0_16px_36px_-8px_rgba(204,34,34,0.6)] active:shadow-[0_6px_16px_-8px_rgba(204,34,34,0.5)] focus-visible:outline-[#ef4444]';
-  const accentBrandGradient = 'from-[#1a1b20]/60 via-[#202126]/58 to-[#141519]/60';
-  const accentFocusVisible = 'focus-visible:outline-[#ef4444]';
-
+  // Estilo "login transparente": campos con sólo línea inferior, fondo
+  // transparente y texto blanco con sombra para legibilidad sobre la foto.
+  // El foco de teclado engrosa la línea inferior en blanco (indicador visible).
   const inputBase =
-    'w-full rounded-[10px] border-[1.5px] border-white/12 bg-white/[0.06] py-3 pr-3.5 pl-11 text-sm text-white outline-none transition-all placeholder:text-slate-400 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60';
+    'w-full rounded-none border-0 border-b border-white/40 bg-transparent px-1 py-2.5 text-white outline-none transition-colors placeholder:text-white/55 focus:border-white focus-visible:border-white focus-visible:outline-none focus-visible:[box-shadow:0_2px_0_0_#ffffff] disabled:opacity-60 [text-shadow:0_1px_8px_rgba(0,0,0,0.45)]';
 
   return (
-    <div className="relative flex min-h-[100dvh] items-center justify-center overflow-y-auto bg-[#0b1a2e] p-5">
-      {/* Foto de fondo con next/image, detrás de la capa de oscurecimiento. */}
+    <div className="relative flex min-h-[100dvh] items-center justify-center overflow-y-auto bg-[#0b1a2e] p-6">
+      {/* Foto de fondo a pantalla completa, sin tarjeta que la tape. */}
       <Image
         src="/assets/login-bg.jpg"
         alt=""
@@ -106,144 +94,106 @@ export function AuthShell({
         priority
         sizes="100vw"
         aria-hidden
-        className="pointer-events-none object-cover [filter:saturate(1.1)_contrast(1.05)_brightness(1.02)]"
+        className="pointer-events-none object-cover [filter:saturate(1.12)_contrast(1.06)_brightness(1.03)]"
       />
-      <main className="relative z-10 flex w-full max-w-[52rem] overflow-hidden rounded-2xl shadow-[0_25px_80px_-15px_rgba(0,0,0,0.6)] ring-1 ring-white/10 max-[620px]:flex-col">
-        {/* Panel izquierdo: marca. Velo navy ~/95 para contraste independiente de la foto. */}
-        <div
-          className={`relative flex w-[40%] shrink-0 flex-col items-center justify-center overflow-hidden bg-linear-to-br ${accentBrandGradient} px-10 py-14 text-center backdrop-blur-xl max-[620px]:w-full max-[620px]:px-7 max-[620px]:py-9`}
-        >
-          {!isPortal && (
-            <div
-              className="absolute top-0 bottom-0 left-0 w-1"
-              style={{ backgroundImage: 'linear-gradient(180deg, transparent 0%, #cc2222 35%, #ef4444 65%, transparent 100%)' }}
-            />
-          )}
-          <Image
-            src="/assets/gcm.jpg"
-            alt="GCM Grupo Milcien"
-            width={92}
-            height={92}
-            className="relative z-1 mb-6 rounded-full border-[3px] border-white/18 bg-white object-contain p-2 shadow-[0_8px_36px_rgba(0,0,0,0.4),0_0_0_6px_rgba(255,255,255,0.05)] max-[620px]:mb-4 max-[620px]:h-18 max-[620px]:w-18"
-          />
-          <div className="relative z-1 mb-2 text-xl font-bold tracking-tight text-white max-[620px]:text-lg">{brandTitle}</div>
-          <div className="relative z-1 text-xs leading-[1.7] text-white/75">{brandSubtitle}</div>
-          <div
-            className={
-              isPortal
-                ? 'relative z-1 mt-8 inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-[11px] text-white/85'
-                : 'relative z-1 mt-8 inline-flex items-center gap-1.5 rounded-full border border-red-400/40 bg-red-600/25 px-3.5 py-1.5 text-[11px] text-red-100'
-            }
-          >
-            <span aria-hidden>{badge.icon}</span> {badge.text}
-          </div>
+      {/* Viñeta focal suave: da contraste al texto sin oscurecer los bordes,
+          así la foto se mantiene brillante alrededor del formulario. */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_60%_at_50%_50%,rgba(0,0,0,0.45),transparent_75%)]" />
+
+      <main className="relative z-10 flex w-full max-w-md flex-col items-center rounded-2xl border border-white/15 bg-white/[0.07] px-8 py-10 text-center shadow-[0_25px_80px_-15px_rgba(0,0,0,0.55)] backdrop-blur-xl max-[620px]:px-6 max-[620px]:py-8">
+        <Image
+          src="/assets/gcm.jpg"
+          alt="GCM Grupo Milcien"
+          width={80}
+          height={80}
+          className="mb-5 h-20 w-20 rounded-full border border-white/30 bg-white/90 object-contain p-1.5 shadow-[0_6px_30px_rgba(0,0,0,0.5)]"
+        />
+        <div className="mb-2 text-xs font-semibold tracking-[0.35em] text-white/70 uppercase [text-shadow:0_1px_10px_rgba(0,0,0,0.6)]">
+          {brandTitle}
         </div>
+        <h1 className="text-3xl font-light tracking-wide text-white [text-shadow:0_2px_16px_rgba(0,0,0,0.6)] max-[620px]:text-2xl">
+          {formTitle}
+        </h1>
+        <p className="mt-2 mb-9 text-sm text-white/70 [text-shadow:0_1px_10px_rgba(0,0,0,0.55)]">{formSubtitle}</p>
 
-        {/* Panel derecho: formulario. */}
-        <div className="flex flex-1 flex-col justify-center bg-[#17181d]/55 px-11 py-14 backdrop-blur-xl max-[620px]:px-7 max-[620px]:py-8">
-          <h1 className="mb-1.5 text-2xl font-bold tracking-tight text-white max-[620px]:text-xl">
-            {formTitle}
-          </h1>
-          <p className="mb-8 text-sm text-slate-300">
-            {formSubtitle}
-          </p>
-
-          <form onSubmit={handleSubmit} aria-busy={loading} noValidate className="space-y-6">
-            <div className="space-y-4">
-              <div className="flex flex-col gap-2">
-                <label htmlFor={userId} className="text-[11px] font-bold tracking-wide text-slate-300 uppercase">
-                  Usuario
-                </label>
-                <div className="relative">
-                  <IconUser
-                    size={18}
-                    aria-hidden
-                    className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-slate-400 dark:text-admin-dark-text-sec"
-                  />
-                  <input
-                    ref={userRef}
-                    id={userId}
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder={isPortal ? 'jlopez' : 'admin'}
-                    autoComplete="username"
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    spellCheck={false}
-                    inputMode="text"
-                    disabled={loading}
-                    aria-invalid={!!shownError}
-                    aria-describedby={shownError ? errorId : undefined}
-                    className={`${inputBase} ${accentFocusInput}`}
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label htmlFor={passId} className="text-[11px] font-bold tracking-wide text-slate-300 uppercase">
-                  Contraseña
-                </label>
-                <div className="relative">
-                  <IconLock
-                    size={18}
-                    aria-hidden
-                    className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-slate-400 dark:text-admin-dark-text-sec"
-                  />
-                  <input
-                    ref={passRef}
-                    id={passId}
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    autoComplete="current-password"
-                    disabled={loading}
-                    aria-invalid={!!shownError}
-                    aria-describedby={shownError ? errorId : undefined}
-                    className={`${inputBase} pr-11 ${accentFocusInput}`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                    disabled={loading}
-                    className={`absolute top-1/2 right-2 -translate-y-1/2 rounded-md p-1.5 text-slate-400 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60 ${accentFocusVisible}`}
-                  >
-                    {showPassword ? <IconEyeOff size={18} aria-hidden /> : <IconEye size={18} aria-hidden />}
-                  </button>
-                </div>
-              </div>
+        <form onSubmit={handleSubmit} aria-busy={loading} noValidate className="w-full space-y-7 text-left">
+          <div className="space-y-6">
+            <div>
+              <label htmlFor={userId} className="sr-only">
+                Usuario
+              </label>
+              <input
+                ref={userRef}
+                id={userId}
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder={isPortal ? 'Usuario (p. ej. jlopez)' : 'Usuario'}
+                autoComplete="username"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                inputMode="text"
+                disabled={loading}
+                aria-invalid={!!shownError}
+                aria-describedby={shownError ? errorId : undefined}
+                className={inputBase}
+              />
             </div>
 
-            {shownError && (
-              <div
-                id={errorId}
-                role="alert"
-                aria-live="assertive"
-                className="flex items-center gap-1.5 rounded-[10px] border border-red-500/30 bg-red-500/15 px-3.5 py-2.5 text-xs font-semibold text-red-100"
+            <div className="relative">
+              <label htmlFor={passId} className="sr-only">
+                Contraseña
+              </label>
+              <input
+                ref={passRef}
+                id={passId}
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Contraseña"
+                autoComplete="current-password"
+                disabled={loading}
+                aria-invalid={!!shownError}
+                aria-describedby={shownError ? errorId : undefined}
+                className={`${inputBase} pr-9`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                disabled={loading}
+                className="absolute top-1/2 right-0 -translate-y-1/2 p-1.5 text-white/60 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:opacity-60"
               >
-                <IconAlertCircle size={14} aria-hidden /> {shownError}
-              </div>
-            )}
+                {showPassword ? <IconEyeOff size={18} aria-hidden /> : <IconEye size={18} aria-hidden />}
+              </button>
+            </div>
+          </div>
 
-            <button
-              type="submit"
-              disabled={loading || !username || !password}
-              aria-busy={loading}
-              className={`relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl p-3.5 text-[15px] font-bold text-white transition-all hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${accentButton}`}
+          {shownError && (
+            <div
+              id={errorId}
+              role="alert"
+              aria-live="assertive"
+              className="flex items-center justify-center gap-1.5 rounded-md border border-red-300/30 bg-red-500/20 px-3 py-2 text-xs font-medium text-red-50 backdrop-blur-sm"
             >
-              {loading ? (
-                <IconLoader2 size={18} className="animate-spin motion-reduce:animate-none" aria-hidden />
-              ) : (
-                <IconLogin size={18} aria-hidden />
-              )}
-              {loading ? loadingLabel : submitLabel}
-            </button>
-          </form>
+              <IconAlertCircle size={14} aria-hidden /> {shownError}
+            </div>
+          )}
 
-          {footer && <div className="mt-6 text-center text-sm">{footer}</div>}
-        </div>
+          <button
+            type="submit"
+            disabled={loading || !username || !password}
+            aria-busy={loading}
+            className="mx-auto flex items-center justify-center gap-2 rounded-full border border-white/60 bg-white/5 px-8 py-3 text-sm font-medium tracking-wide text-white backdrop-blur-sm transition hover:border-white hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {loading && <IconLoader2 size={18} className="animate-spin motion-reduce:animate-none" aria-hidden />}
+            {loading ? loadingLabel : submitLabel}
+            {!loading && <IconArrowRight size={18} aria-hidden />}
+          </button>
+        </form>
+
+        {footer && <div className="mt-8 text-center text-sm [text-shadow:0_1px_10px_rgba(0,0,0,0.55)]">{footer}</div>}
       </main>
     </div>
   );
