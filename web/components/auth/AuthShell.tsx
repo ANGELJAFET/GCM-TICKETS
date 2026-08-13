@@ -84,19 +84,17 @@ export function AuthShell({
   // Ambos acentos comparten el navy de marca (#1a2e6b) para foco y CTA; sólo el
   // detalle rojo del admin los diferencia. Clases estáticas completas para que
   // Tailwind las detecte en compilación.
-  const accentFocusInput = isPortal
-    ? 'focus:border-portal-navy focus:bg-white focus:shadow-[0_0_0_3px_rgba(26,46,107,0.12)] focus-visible:outline-portal-navy'
-    : 'focus:border-admin-brand focus:bg-white focus:shadow-[0_0_0_3px_rgba(26,46,107,0.12)] focus-visible:outline-admin-brand';
-  const accentButton = isPortal
-    ? 'bg-linear-to-br from-portal-navy-dark to-portal-navy-mid shadow-[0_10px_28px_-8px_rgba(26,46,107,0.55)] hover:shadow-[0_16px_36px_-8px_rgba(26,46,107,0.6)] active:shadow-[0_6px_16px_-8px_rgba(26,46,107,0.5)] focus-visible:outline-portal-navy'
-    : 'bg-linear-to-br from-admin-brand to-admin-brand2 shadow-[0_10px_28px_-8px_rgba(26,46,107,0.55)] hover:shadow-[0_16px_36px_-8px_rgba(26,46,107,0.6)] active:shadow-[0_6px_16px_-8px_rgba(26,46,107,0.5)] focus-visible:outline-admin-brand';
-  const accentBrandGradient = isPortal
-    ? 'from-[#0b1838]/95 via-[#162660]/95 to-portal-navy-mid/95'
-    : 'from-[#0b1838]/95 via-[#162660]/95 to-admin-brand2/95';
-  const accentFocusVisible = isPortal ? 'focus-visible:outline-portal-navy' : 'focus-visible:outline-admin-brand';
+  // Paleta grafito/carbón oscuro con acento rojo GCM: contrasta fuerte con la
+  // foto de fondo (verdes/turquesas) y mantiene el texto blanco muy legible.
+  const accentFocusInput =
+    'focus:border-[#e23b3b] focus:bg-white/[0.08] focus:shadow-[0_0_0_3px_rgba(226,59,59,0.18)] focus-visible:outline-[#ef4444]';
+  const accentButton =
+    'bg-linear-to-br from-[#c81e2d] to-[#e23b3b] shadow-[0_10px_28px_-8px_rgba(204,34,34,0.55)] hover:shadow-[0_16px_36px_-8px_rgba(204,34,34,0.6)] active:shadow-[0_6px_16px_-8px_rgba(204,34,34,0.5)] focus-visible:outline-[#ef4444]';
+  const accentBrandGradient = 'from-[#1a1b20]/90 via-[#202126]/90 to-[#141519]/90';
+  const accentFocusVisible = 'focus-visible:outline-[#ef4444]';
 
   const inputBase =
-    'w-full rounded-[10px] border-[1.5px] border-slate-200 bg-slate-50 py-3 pr-3.5 pl-11 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60 dark:border-white/12 dark:bg-admin-dark-bg dark:text-admin-dark-text dark:placeholder:text-slate-500 dark:focus:bg-admin-dark-bg';
+    'w-full rounded-[10px] border-[1.5px] border-white/12 bg-white/[0.06] py-3 pr-3.5 pl-11 text-sm text-white outline-none transition-all placeholder:text-slate-400 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60';
 
   return (
     <div className="relative flex min-h-[100dvh] items-stretch justify-start overflow-y-auto overflow-x-hidden bg-[#0b1a2e]">
@@ -145,22 +143,18 @@ export function AuthShell({
         </div>
 
         {/* Panel derecho: formulario. */}
-        <div className="flex flex-1 flex-col justify-center bg-white/90 px-11 py-14 backdrop-blur-md max-[620px]:px-7 max-[620px]:py-8 dark:bg-admin-dark-surface/85">
-          <h1
-            className={`mb-1.5 text-2xl font-bold tracking-tight max-[620px]:text-xl dark:text-admin-dark-text ${
-              isPortal ? 'text-portal-navy' : 'text-admin-text'
-            }`}
-          >
+        <div className="flex flex-1 flex-col justify-center bg-[#17181d]/80 px-11 py-14 backdrop-blur-md max-[620px]:px-7 max-[620px]:py-8">
+          <h1 className="mb-1.5 text-2xl font-bold tracking-tight text-white max-[620px]:text-xl">
             {formTitle}
           </h1>
-          <p className={`mb-8 text-sm dark:text-admin-dark-text-sec ${isPortal ? 'text-portal-text-sec' : 'text-admin-text-sec'}`}>
+          <p className="mb-8 text-sm text-slate-300">
             {formSubtitle}
           </p>
 
           <form onSubmit={handleSubmit} aria-busy={loading} noValidate className="space-y-6">
             <div className="space-y-4">
               <div className="flex flex-col gap-2">
-                <label htmlFor={userId} className={`text-[11px] font-bold tracking-wide uppercase dark:text-admin-dark-text-sec ${isPortal ? 'text-portal-text-sec' : 'text-admin-text-sec'}`}>
+                <label htmlFor={userId} className="text-[11px] font-bold tracking-wide text-slate-300 uppercase">
                   Usuario
                 </label>
                 <div className="relative">
@@ -190,7 +184,7 @@ export function AuthShell({
               </div>
 
               <div className="flex flex-col gap-2">
-                <label htmlFor={passId} className={`text-[11px] font-bold tracking-wide uppercase dark:text-admin-dark-text-sec ${isPortal ? 'text-portal-text-sec' : 'text-admin-text-sec'}`}>
+                <label htmlFor={passId} className="text-[11px] font-bold tracking-wide text-slate-300 uppercase">
                   Contraseña
                 </label>
                 <div className="relative">
@@ -217,7 +211,7 @@ export function AuthShell({
                     onClick={() => setShowPassword((v) => !v)}
                     aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                     disabled={loading}
-                    className={`absolute top-1/2 right-2 -translate-y-1/2 rounded-md p-1.5 text-slate-500 transition-colors hover:text-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60 dark:text-admin-dark-text-sec dark:hover:text-admin-dark-text ${accentFocusVisible}`}
+                    className={`absolute top-1/2 right-2 -translate-y-1/2 rounded-md p-1.5 text-slate-400 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60 ${accentFocusVisible}`}
                   >
                     {showPassword ? <IconEyeOff size={18} aria-hidden /> : <IconEye size={18} aria-hidden />}
                   </button>
@@ -230,7 +224,7 @@ export function AuthShell({
                 id={errorId}
                 role="alert"
                 aria-live="assertive"
-                className="flex items-center gap-1.5 rounded-[10px] border border-admin-red/20 bg-admin-red-light px-3.5 py-2.5 text-xs font-semibold text-red-800"
+                className="flex items-center gap-1.5 rounded-[10px] border border-red-500/30 bg-red-500/15 px-3.5 py-2.5 text-xs font-semibold text-red-100"
               >
                 <IconAlertCircle size={14} aria-hidden /> {shownError}
               </div>
@@ -242,13 +236,6 @@ export function AuthShell({
               aria-busy={loading}
               className={`relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl p-3.5 text-[15px] font-bold text-white transition-all hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${accentButton}`}
             >
-              {/* Micro-acento rojo GCM en el CTA del admin (franja fina a la izquierda). */}
-              {!isPortal && (
-                <span
-                  aria-hidden
-                  className="absolute inset-y-0 left-0 w-1 bg-linear-to-b from-portal-red to-admin-red"
-                />
-              )}
               {loading ? (
                 <IconLoader2 size={18} className="animate-spin motion-reduce:animate-none" aria-hidden />
               ) : (
@@ -260,7 +247,7 @@ export function AuthShell({
 
           {footer && <div className="mt-6 text-center text-sm">{footer}</div>}
 
-          <p className="mt-4 flex items-center justify-center gap-1.5 text-[11px] text-slate-500 dark:text-admin-dark-text-sec">
+          <p className="mt-4 flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
             Conexión en red interna
           </p>
         </div>

@@ -44,7 +44,7 @@ export function LoginScreen() {
       error={error}
       submitLabel="Ingresar al sistema"
       footer={
-        <span className="text-portal-text-sec dark:text-admin-dark-text-sec">
+        <span className="text-slate-300">
           ¿Olvidaste tu contraseña? Contacta al Depto. de Sistemas / TI
         </span>
       }

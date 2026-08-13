@@ -44,16 +44,16 @@ export function IdentScreen() {
       submitLabel="Iniciar sesión"
       footer={
         <div className="flex flex-col gap-1.5">
-          <span className="text-portal-text-sec dark:text-admin-dark-text-sec">
+          <span className="text-slate-300">
             ¿Sin cuenta?{' '}
             <Link
               href="/registro"
-              className="rounded font-semibold text-portal-navy underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-portal-navy dark:text-portal-navy-light dark:hover:text-white dark:focus-visible:outline-portal-navy-light"
+              className="rounded font-semibold text-red-300 underline-offset-2 hover:text-white hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ef4444]"
             >
               Solicitar acceso
             </Link>
           </span>
-          <span className="text-portal-text-sec dark:text-admin-dark-text-sec">
+          <span className="text-slate-300">
             ¿Olvidaste tu contraseña? Contacta al Depto. de Sistemas / TI
           </span>
         </div>
