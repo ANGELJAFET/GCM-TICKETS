@@ -13,24 +13,38 @@ import db from '../db';
 import { JwtUser } from '../types';
 
 /**
- * Verifica el JWT de sesión y, si es válido, adjunta el usuario decodificado
- * a `req.user` para que los handlers siguientes lo usen sin volver a decodificar.
- * @returns `401` con `{ error }` si no hay token, o si el token es inválido/expiró.
+ * Verifica el JWT de sesión y, si es válido, **revalida contra la BD** que el
+ * usuario siga existiendo y activo, y toma su `rol_nivel` actual de la base (no
+ * del token). Así, desactivar/eliminar/degradar a un usuario surte efecto de
+ * inmediato en vez de esperar hasta 12h a que expire su token. Adjunta el
+ * usuario resultante a `req.user`.
+ * @returns `401` si no hay token, si es inválido/expiró, o si el usuario ya no existe/está inactivo; `500` si falla la consulta.
  */
-function requireAuth(req: Request, res: Response, next: NextFunction) {
+async function requireAuth(req: Request, res: Response, next: NextFunction) {
   const header = req.headers.authorization || '';
   const token  = header.startsWith('Bearer ') ? header.slice(7) : null;
   if (!token) return res.status(401).json({ error: 'Sesión requerida' });
 
+  let payload: JwtUser;
   try {
-    const payload = jwt.verify(token, SESSION_SECRET, { algorithms: ['HS256'] }) as unknown as JwtUser;
-    req.user = {
-      id: payload.id, username: payload.username,
-      nombre: payload.nombre, rol_nivel: payload.rol_nivel
-    };
-    next();
+    payload = jwt.verify(token, SESSION_SECRET, { algorithms: ['HS256'] }) as unknown as JwtUser;
   } catch {
     return res.status(401).json({ error: 'Sesión inválida o expirada' });
+  }
+
+  try {
+    // El rol y el estado activo se leen de la BD, no del token: una cuenta
+    // desactivada, eliminada o con el rol cambiado deja de tener acceso ya.
+    const u = await db.queryOne<{ rol_nivel: number; activo: boolean | number }>(
+      'SELECT r.nivel AS rol_nivel, u.activo FROM usuarios u JOIN roles r ON r.id = u.rol_id WHERE u.id = ?',
+      [payload.id]
+    );
+    if (!u || !u.activo) return res.status(401).json({ error: 'Sesión inválida o expirada' });
+    req.user = { id: payload.id, username: payload.username, nombre: payload.nombre, rol_nivel: u.rol_nivel };
+    next();
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Error al verificar la sesión' });
   }
 }
 

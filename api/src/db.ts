@@ -59,8 +59,11 @@ function toTSQL(s: string): string {
  * @returns Arreglo de filas (`recordset`) devuelto por SQL Server.
  * @throws Si el pool no está inicializado (`initDB` no se llamó) o la query falla.
  */
-async function query<T = any>(sqlText: string, params: any[] = []): Promise<T[]> {
-  const req = pool!.request();
+/**
+ * Ejecuta una query con placeholders `?` sobre un `Request` dado (del pool o de
+ * una transacción). Núcleo compartido por {@link query} y por {@link withTransaction}.
+ */
+async function runQuery<T = any>(req: sql.Request, sqlText: string, params: any[] = []): Promise<T[]> {
   let i = 0;
   const tsql = toTSQL(sqlText).replace(/\?/g, () => {
     const name = `p${i}`;
@@ -70,6 +73,10 @@ async function query<T = any>(sqlText: string, params: any[] = []): Promise<T[]>
   });
   const result = await req.query(tsql);
   return result.recordset;
+}
+
+async function query<T = any>(sqlText: string, params: any[] = []): Promise<T[]> {
+  return runQuery<T>(pool!.request(), sqlText, params);
 }
 
 /**
@@ -176,4 +183,62 @@ async function initDB(): Promise<void> {
   }
 }
 
-export default { pool, query, queryOne, exec, execOne, nextId, findUserByNombre, initDB, bcrypt, ROUNDS };
+/** Cliente de consultas ligado a una transacción abierta (ver {@link withTransaction}). */
+export interface TxClient {
+  query<T = any>(sqlText: string, params?: any[]): Promise<T[]>;
+  queryOne<T = any>(sqlText: string, params?: any[]): Promise<T | null>;
+  exec<T = any>(spName: string, params?: Record<string, any>): Promise<T[]>;
+  execOne<T = any>(spName: string, params?: Record<string, any>): Promise<T | null>;
+  nextId(counter: string, prefix: string, padding?: number): Promise<string>;
+}
+
+/**
+ * Ejecuta `fn` dentro de una transacción SQL (BEGIN → COMMIT, con ROLLBACK
+ * automático si `fn` lanza). Todas las consultas hechas con el `TxClient`
+ * recibido participan de la misma transacción, de modo que operaciones de
+ * varios pasos (crear préstamo + historial, devolver, borrar usuario, etc.)
+ * son atómicas. Combinado con `WITH (UPDLOCK, HOLDLOCK)` en las lecturas de
+ * disponibilidad, serializa el "check-then-act" y evita sobre-préstamo.
+ * @throws Relanza el error de `fn` tras revertir; el caller decide el status HTTP.
+ */
+async function withTransaction<T>(fn: (tx: TxClient) => Promise<T>): Promise<T> {
+  const tx = new sql.Transaction(pool!);
+  await tx.begin();
+  try {
+    const client: TxClient = {
+      query:    (s, p = []) => runQuery(new sql.Request(tx), s, p),
+      queryOne: async (s, p = []) => (await runQuery(new sql.Request(tx), s, p))[0] ?? null,
+      exec:     async (sp, params = {}) => {
+        const r = new sql.Request(tx);
+        for (const [k, v] of Object.entries(params)) r.input(k, v);
+        return (await r.execute(sp)).recordset ?? [];
+      },
+      execOne:  async (sp, params = {}) => {
+        const r = new sql.Request(tx);
+        for (const [k, v] of Object.entries(params)) r.input(k, v);
+        return (await r.execute(sp)).recordset?.[0] ?? null;
+      },
+      nextId:   async (counter, prefix, padding = 3) => {
+        const r = new sql.Request(tx);
+        r.input('nombre', sql.NVarChar, counter);
+        const result = await r.query('UPDATE contadores SET valor = valor + 1 OUTPUT INSERTED.valor WHERE nombre = @nombre');
+        const row = result.recordset[0];
+        if (!row) throw new Error(`Contador '${counter}' no encontrado`);
+        return `${prefix}-${String(row.valor).padStart(padding, '0')}`;
+      },
+    };
+    const result = await fn(client);
+    await tx.commit();
+    return result;
+  } catch (err) {
+    try { await tx.rollback(); } catch { /* la transacción pudo no haber comenzado */ }
+    throw err;
+  }
+}
+
+// `pool` se expone como getter: la variable arranca en `null` y `initDB()` la
+// asigna después, así que exportar el valor directo daría siempre `null`.
+export default {
+  get pool() { return pool; },
+  query, queryOne, exec, execOne, nextId, findUserByNombre, initDB, withTransaction, bcrypt, ROUNDS,
+};

@@ -64,6 +64,11 @@ const router = express.Router();
 
 const CONDICIONES   = ['nuevo', 'excelente', 'bueno', 'regular', 'danado'];
 const ESTADOS_INV   = ['disponible', 'en_uso', 'en_prestamo', 'en_reparacion', 'de_baja'];
+
+/** Error con código HTTP, para lanzar validaciones desde dentro de una transacción y mapearlas al status correcto en el catch de la ruta. */
+class HttpError extends Error {
+  constructor(public status: number, message: string) { super(message); this.name = 'HttpError'; }
+}
 const TIPOS_MANEJO  = ['unidad', 'cantidad'];
 
 /**
@@ -544,29 +549,6 @@ router.post('/loans', ...requireSuperadminOrAcceso('prestamos'), async (req: Req
     if (!rawItems.every((it: any) => it && it.inventoryId))
       return res.status(400).json({ error: 'Cada equipo requiere inventoryId' });
 
-    // Cargar y validar TODOS los equipos antes de crear nada, para no dejar un
-    // préstamo a medias si alguno no está disponible.
-    const preparados: { item: any; cantSolicitada: number }[] = [];
-    for (const it of rawItems) {
-      const item = await db.queryOne<any>('SELECT * FROM inventario WHERE id = ?', [it.inventoryId]);
-      if (!item) return res.status(404).json({ error: `Equipo ${it.inventoryId} no encontrado en inventario` });
-
-      let cantSolicitada = 1;
-      if (item.tipo_manejo === 'unidad') {
-        if (item.estado === 'en_prestamo')
-          return res.status(409).json({ error: `El equipo ${item.marca} ${item.modelo || item.tipo} ya está prestado` });
-      } else {
-        cantSolicitada = parseInt(it.cantidad, 10);
-        if (!Number.isInteger(cantSolicitada) || cantSolicitada < 1)
-          return res.status(400).json({ error: 'La cantidad a prestar debe ser un número entero mayor o igual a 1' });
-        const prestado   = await getCantidadPrestada(it.inventoryId);
-        const disponible = (item.cantidad_total || 0) - prestado;
-        if (cantSolicitada > disponible)
-          return res.status(409).json({ error: `Solo hay ${disponible} unidades disponibles de ${item.marca} ${item.modelo || item.tipo}` });
-      }
-      preparados.push({ item, cantSolicitada });
-    }
-
     let empleadoId: number | null = null;
     const u = await db.findUserByNombre(empleado);
     if (u) empleadoId = u.id;
@@ -579,47 +561,75 @@ router.post('/loans', ...requireSuperadminOrAcceso('prestamos'), async (req: Req
     const fotosEntrega = resolveMobilePhotos(mobileTokens);
     const fotosJson = fotosEntrega.length ? JSON.stringify(fotosEntrega) : null;
 
-    // grupo_id solo cuando hay más de un equipo; un solo equipo mantiene el
-    // comportamiento anterior (grupo_id NULL).
-    const grupoId = preparados.length > 1 ? await db.nextId('grupos', 'GRP') : null;
+    // Todo dentro de una transacción: se bloquean las filas de inventario
+    // (UPDLOCK, HOLDLOCK) al validar disponibilidad para que dos préstamos
+    // concurrentes del mismo equipo no puedan sobre-prestarlo, y si algo falla
+    // a mitad no queda un préstamo parcial (rollback).
+    const { loans, grupoId, resumen } = await db.withTransaction(async (tx) => {
+      const preparados: { item: any; cantSolicitada: number }[] = [];
+      for (const it of rawItems) {
+        const item = await tx.queryOne<any>('SELECT * FROM inventario WITH (UPDLOCK, HOLDLOCK) WHERE id = ?', [it.inventoryId]);
+        if (!item) throw new HttpError(404, `Equipo ${it.inventoryId} no encontrado en inventario`);
 
-    const createdIds: string[] = [];
-    for (let idx = 0; idx < preparados.length; idx++) {
-      const { item, cantSolicitada } = preparados[idx];
-      const id = await db.nextId('prestamos', 'PREST');
-      // Las fotos de entrega se guardan una sola vez, en el primer préstamo del grupo.
-      const fotosParaEste = idx === 0 ? fotosJson : null;
-      await db.query(
-        `INSERT INTO prestamos (id, inventario_id, empleado_id, empleado_nombre, departamento,
-                                fecha_prestamo, fecha_devolucion_estimada, estado, autorizado_por_id, notas, cantidad, fotos_entrega, grupo_id, permanente)
-         VALUES (?, ?, ?, ?, ?, NOW(), ?, 'activo', ?, ?, ?, ?, ?, ?)`,
-        [id, item.id, empleadoId, empleado, departamento || '',
-         fechaDev, autorizadoId, notas || '', cantSolicitada, fotosParaEste, grupoId, permanente]
-      );
-
-      if (item.tipo_manejo === 'unidad') {
-        await db.query(
-          `UPDATE inventario SET estado = 'en_prestamo', responsable_id = ?, updated_at = NOW() WHERE id = ?`,
-          [empleadoId, item.id]
-        );
+        let cantSolicitada = 1;
+        if (item.tipo_manejo === 'unidad') {
+          if (item.estado === 'en_prestamo')
+            throw new HttpError(409, `El equipo ${item.marca} ${item.modelo || item.tipo} ya está prestado`);
+        } else {
+          cantSolicitada = parseInt(it.cantidad, 10);
+          if (!Number.isInteger(cantSolicitada) || cantSolicitada < 1)
+            throw new HttpError(400, 'La cantidad a prestar debe ser un número entero mayor o igual a 1');
+          const row = await tx.queryOne<{ prestado: number }>(
+            'SELECT ISNULL(SUM(cantidad - cantidad_devuelta), 0) AS prestado FROM prestamos WHERE inventario_id = ? AND estado = ?',
+            [it.inventoryId, 'activo']
+          );
+          const disponible = (item.cantidad_total || 0) - (row?.prestado || 0);
+          if (cantSolicitada > disponible)
+            throw new HttpError(409, `Solo hay ${disponible} unidades disponibles de ${item.marca} ${item.modelo || item.tipo}`);
+        }
+        preparados.push({ item, cantSolicitada });
       }
 
-      await db.query(
-        'INSERT INTO historial_inventario (inventario_id, usuario_id, accion) VALUES (?, ?, ?)',
-        [item.id, empleadoId,
-         item.tipo_manejo === 'cantidad' ? `Préstamo ${id} — ${cantSolicitada} unidades a ${empleado}` : `Préstamo ${id} — ${empleado}`]
-      );
-      createdIds.push(id);
-    }
+      const grupoId = preparados.length > 1 ? await tx.nextId('grupos', 'GRP') : null;
+      const createdIds: string[] = [];
+      for (let idx = 0; idx < preparados.length; idx++) {
+        const { item, cantSolicitada } = preparados[idx];
+        const id = await tx.nextId('prestamos', 'PREST');
+        // Las fotos de entrega se guardan una sola vez, en el primer préstamo del grupo.
+        const fotosParaEste = idx === 0 ? fotosJson : null;
+        await tx.query(
+          `INSERT INTO prestamos (id, inventario_id, empleado_id, empleado_nombre, departamento,
+                                  fecha_prestamo, fecha_devolucion_estimada, estado, autorizado_por_id, notas, cantidad, fotos_entrega, grupo_id, permanente)
+           VALUES (?, ?, ?, ?, ?, NOW(), ?, 'activo', ?, ?, ?, ?, ?, ?)`,
+          [id, item.id, empleadoId, empleado, departamento || '',
+           fechaDev, autorizadoId, notas || '', cantSolicitada, fotosParaEste, grupoId, permanente]
+        );
 
-    await logAudit(req.user!.nombre,
-      'Registró préstamo', 'prestamo', grupoId || createdIds[0],
-      `${grupoId ? `${grupoId} (${createdIds.length} equipos)` : `${createdIds[0]}: ${preparados[0].item.id}`} → ${empleado}${departamento ? ' (' + departamento + ')' : ''}`);
+        if (item.tipo_manejo === 'unidad') {
+          await tx.query(
+            `UPDATE inventario SET estado = 'en_prestamo', responsable_id = ?, updated_at = NOW() WHERE id = ?`,
+            [empleadoId, item.id]
+          );
+        }
 
-    const loans = await db.query(
-      `SELECT * FROM prestamos WHERE id IN (${createdIds.map(() => '?').join(',')})`, createdIds);
+        await tx.query(
+          'INSERT INTO historial_inventario (inventario_id, usuario_id, accion) VALUES (?, ?, ?)',
+          [item.id, empleadoId,
+           item.tipo_manejo === 'cantidad' ? `Préstamo ${id} — ${cantSolicitada} unidades a ${empleado}` : `Préstamo ${id} — ${empleado}`]
+        );
+        createdIds.push(id);
+      }
+
+      const loans = await tx.query(
+        `SELECT * FROM prestamos WHERE id IN (${createdIds.map(() => '?').join(',')})`, createdIds);
+      const resumen = `${grupoId ? `${grupoId} (${createdIds.length} equipos)` : `${createdIds[0]}: ${preparados[0].item.id}`} → ${empleado}${departamento ? ' (' + departamento + ')' : ''}`;
+      return { loans, grupoId, resumen };
+    });
+
+    await logAudit(req.user!.nombre, 'Registró préstamo', 'prestamo', grupoId || loans[0]?.id, resumen);
     res.status(201).json({ loans, grupoId });
   } catch (err) {
+    if (err instanceof HttpError) return res.status(err.status).json({ error: err.message });
     console.error(err);
     res.status(500).json({ error: 'Error al registrar préstamo' });
   }
@@ -654,108 +664,114 @@ router.post('/loans', ...requireSuperadminOrAcceso('prestamos'), async (req: Req
  */
 router.patch('/loans/:id', ...requireSuperadminOrAcceso('prestamos'), async (req: Request, res: Response) => {
   try {
-    const id   = req.params.id;
-    const loan = await db.queryOne<any>('SELECT * FROM prestamos WHERE id = ?', [id]);
-    if (!loan) return res.status(404).json({ error: 'Préstamo no encontrado' });
+    const id = req.params.id;
 
-    const restante = loan.cantidad - loan.cantidad_devuelta;
+    // Resolver el empleado (si se está editando) antes de abrir la transacción:
+    // es una lectura y así el bloque de edición no depende del pool dentro de la tx.
+    const editEmpId = req.body.empleado !== undefined ? ((await db.findUserByNombre(req.body.empleado))?.id ?? null) : undefined;
 
-    // `estado: 'devuelto'` (flujo anterior, un solo clic) devuelve todo lo
-    // pendiente. `cantidadDevuelta` permite devolución parcial (artículos
-    // por cantidad, ej. devolver 1 de 2 mouse prestados).
-    let cantidadARegistrar: number | null = null;
-    if (req.body.cantidadDevuelta !== undefined) {
-      cantidadARegistrar = parseInt(req.body.cantidadDevuelta, 10);
-      if (!Number.isInteger(cantidadARegistrar) || cantidadARegistrar < 1)
-        return res.status(400).json({ error: 'La cantidad a devolver debe ser un número entero mayor o igual a 1' });
-    } else if (req.body.estado === 'devuelto') {
-      cantidadARegistrar = restante;
-    }
+    // Auditorías a emitir DESPUÉS del commit (logAudit usa el pool, no la tx;
+    // emitirlas dentro dejaría bitácora aunque la transacción se revierta).
+    const audits: { accion: string; detalle: string }[] = [];
 
-    if (cantidadARegistrar !== null) {
-      if (loan.estado === 'devuelto')
-        return res.status(409).json({ error: 'Este préstamo ya fue devuelto por completo' });
-      if (cantidadARegistrar > restante)
-        return res.status(400).json({ error: `Solo quedan ${restante} unidades pendientes de devolver en este préstamo` });
+    const loanFinal = await db.withTransaction(async (tx) => {
+      // Se bloquea la fila del préstamo (UPDLOCK, HOLDLOCK) para serializar el
+      // read-modify-write de la devolución (evita dobles devoluciones/carreras).
+      const loan = await tx.queryOne<any>('SELECT * FROM prestamos WITH (UPDLOCK, HOLDLOCK) WHERE id = ?', [id]);
+      if (!loan) throw new HttpError(404, 'Préstamo no encontrado');
 
-      if (req.body.condicionDevolucion !== undefined && !CONDICIONES.includes(req.body.condicionDevolucion))
-        return res.status(400).json({ error: 'Condición de devolución inválida' });
+      const restante = loan.cantidad - loan.cantidad_devuelta;
 
-      const nuevaDevuelta = loan.cantidad_devuelta + cantidadARegistrar;
-      const nuevoEstado   = nuevaDevuelta >= loan.cantidad ? 'devuelto' : 'activo';
-
-      await db.query(
-        `UPDATE prestamos SET cantidad_devuelta = ?, estado = ?,
-                              fecha_devolucion_real = ${nuevoEstado === 'devuelto' ? 'NOW()' : 'fecha_devolucion_real'},
-                              condicion_devolucion = COALESCE(?, condicion_devolucion),
-                              nota_devolucion = COALESCE(?, nota_devolucion)
-         WHERE id = ?`,
-        [nuevaDevuelta, nuevoEstado, req.body.condicionDevolucion || null, req.body.notaDevolucion || null, id]
-      );
-
-      // La condición reportada al devolver no solo queda impresa en el
-      // comprobante — alimenta la ficha real del equipo. Si vuelve "dañado",
-      // se manda a 'en_reparacion' en vez de 'disponible' para que nadie lo
-      // vuelva a prestar sin revisarlo primero. Solo aplica a modo 'unidad':
-      // en modo 'cantidad' el estado del ítem no representa disponibilidad
-      // (ver getCantidadPrestada) y una sola condición no describe N unidades.
-      const item = await db.queryOne<any>('SELECT tipo_manejo FROM inventario WHERE id = ?', [loan.inventario_id]);
-      let nuevoEstadoInv: string | null = null;
-      if (item?.tipo_manejo === 'unidad' && nuevoEstado === 'devuelto') {
-        const condDev = req.body.condicionDevolucion as string | undefined;
-        nuevoEstadoInv = condDev === 'danado' ? 'en_reparacion' : 'disponible';
-        await db.query(
-          `UPDATE inventario SET estado = ?, condicion = COALESCE(?, condicion), updated_at = NOW()
-           WHERE id = ? AND estado = 'en_prestamo'`,
-          [nuevoEstadoInv, condDev || null, loan.inventario_id]
-        );
+      // `estado: 'devuelto'` (un solo clic) devuelve todo lo pendiente;
+      // `cantidadDevuelta` permite devolución parcial de un lote.
+      let cantidadARegistrar: number | null = null;
+      if (req.body.cantidadDevuelta !== undefined) {
+        cantidadARegistrar = parseInt(req.body.cantidadDevuelta, 10);
+        if (!Number.isInteger(cantidadARegistrar) || cantidadARegistrar < 1)
+          throw new HttpError(400, 'La cantidad a devolver debe ser un número entero mayor o igual a 1');
+      } else if (req.body.estado === 'devuelto') {
+        cantidadARegistrar = restante;
       }
 
-      await db.query(
-        'INSERT INTO historial_inventario (inventario_id, accion) VALUES (?, ?)',
-        [loan.inventario_id, item?.tipo_manejo === 'cantidad'
-          ? `Devolución de ${cantidadARegistrar} unidades de ${loan.empleado_nombre} (${id})${nuevoEstado === 'activo' ? ` — quedan ${loan.cantidad - nuevaDevuelta} pendientes` : ''}`
-          : `Devolución de ${loan.empleado_nombre} (${id})${nuevoEstadoInv === 'en_reparacion' ? ' — regresó dañado, enviado a reparación' : ''}`]
-      );
-      await logAudit(req.user!.nombre,
-        'Registró devolución de préstamo', 'prestamo', id,
-        `${id}: ${loan.inventario_id} devuelto por ${loan.empleado_nombre}${item?.tipo_manejo === 'cantidad' ? ` (${cantidadARegistrar} uds.)` : ''}`);
-    }
+      if (cantidadARegistrar !== null) {
+        if (loan.estado === 'devuelto') throw new HttpError(409, 'Este préstamo ya fue devuelto por completo');
+        if (cantidadARegistrar > restante) throw new HttpError(400, `Solo quedan ${restante} unidades pendientes de devolver en este préstamo`);
+        if (req.body.condicionDevolucion !== undefined && !CONDICIONES.includes(req.body.condicionDevolucion))
+          throw new HttpError(400, 'Condición de devolución inválida');
 
-    // Edición de los datos del préstamo (independiente de la devolución):
-    // empleado, departamento, fecha estimada, autorizado por, notas y si es
-    // una asignación permanente. Se arma un UPDATE dinámico con lo enviado.
-    const sets: string[] = [];
-    const params: any[] = [];
-    if (req.body.empleado !== undefined) {
-      const eu = await db.findUserByNombre(req.body.empleado);
-      sets.push('empleado_nombre = ?', 'empleado_id = ?');
-      params.push(req.body.empleado, eu ? eu.id : null);
-    }
-    if (req.body.departamento !== undefined) { sets.push('departamento = ?'); params.push(req.body.departamento || ''); }
-    if (req.body.autorizadoPorId !== undefined) {
-      sets.push('autorizado_por_id = ?');
-      params.push(req.body.autorizadoPorId ? parseInt(req.body.autorizadoPorId, 10) || null : null);
-    }
-    if (req.body.notas !== undefined) { sets.push('notas = ?'); params.push(req.body.notas); }
-    if (req.body.permanente !== undefined) {
-      const perm = req.body.permanente ? 1 : 0;
-      sets.push('permanente = ?'); params.push(perm);
-      // Permanente = sin fecha de devolución esperada.
-      sets.push('fecha_devolucion_estimada = ?');
-      params.push(perm ? null : (req.body.fechaDevolucion || null));
-    } else if (req.body.fechaDevolucion !== undefined) {
-      sets.push('fecha_devolucion_estimada = ?');
-      params.push(req.body.fechaDevolucion || null);
-    }
-    if (sets.length) {
-      params.push(id);
-      await db.query(`UPDATE prestamos SET ${sets.join(', ')} WHERE id = ?`, params);
-      await logAudit(req.user!.nombre, 'Editó préstamo', 'prestamo', id, `${id} — datos actualizados`);
-    }
+        const nuevaDevuelta = loan.cantidad_devuelta + cantidadARegistrar;
+        const nuevoEstado   = nuevaDevuelta >= loan.cantidad ? 'devuelto' : 'activo';
 
-    res.json(await db.queryOne('SELECT * FROM prestamos WHERE id = ?', [id]));
+        await tx.query(
+          `UPDATE prestamos SET cantidad_devuelta = ?, estado = ?,
+                                fecha_devolucion_real = ${nuevoEstado === 'devuelto' ? 'NOW()' : 'fecha_devolucion_real'},
+                                condicion_devolucion = COALESCE(?, condicion_devolucion),
+                                nota_devolucion = COALESCE(?, nota_devolucion)
+           WHERE id = ?`,
+          [nuevaDevuelta, nuevoEstado, req.body.condicionDevolucion || null, req.body.notaDevolucion || null, id]
+        );
+
+        // La condición al devolver alimenta la ficha del equipo: si vuelve
+        // 'danado' se manda a 'en_reparacion'. Solo aplica a modo 'unidad'.
+        const item = await tx.queryOne<any>('SELECT tipo_manejo FROM inventario WHERE id = ?', [loan.inventario_id]);
+        let nuevoEstadoInv: string | null = null;
+        if (item?.tipo_manejo === 'unidad' && nuevoEstado === 'devuelto') {
+          const condDev = req.body.condicionDevolucion as string | undefined;
+          nuevoEstadoInv = condDev === 'danado' ? 'en_reparacion' : 'disponible';
+          await tx.query(
+            `UPDATE inventario SET estado = ?, condicion = COALESCE(?, condicion), updated_at = NOW()
+             WHERE id = ? AND estado = 'en_prestamo'`,
+            [nuevoEstadoInv, condDev || null, loan.inventario_id]
+          );
+        }
+
+        await tx.query(
+          'INSERT INTO historial_inventario (inventario_id, accion) VALUES (?, ?)',
+          [loan.inventario_id, item?.tipo_manejo === 'cantidad'
+            ? `Devolución de ${cantidadARegistrar} unidades de ${loan.empleado_nombre} (${id})${nuevoEstado === 'activo' ? ` — quedan ${loan.cantidad - nuevaDevuelta} pendientes` : ''}`
+            : `Devolución de ${loan.empleado_nombre} (${id})${nuevoEstadoInv === 'en_reparacion' ? ' — regresó dañado, enviado a reparación' : ''}`]
+        );
+        audits.push({
+          accion: 'Registró devolución de préstamo',
+          detalle: `${id}: ${loan.inventario_id} devuelto por ${loan.empleado_nombre}${item?.tipo_manejo === 'cantidad' ? ` (${cantidadARegistrar} uds.)` : ''}`,
+        });
+      }
+
+      // Edición de datos del préstamo (independiente de la devolución).
+      const sets: string[] = [];
+      const params: any[] = [];
+      if (req.body.empleado !== undefined) {
+        sets.push('empleado_nombre = ?', 'empleado_id = ?');
+        params.push(req.body.empleado, editEmpId ?? null);
+      }
+      if (req.body.departamento !== undefined) { sets.push('departamento = ?'); params.push(req.body.departamento || ''); }
+      if (req.body.autorizadoPorId !== undefined) {
+        sets.push('autorizado_por_id = ?');
+        params.push(req.body.autorizadoPorId ? parseInt(req.body.autorizadoPorId, 10) || null : null);
+      }
+      if (req.body.notas !== undefined) { sets.push('notas = ?'); params.push(req.body.notas); }
+      if (req.body.permanente !== undefined) {
+        const perm = req.body.permanente ? 1 : 0;
+        sets.push('permanente = ?'); params.push(perm);
+        sets.push('fecha_devolucion_estimada = ?');
+        params.push(perm ? null : (req.body.fechaDevolucion || null));
+      } else if (req.body.fechaDevolucion !== undefined) {
+        sets.push('fecha_devolucion_estimada = ?');
+        params.push(req.body.fechaDevolucion || null);
+      }
+      if (sets.length) {
+        params.push(id);
+        await tx.query(`UPDATE prestamos SET ${sets.join(', ')} WHERE id = ?`, params);
+        audits.push({ accion: 'Editó préstamo', detalle: `${id} — datos actualizados` });
+      }
+
+      return tx.queryOne('SELECT * FROM prestamos WHERE id = ?', [id]);
+    });
+
+    for (const a of audits) await logAudit(req.user!.nombre, a.accion, 'prestamo', id, a.detalle);
+    res.json(loanFinal);
   } catch (err) {
+    if (err instanceof HttpError) return res.status(err.status).json({ error: err.message });
     console.error(err);
     res.status(500).json({ error: 'Error al actualizar préstamo' });
   }
