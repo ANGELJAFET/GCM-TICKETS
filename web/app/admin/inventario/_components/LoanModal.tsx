@@ -23,11 +23,13 @@ export interface LoanFormValues {
   fechaDevolucion: string;
   autorizadoPorId: string;
   notas: string;
+  /** Asignación permanente: se entrega de forma indefinida, sin fecha de devolución. */
+  permanente: boolean;
   /** Tokens de sesiones de subida por QR con las fotos del estado del equipo al entregarlo. */
   mobileTokens: string[];
 }
 
-const EMPTY_FORM: LoanFormValues = { items: [], empleado: '', departamento: '', fechaDevolucion: '', autorizadoPorId: '', notas: '', mobileTokens: [] };
+const EMPTY_FORM: LoanFormValues = { items: [], empleado: '', departamento: '', fechaDevolucion: '', autorizadoPorId: '', notas: '', permanente: false, mobileTokens: [] };
 
 interface LoanModalProps {
   open: boolean;
@@ -212,7 +214,11 @@ export function LoanModal({ open, preselectedItemId, inventory, usuarios, admins
 
         <div className="grid grid-cols-2 gap-3.5 max-[560px]:grid-cols-1">
           <FormField label="Fecha estimada de devolución">
-            <Input type="date" value={form.fechaDevolucion} onChange={(e) => set('fechaDevolucion', e.target.value)} />
+            <Input type="date" value={form.fechaDevolucion} disabled={form.permanente} onChange={(e) => set('fechaDevolucion', e.target.value)} />
+            <label className="mt-1.5 flex items-center gap-1.5 text-[12px] text-admin-text-sec dark:text-admin-dark-text-sec">
+              <input type="checkbox" checked={form.permanente} onChange={(e) => set('permanente', e.target.checked)} className="h-3.5 w-3.5" />
+              Asignación permanente (sin devolución)
+            </label>
           </FormField>
           <FormField label="Autorizado por">
             <Select value={form.autorizadoPorId} onChange={(e) => set('autorizadoPorId', e.target.value)}>

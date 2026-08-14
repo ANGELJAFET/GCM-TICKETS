@@ -20,6 +20,7 @@ import { InventoryModal, type InventoryFormValues } from './_components/Inventor
 import { LoanModal, type LoanFormValues } from './_components/LoanModal';
 import { SimilarEquiposModal } from './_components/SimilarEquiposModal';
 import { ReturnConfirmModal, PartialReturnModal } from './_components/ReturnModals';
+import { EditLoanModal, type EditLoanValues } from './_components/EditLoanModal';
 import { filterInventory, filterLoans, invGroupKey } from './_lib/invHelpers';
 import { generateLoanWord } from './_lib/generateLoanWord';
 import { generateReturnWord } from './_lib/generateReturnWord';
@@ -78,6 +79,9 @@ function InventarioApp() {
   // Cuando se devuelve un grupo completo, guarda su id para aplicar la misma
   // condición/nota a todos sus equipos activos al confirmar (ver confirmReturnFull).
   const [returnGroupId, setReturnGroupId] = useState<string | null>(null);
+  // Préstamo (o grupo) en edición.
+  const [editLoan, setEditLoan] = useState<Loan | null>(null);
+  const editGroupLoans = editLoan ? (editLoan.grupoId ? loanList.filter((l) => l.grupoId === editLoan.grupoId) : [editLoan]) : [];
 
   const filteredEquipos = useMemo(() => filterInventory(items, query, estadoFilter, fechaDesde, fechaHasta), [items, query, estadoFilter, fechaDesde, fechaHasta]);
   const filteredLoans = useMemo(() => filterLoans(loanList, loanQuery, loanEstadoFilter, loanFechaDesde, loanFechaHasta), [loanList, loanQuery, loanEstadoFilter, loanFechaDesde, loanFechaHasta]);
@@ -153,6 +157,7 @@ function InventarioApp() {
         fechaDevolucion: values.fechaDevolucion || null,
         autorizadoPorId: values.autorizadoPorId ? parseInt(values.autorizadoPorId, 10) : null,
         notas: values.notas.trim(),
+        permanente: values.permanente,
         mobileTokens: values.mobileTokens,
       },
     });
@@ -226,6 +231,34 @@ function InventarioApp() {
     if (!first) return showToast('No hay equipos pendientes en este grupo');
     setReturnGroupId(grupoId);
     setReturnConfirmLoan(first);
+  }
+
+  function handleEditLoan(loanId: string) {
+    const loan = loanList.find((l) => l.id === loanId);
+    if (loan) setEditLoan(loan);
+  }
+
+  /** Guarda los cambios del préstamo (o de todos los equipos del grupo). */
+  async function confirmEditLoan(values: EditLoanValues) {
+    if (!editLoan) return;
+    const group = editLoan.grupoId ? loanList.filter((l) => l.grupoId === editLoan.grupoId) : [editLoan];
+    for (const l of group) {
+      await api(`/loans/${l.id}`, {
+        method: 'PATCH',
+        token,
+        body: {
+          empleado: values.empleado.trim(),
+          departamento: values.departamento.trim(),
+          fechaDevolucion: values.fechaDevolucion || null,
+          autorizadoPorId: values.autorizadoPorId ? parseInt(values.autorizadoPorId, 10) : null,
+          notas: values.notas.trim(),
+          permanente: values.permanente,
+        },
+      });
+    }
+    showToast('Préstamo actualizado ✓');
+    setEditLoan(null);
+    await reload();
   }
 
   function openSimilar(id: string) {
@@ -345,6 +378,7 @@ function InventarioApp() {
               onReturnFull={handleReturnFull}
               onReturnPartial={handleReturnPartial}
               onReturnGroup={handleReturnGroup}
+              onEdit={handleEditLoan}
               onGenerateWord={handleGenerateWord}
             />
           )}
@@ -434,6 +468,17 @@ function InventarioApp() {
         item={partialReturnLoan ? items.find((i) => i.id === partialReturnLoan.inventoryId) : undefined}
         onClose={() => setPartialReturnLoan(null)}
         onConfirm={confirmReturnPartial}
+      />
+
+      <EditLoanModal
+        key={editLoan?.id ?? 'edit-closed'}
+        open={!!editLoan}
+        loan={editLoan}
+        groupLoans={editGroupLoans}
+        usuarios={usuarios}
+        admins={adminList}
+        onClose={() => setEditLoan(null)}
+        onSave={confirmEditLoan}
       />
     </div>
   );

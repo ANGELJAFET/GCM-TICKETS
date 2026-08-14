@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { IconExchangeOff, IconPackage, IconPackages, IconUser, IconUserCheck, IconCalendarPlus, IconCalendarMinus, IconCheck, IconFileTypeDoc, IconClock, IconHistory, IconSearch } from '@tabler/icons-react';
+import { IconExchangeOff, IconPackage, IconPackages, IconUser, IconUserCheck, IconCalendarPlus, IconCalendarMinus, IconCheck, IconFileTypeDoc, IconClock, IconHistory, IconSearch, IconPencil, IconInfinity } from '@tabler/icons-react';
 import type { Loan } from '@/lib/types';
 import { DateRangeFilter } from './DateRangeFilter';
 
@@ -17,26 +17,34 @@ interface PrestamosViewProps {
   onReturnFull: (loanId: string) => void;
   onReturnPartial: (loanId: string) => void;
   onReturnGroup: (grupoId: string) => void;
+  onEdit: (loanId: string) => void;
   onGenerateWord: (loanId: string) => void;
 }
 
-/** ¿El préstamo está activo y venció su fecha estimada de devolución? */
+/** ¿El préstamo está activo y venció su fecha estimada de devolución? Las asignaciones permanentes nunca vencen. */
 function isVencido(loan: Loan): boolean {
+  if (loan.permanente) return false;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const devEst = loan.fechaDevolucionEstimada ? new Date(loan.fechaDevolucionEstimada) : null;
   return loan.estado === 'activo' && !!devEst && devEst < today;
 }
 
-/** Etiqueta de estado (Vencido / Activo / Devuelto). */
-function EstadoBadge({ vencido, activo }: { vencido: boolean; activo: boolean }) {
+/** Etiqueta de estado (Permanente / Vencido / Activo / Devuelto). */
+function EstadoBadge({ vencido, activo, permanente }: { vencido: boolean; activo: boolean; permanente?: boolean }) {
+  if (activo && permanente)
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-admin-purple-light px-2.25 py-0.75 text-[10px] font-bold text-admin-purple uppercase">
+        <IconInfinity size={11} /> Permanente
+      </span>
+    );
   if (vencido) return <span className="rounded-full bg-admin-red-light px-2.25 py-0.75 text-[10px] font-bold text-admin-red uppercase">Vencido</span>;
   if (activo) return <span className="rounded-full bg-admin-amber-light px-2.25 py-0.75 text-[10px] font-bold text-admin-amber uppercase">Activo</span>;
   return <span className="rounded-full bg-admin-green-light px-2.25 py-0.75 text-[10px] font-bold text-admin-green uppercase">Devuelto</span>;
 }
 
 /** Fila de un préstamo individual (sin grupo). Ofrece devolución total o parcial y generación del comprobante Word. */
-function LoanRow({ loan, onReturnFull, onReturnPartial, onGenerateWord }: { loan: Loan; onReturnFull: (id: string) => void; onReturnPartial: (id: string) => void; onGenerateWord: (id: string) => void }) {
+function LoanRow({ loan, onReturnFull, onReturnPartial, onEdit, onGenerateWord }: { loan: Loan; onReturnFull: (id: string) => void; onReturnPartial: (id: string) => void; onEdit: (id: string) => void; onGenerateWord: (id: string) => void }) {
   const vencido = isVencido(loan);
 
   return (
@@ -88,7 +96,7 @@ function LoanRow({ loan, onReturnFull, onReturnPartial, onGenerateWord }: { loan
         )}
       </div>
       <div className="flex justify-center">
-        <EstadoBadge vencido={vencido} activo={loan.estado === 'activo'} />
+        <EstadoBadge vencido={vencido} activo={loan.estado === 'activo'} permanente={loan.permanente} />
       </div>
       <div className="flex flex-col gap-1.5">
         {loan.estado === 'activo' &&
@@ -101,6 +109,11 @@ function LoanRow({ loan, onReturnFull, onReturnPartial, onGenerateWord }: { loan
               <IconCheck size={12} /> Retornado
             </button>
           ))}
+        {loan.estado === 'activo' && (
+          <button type="button" onClick={() => onEdit(loan.id)} className="inline-flex items-center gap-1.25 rounded-lg border-[1.5px] border-admin-border bg-white px-3 py-1.5 text-[11px] font-bold whitespace-nowrap text-admin-text-sec hover:border-admin-blue hover:text-admin-blue dark:bg-admin-dark-alt dark:text-admin-dark-text-sec">
+            <IconPencil size={12} /> Editar
+          </button>
+        )}
         <button
           type="button"
           onClick={() => onGenerateWord(loan.id)}
@@ -115,7 +128,7 @@ function LoanRow({ loan, onReturnFull, onReturnPartial, onGenerateWord }: { loan
 }
 
 /** Tarjeta de un préstamo agrupado: varios equipos entregados juntos a la misma persona (un solo comprobante y devolución conjunta). */
-function GroupCard({ grupoId, loans, onReturnGroup, onGenerateWord }: { grupoId: string; loans: Loan[]; onReturnGroup: (grupoId: string) => void; onGenerateWord: (loanId: string) => void }) {
+function GroupCard({ grupoId, loans, onReturnGroup, onEdit, onGenerateWord }: { grupoId: string; loans: Loan[]; onReturnGroup: (grupoId: string) => void; onEdit: (loanId: string) => void; onGenerateWord: (loanId: string) => void }) {
   const base = loans[0];
   const anyActive = loans.some((l) => l.estado === 'activo');
   const anyVencido = loans.some((l) => isVencido(l));
@@ -138,7 +151,7 @@ function GroupCard({ grupoId, loans, onReturnGroup, onGenerateWord }: { grupoId:
               </div>
             </div>
             <div className="ml-auto">
-              <EstadoBadge vencido={anyVencido} activo={anyActive} />
+              <EstadoBadge vencido={anyVencido} activo={anyActive} permanente={base.permanente} />
             </div>
           </div>
 
@@ -177,6 +190,11 @@ function GroupCard({ grupoId, loans, onReturnGroup, onGenerateWord }: { grupoId:
           {anyActive && (
             <button type="button" onClick={() => onReturnGroup(grupoId)} className="inline-flex items-center gap-1.25 rounded-lg bg-linear-to-br from-emerald-600 to-admin-green px-3 py-1.5 text-[11px] font-bold whitespace-nowrap text-white">
               <IconCheck size={12} /> Devolver todo
+            </button>
+          )}
+          {anyActive && (
+            <button type="button" onClick={() => onEdit(base.id)} className="inline-flex items-center gap-1.25 rounded-lg border-[1.5px] border-admin-border bg-white px-3 py-1.5 text-[11px] font-bold whitespace-nowrap text-admin-text-sec hover:border-admin-blue hover:text-admin-blue dark:bg-admin-dark-alt dark:text-admin-dark-text-sec">
+              <IconPencil size={12} /> Editar
             </button>
           )}
           <button
@@ -220,15 +238,15 @@ function entryActiva(e: Entry): boolean {
   return e.type === 'single' ? e.loan.estado === 'activo' : e.loans.some((l) => l.estado === 'activo');
 }
 
-function renderEntry(e: Entry, props: Pick<PrestamosViewProps, 'onReturnFull' | 'onReturnPartial' | 'onReturnGroup' | 'onGenerateWord'>) {
+function renderEntry(e: Entry, props: Pick<PrestamosViewProps, 'onReturnFull' | 'onReturnPartial' | 'onReturnGroup' | 'onEdit' | 'onGenerateWord'>) {
   if (e.type === 'single') {
-    return <LoanRow key={e.loan.id} loan={e.loan} onReturnFull={props.onReturnFull} onReturnPartial={props.onReturnPartial} onGenerateWord={props.onGenerateWord} />;
+    return <LoanRow key={e.loan.id} loan={e.loan} onReturnFull={props.onReturnFull} onReturnPartial={props.onReturnPartial} onEdit={props.onEdit} onGenerateWord={props.onGenerateWord} />;
   }
-  return <GroupCard key={e.grupoId} grupoId={e.grupoId} loans={e.loans} onReturnGroup={props.onReturnGroup} onGenerateWord={props.onGenerateWord} />;
+  return <GroupCard key={e.grupoId} grupoId={e.grupoId} loans={e.loans} onReturnGroup={props.onReturnGroup} onEdit={props.onEdit} onGenerateWord={props.onGenerateWord} />;
 }
 
 /** Vista "Préstamos": buscador + filtro de estado, y listado separado en "Activos" e "Historial" (devueltos). Los equipos prestados juntos se muestran agrupados. */
-export function PrestamosView({ allCount, loans, query, estado, fechaDesde, fechaHasta, onQueryChange, onEstadoChange, onFechaDesdeChange, onFechaHastaChange, onReturnFull, onReturnPartial, onReturnGroup, onGenerateWord }: PrestamosViewProps) {
+export function PrestamosView({ allCount, loans, query, estado, fechaDesde, fechaHasta, onQueryChange, onEstadoChange, onFechaDesdeChange, onFechaHastaChange, onReturnFull, onReturnPartial, onReturnGroup, onEdit, onGenerateWord }: PrestamosViewProps) {
   const toolbar = (
     <div className="flex flex-wrap items-center gap-2.5">
       <div className="relative min-w-50 flex-1">
@@ -278,7 +296,7 @@ export function PrestamosView({ allCount, loans, query, estado, fechaDesde, fech
   const entries = buildEntries(loans);
   const activos = entries.filter(entryActiva);
   const devueltos = entries.filter((e) => !entryActiva(e));
-  const handlers = { onReturnFull, onReturnPartial, onReturnGroup, onGenerateWord };
+  const handlers = { onReturnFull, onReturnPartial, onReturnGroup, onEdit, onGenerateWord };
 
   return (
     <div className="flex flex-col gap-5">

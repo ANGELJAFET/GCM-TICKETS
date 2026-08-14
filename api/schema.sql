@@ -745,6 +745,17 @@ IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('prestamos'
 GO
 
 -- ============================================================
+-- 15. Asignación permanente (préstamo sin fecha de devolución)
+--     permanente = 1 marca equipos entregados de forma indefinida a una
+--     persona (no se espera devolución, no cuenta como "vencido"). En ese
+--     caso fecha_devolucion_estimada queda NULL. Sigue pudiendo "devolverse"
+--     (liberarse) si algún día se reasigna.
+-- ============================================================
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('prestamos') AND name = 'permanente')
+  ALTER TABLE prestamos ADD permanente BIT NOT NULL DEFAULT 0;
+GO
+
+-- ============================================================
 -- Fin del script
 -- Siguiente paso: ejecutar procedimientos.sql y luego node server.js
 -- ============================================================

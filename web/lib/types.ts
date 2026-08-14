@@ -108,6 +108,8 @@ export interface Loan {
   /** Fecha del préstamo en formato `YYYY-MM-DD`, para filtrar por rango de fechas. */
   fechaPrestamoISO: string;
   fechaDevolucionEstimada: string;
+  /** Fecha estimada de devolución en `YYYY-MM-DD`, para prellenar el editor. */
+  fechaDevolucionEstimadaISO: string;
   fechaDevolucionReal: string | null;
   estado: LoanEstado;
   cantidad: number;
@@ -121,6 +123,8 @@ export interface Loan {
   equipoDesc: string;
   /** Id de grupo cuando varios equipos se prestaron juntos a la misma persona (comprobante único); `null` si es un préstamo de un solo equipo. */
   grupoId: string | null;
+  /** Asignación permanente: el equipo se entregó de forma indefinida (sin fecha de devolución); no cuenta como vencido. */
+  permanente: boolean;
 }
 
 /** Fila ligera de usuario para autocompletados (asignar ticket, responsable de inventario, etc.). */

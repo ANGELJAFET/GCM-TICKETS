@@ -481,6 +481,8 @@ router.get('/loans', ...requireSuperadminOrAcceso('prestamos'), async (req: Requ
       // Fecha del préstamo en YYYY-MM-DD (misma base local que fmtDate), para el filtro por rango de fechas.
       fechaPrestamoISO: new Date(l.fecha_prestamo).toLocaleDateString('en-CA'),
       fechaDevolucionEstimada: l.fecha_devolucion_estimada ? fmtDate(l.fecha_devolucion_estimada) : '',
+      // Misma fecha en YYYY-MM-DD, para prellenar el input date al editar.
+      fechaDevolucionEstimadaISO: l.fecha_devolucion_estimada ? new Date(l.fecha_devolucion_estimada).toLocaleDateString('en-CA') : '',
       fechaDevolucionReal: l.fecha_devolucion_real ? fmtDate(l.fecha_devolucion_real) : null,
       estado: l.estado,
       cantidad: l.cantidad,
@@ -491,7 +493,8 @@ router.get('/loans', ...requireSuperadminOrAcceso('prestamos'), async (req: Requ
       notaDevolucion: l.nota_devolucion || null,
       fotosEntrega: l.fotos_entrega ? JSON.parse(l.fotos_entrega) : [],
       equipoDesc: l.equipoDesc,
-      grupoId: l.grupo_id || null
+      grupoId: l.grupo_id || null,
+      permanente: !!l.permanente
     })));
   } catch (err) {
     console.error(err);
@@ -569,6 +572,10 @@ router.post('/loans', ...requireSuperadminOrAcceso('prestamos'), async (req: Req
     if (u) empleadoId = u.id;
     const autorizadoId = autorizadoPorId ? parseInt(autorizadoPorId, 10) || null : null;
 
+    // Asignación permanente: sin fecha de devolución esperada.
+    const permanente = req.body.permanente ? 1 : 0;
+    const fechaDev = permanente ? null : (fechaDevolucion || null);
+
     const fotosEntrega = resolveMobilePhotos(mobileTokens);
     const fotosJson = fotosEntrega.length ? JSON.stringify(fotosEntrega) : null;
 
@@ -584,10 +591,10 @@ router.post('/loans', ...requireSuperadminOrAcceso('prestamos'), async (req: Req
       const fotosParaEste = idx === 0 ? fotosJson : null;
       await db.query(
         `INSERT INTO prestamos (id, inventario_id, empleado_id, empleado_nombre, departamento,
-                                fecha_prestamo, fecha_devolucion_estimada, estado, autorizado_por_id, notas, cantidad, fotos_entrega, grupo_id)
-         VALUES (?, ?, ?, ?, ?, NOW(), ?, 'activo', ?, ?, ?, ?, ?)`,
+                                fecha_prestamo, fecha_devolucion_estimada, estado, autorizado_por_id, notas, cantidad, fotos_entrega, grupo_id, permanente)
+         VALUES (?, ?, ?, ?, ?, NOW(), ?, 'activo', ?, ?, ?, ?, ?, ?)`,
         [id, item.id, empleadoId, empleado, departamento || '',
-         fechaDevolucion || null, autorizadoId, notas || '', cantSolicitada, fotosParaEste, grupoId]
+         fechaDev, autorizadoId, notas || '', cantSolicitada, fotosParaEste, grupoId, permanente]
       );
 
       if (item.tipo_manejo === 'unidad') {
@@ -715,8 +722,37 @@ router.patch('/loans/:id', ...requireSuperadminOrAcceso('prestamos'), async (req
         `${id}: ${loan.inventario_id} devuelto por ${loan.empleado_nombre}${item?.tipo_manejo === 'cantidad' ? ` (${cantidadARegistrar} uds.)` : ''}`);
     }
 
-    if (req.body.notas !== undefined)
-      await db.query('UPDATE prestamos SET notas = ? WHERE id = ?', [req.body.notas, id]);
+    // Edición de los datos del préstamo (independiente de la devolución):
+    // empleado, departamento, fecha estimada, autorizado por, notas y si es
+    // una asignación permanente. Se arma un UPDATE dinámico con lo enviado.
+    const sets: string[] = [];
+    const params: any[] = [];
+    if (req.body.empleado !== undefined) {
+      const eu = await db.findUserByNombre(req.body.empleado);
+      sets.push('empleado_nombre = ?', 'empleado_id = ?');
+      params.push(req.body.empleado, eu ? eu.id : null);
+    }
+    if (req.body.departamento !== undefined) { sets.push('departamento = ?'); params.push(req.body.departamento || ''); }
+    if (req.body.autorizadoPorId !== undefined) {
+      sets.push('autorizado_por_id = ?');
+      params.push(req.body.autorizadoPorId ? parseInt(req.body.autorizadoPorId, 10) || null : null);
+    }
+    if (req.body.notas !== undefined) { sets.push('notas = ?'); params.push(req.body.notas); }
+    if (req.body.permanente !== undefined) {
+      const perm = req.body.permanente ? 1 : 0;
+      sets.push('permanente = ?'); params.push(perm);
+      // Permanente = sin fecha de devolución esperada.
+      sets.push('fecha_devolucion_estimada = ?');
+      params.push(perm ? null : (req.body.fechaDevolucion || null));
+    } else if (req.body.fechaDevolucion !== undefined) {
+      sets.push('fecha_devolucion_estimada = ?');
+      params.push(req.body.fechaDevolucion || null);
+    }
+    if (sets.length) {
+      params.push(id);
+      await db.query(`UPDATE prestamos SET ${sets.join(', ')} WHERE id = ?`, params);
+      await logAudit(req.user!.nombre, 'Editó préstamo', 'prestamo', id, `${id} — datos actualizados`);
+    }
 
     res.json(await db.queryOne('SELECT * FROM prestamos WHERE id = ?', [id]));
   } catch (err) {
