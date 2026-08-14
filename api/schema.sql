@@ -756,6 +756,76 @@ IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('prestamos'
 GO
 
 -- ============================================================
+-- 16. Normalización / integridad (cambios aditivos, sin impacto en el backend)
+--     Auditoría 2026-08: se agregan índices en FKs/filtros, una FK faltante,
+--     índices UNIQUE (departamento sin duplicados, serie única por equipo de
+--     unidad) y CHECKs de dominio cerrado. Los CHECK/FK usan WITH NOCHECK para
+--     no fallar contra filas históricas: solo validan filas nuevas. Los valores
+--     de los CHECK provienen de los enums que ya usa la app (no cambia nada de
+--     comportamiento; solo impiden datos fuera de dominio a nivel de BD).
+-- ============================================================
+
+-- 16.1  Índices en claves foráneas y columnas de filtro frecuentes
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_tickets_asignado_id'   AND object_id=OBJECT_ID('tickets'))            CREATE INDEX IX_tickets_asignado_id   ON tickets(asignado_id);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_tickets_reporter_id'   AND object_id=OBJECT_ID('tickets'))            CREATE INDEX IX_tickets_reporter_id   ON tickets(reporter_id);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_tickets_status'        AND object_id=OBJECT_ID('tickets'))            CREATE INDEX IX_tickets_status        ON tickets(status);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_comentarios_ticket_id' AND object_id=OBJECT_ID('comentarios'))        CREATE INDEX IX_comentarios_ticket_id ON comentarios(ticket_id);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_hist_tickets_ticket_id' AND object_id=OBJECT_ID('historial_tickets')) CREATE INDEX IX_hist_tickets_ticket_id ON historial_tickets(ticket_id);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_hist_inv_inventario_id' AND object_id=OBJECT_ID('historial_inventario')) CREATE INDEX IX_hist_inv_inventario_id ON historial_inventario(inventario_id);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_prestamos_inv_estado'  AND object_id=OBJECT_ID('prestamos'))          CREATE INDEX IX_prestamos_inv_estado  ON prestamos(inventario_id, estado);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_prestamos_grupo_id'    AND object_id=OBJECT_ID('prestamos'))          CREATE INDEX IX_prestamos_grupo_id    ON prestamos(grupo_id) WHERE grupo_id IS NOT NULL;
+GO
+
+-- 16.2  FK faltante: registro_aprobado_por → usuarios(id)
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_usuarios_aprobado_por')
+  ALTER TABLE usuarios WITH NOCHECK ADD CONSTRAINT FK_usuarios_aprobado_por FOREIGN KEY (registro_aprobado_por) REFERENCES usuarios(id);
+GO
+
+-- 16.3  UNIQUE: departamentos.nombre y número de serie por equipo de unidad
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='UQ_departamentos_nombre' AND object_id=OBJECT_ID('departamentos'))
+  CREATE UNIQUE INDEX UQ_departamentos_nombre ON departamentos(nombre);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_inventario_serie_unidad' AND object_id=OBJECT_ID('inventario'))
+  CREATE UNIQUE INDEX IX_inventario_serie_unidad ON inventario(numero_serie) WHERE tipo_manejo='unidad' AND numero_serie IS NOT NULL;
+GO
+
+-- 16.4  CHECK de dominio cerrado (valores = enums de la app)
+IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name='CK_tickets_status')
+  ALTER TABLE tickets WITH NOCHECK ADD CONSTRAINT CK_tickets_status CHECK (status IN ('abierto','en_progreso','cerrado'));
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name='CK_tickets_prioridad')
+  ALTER TABLE tickets WITH NOCHECK ADD CONSTRAINT CK_tickets_prioridad CHECK (prioridad IN ('Baja','Media','Alta','Crítica'));
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name='CK_tickets_categoria')
+  ALTER TABLE tickets WITH NOCHECK ADD CONSTRAINT CK_tickets_categoria CHECK (categoria IN ('Hardware','Software','Red','Acceso','Otro'));
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name='CK_inventario_condicion')
+  ALTER TABLE inventario WITH NOCHECK ADD CONSTRAINT CK_inventario_condicion CHECK (condicion IN ('nuevo','excelente','bueno','regular','danado'));
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name='CK_inventario_estado')
+  ALTER TABLE inventario WITH NOCHECK ADD CONSTRAINT CK_inventario_estado CHECK (estado IN ('disponible','en_uso','en_prestamo','en_reparacion','de_baja'));
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name='CK_inventario_tipo_manejo')
+  ALTER TABLE inventario WITH NOCHECK ADD CONSTRAINT CK_inventario_tipo_manejo CHECK (tipo_manejo IN ('unidad','cantidad'));
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name='CK_dispositivos_estado_fisico')
+  ALTER TABLE dispositivos WITH NOCHECK ADD CONSTRAINT CK_dispositivos_estado_fisico CHECK (estado_fisico IN ('nuevo','excelente','bueno','regular','danado'));
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name='CK_prestamos_estado')
+  ALTER TABLE prestamos WITH NOCHECK ADD CONSTRAINT CK_prestamos_estado CHECK (estado IN ('activo','devuelto'));
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name='CK_prestamos_cantidad')
+  ALTER TABLE prestamos WITH NOCHECK ADD CONSTRAINT CK_prestamos_cantidad CHECK (cantidad >= 1 AND cantidad_devuelta >= 0 AND cantidad_devuelta <= cantidad);
+GO
+
+-- ============================================================
 -- Fin del script
 -- Siguiente paso: ejecutar procedimientos.sql y luego node server.js
 -- ============================================================
