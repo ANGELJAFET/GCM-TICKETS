@@ -102,21 +102,26 @@ router.delete('/usuarios/:id', ...requireRole(3), async (req: Request, res: Resp
     const target = await db.queryOne<any>('SELECT id, username, nombre, apellido FROM usuarios WHERE id = ?', [req.params.id]);
     if (!target) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-    await db.query('UPDATE tickets      SET asignado_id       = NULL WHERE asignado_id      = ?', [req.params.id]);
-    await db.query('UPDATE tickets      SET reporter_id       = NULL WHERE reporter_id      = ?', [req.params.id]);
-    await db.query('UPDATE comentarios  SET autor_id          = NULL WHERE autor_id         = ?', [req.params.id]);
-    await db.query('UPDATE historial_tickets SET usuario_id   = NULL WHERE usuario_id       = ?', [req.params.id]);
-    await db.query('UPDATE dispositivos SET tecnico_id        = NULL WHERE tecnico_id        = ?', [req.params.id]);
-    await db.query('UPDATE inventario   SET responsable_id    = NULL WHERE responsable_id    = ?', [req.params.id]);
-    await db.query('UPDATE prestamos    SET empleado_id       = NULL WHERE empleado_id       = ?', [req.params.id]);
-    await db.query('UPDATE prestamos    SET autorizado_por_id = NULL WHERE autorizado_por_id = ?', [req.params.id]);
-    await db.query('UPDATE historial_inventario SET usuario_id = NULL WHERE usuario_id       = ?', [req.params.id]);
-    await db.query(
-      `UPDATE solicitudes_registro SET estado = 'eliminado', revisado_por = NULL
-       WHERE username = ? OR revisado_por = ?`,
-      [target.username, req.params.id]
-    );
-    await db.query('DELETE FROM usuarios WHERE id = ?', [req.params.id]);
+    // Toda la desvinculación de referencias + el DELETE van en una transacción:
+    // si algo falla a mitad, no queda un usuario parcialmente desvinculado y sin
+    // borrar (estado inconsistente de integridad referencial).
+    await db.withTransaction(async (tx) => {
+      await tx.query('UPDATE tickets      SET asignado_id       = NULL WHERE asignado_id      = ?', [req.params.id]);
+      await tx.query('UPDATE tickets      SET reporter_id       = NULL WHERE reporter_id      = ?', [req.params.id]);
+      await tx.query('UPDATE comentarios  SET autor_id          = NULL WHERE autor_id         = ?', [req.params.id]);
+      await tx.query('UPDATE historial_tickets SET usuario_id   = NULL WHERE usuario_id       = ?', [req.params.id]);
+      await tx.query('UPDATE dispositivos SET tecnico_id        = NULL WHERE tecnico_id        = ?', [req.params.id]);
+      await tx.query('UPDATE inventario   SET responsable_id    = NULL WHERE responsable_id    = ?', [req.params.id]);
+      await tx.query('UPDATE prestamos    SET empleado_id       = NULL WHERE empleado_id       = ?', [req.params.id]);
+      await tx.query('UPDATE prestamos    SET autorizado_por_id = NULL WHERE autorizado_por_id = ?', [req.params.id]);
+      await tx.query('UPDATE historial_inventario SET usuario_id = NULL WHERE usuario_id       = ?', [req.params.id]);
+      await tx.query(
+        `UPDATE solicitudes_registro SET estado = 'eliminado', revisado_por = NULL
+         WHERE username = ? OR revisado_por = ?`,
+        [target.username, req.params.id]
+      );
+      await tx.query('DELETE FROM usuarios WHERE id = ?', [req.params.id]);
+    });
 
     await logAudit(req.user!.username, 'Eliminó usuario', 'usuario', req.params.id,
       `@${target.username}${target.nombre ? ' — ' + [target.nombre, target.apellido].filter(Boolean).join(' ') : ''}`);
@@ -383,6 +388,8 @@ router.post('/admins', ...requireRole(3), async (req: Request, res: Response) =>
       return res.status(400).json({ error: 'Usuario, contraseña y nombre son requeridos' });
     if (!USERNAME_RE.test(username.trim()))
       return res.status(400).json({ error: 'El usuario debe tener 3-20 caracteres: letras, números o guión bajo.' });
+    if (String(password).length < 6)
+      return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
 
     const exists = await db.queryOne('SELECT id FROM usuarios WHERE username = ?', [username]);
     if (exists) return res.status(409).json({ error: 'Ese nombre de usuario ya existe' });

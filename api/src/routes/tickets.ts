@@ -93,26 +93,30 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
 
   let ticketId: string | null = null;
   try {
-    ticketId = await db.nextId('tickets', 'TK');
-
     let asignadoId: number | null = null;
     if (asignado && asignado !== 'Sin asignar') {
       const u = await db.findUserByNombre(asignado);
       if (u) asignadoId = u.id;
     }
 
-    await db.query(
-      `INSERT INTO tickets (id, titulo, descripcion, status, prioridad, categoria,
-                            reporter_id, asignado_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [ticketId, title, desc || 'Sin descripción.', status || 'abierto',
-       prioridad || 'Media', categoria || 'Otro', req.user!.id, asignadoId]
-    );
-
-    await db.query(
-      'INSERT INTO historial_tickets (ticket_id, usuario_id, accion) VALUES (?, ?, ?)',
-      [ticketId, req.user!.id, `Ticket creado por ${req.user!.nombre}`]
-    );
+    // El folio (nextId), el INSERT del ticket y su primera entrada de historial
+    // van en una transacción: si algo falla no queda un folio "quemado" sin
+    // ticket, ni un ticket sin su historial inicial.
+    ticketId = await db.withTransaction(async (tx) => {
+      const id = await tx.nextId('tickets', 'TK');
+      await tx.query(
+        `INSERT INTO tickets (id, titulo, descripcion, status, prioridad, categoria,
+                              reporter_id, asignado_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, title, desc || 'Sin descripción.', status || 'abierto',
+         prioridad || 'Media', categoria || 'Otro', req.user!.id, asignadoId]
+      );
+      await tx.query(
+        'INSERT INTO historial_tickets (ticket_id, usuario_id, accion) VALUES (?, ?, ?)',
+        [id, req.user!.id, `Ticket creado por ${req.user!.nombre}`]
+      );
+      return id;
+    });
 
     res.status(201).json(await loadTicket(ticketId));
   } catch (err) {
@@ -293,12 +297,16 @@ router.delete('/:id', ...requireRole(2), async (req: Request, res: Response) => 
   try {
     const id   = req.params.id;
     const atts = await db.query<any>('SELECT nombre_archivo FROM adjuntos WHERE ticket_id = ?', [id]);
-    atts.forEach(a => {
-      const fp = path.join(UPLOADS, a.nombre_archivo);
-      if (fs.existsSync(fp)) fs.unlinkSync(fp);
-    });
-    const tkt = await db.queryOne<any>('SELECT titulo, reporter_nombre FROM tickets WHERE id = ?', [id]);
+    const tkt  = await db.queryOne<any>('SELECT titulo, reporter_nombre FROM tickets WHERE id = ?', [id]);
+
+    // Primero se borra en BD (esto elimina en cascada adjuntos/comentarios/
+    // historial). Los archivos del disco se borran DESPUÉS de confirmar el
+    // DELETE, y de forma asíncrona (no bloquea el event loop). Así, si el
+    // DELETE fallara, los archivos seguirían intactos en vez de quedar
+    // huérfanos apuntados por un ticket que no se borró.
     await db.query('DELETE FROM tickets WHERE id = ?', [id]);
+    await Promise.all(atts.map(a => fs.promises.unlink(path.join(UPLOADS, a.nombre_archivo)).catch(() => {})));
+
     await logAudit(req.user!.nombre, 'Eliminó ticket', 'ticket', id,
       tkt ? `${id}: "${tkt.titulo}"` : id);
     res.json({ ok: true });

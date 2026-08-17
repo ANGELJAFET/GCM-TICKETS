@@ -8,6 +8,7 @@
  * Montado en `server.ts` bajo el prefijo `/api/mobile-upload`.
  */
 import express, { Request, Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import fs from 'fs';
 import crypto from 'crypto';
 import QRCode from 'qrcode';
@@ -16,6 +17,18 @@ import { mobileSessions, SESSION_TTL } from '../mobileSessions';
 import { getWebAppUrl } from '../helpers';
 
 const router = express.Router();
+
+// Estas rutas no llevan auth (el celular no tiene JWT), así que un rate limit
+// por IP evita que alguien en la LAN cree sesiones o suba archivos de 50 MB sin
+// límite (DoS de disco). El tope es holgado para no estorbar el uso real
+// (varias fotos por sesión de préstamo desde un mismo teléfono).
+const mobileLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiadas solicitudes. Espera unos minutos e intenta de nuevo.' },
+});
 
 /**
  * POST /api/mobile-upload/session
@@ -27,7 +40,7 @@ const router = express.Router();
  *
  * Respuesta 200: `{ token: string }`
  */
-router.post('/session', (req: Request, res: Response) => {
+router.post('/session', mobileLimiter, (req: Request, res: Response) => {
   const token = crypto.randomBytes(16).toString('hex');
   mobileSessions.set(token, { status: 'pending', file: null, filePath: null, files: [], filePaths: [], expiresAt: Date.now() + SESSION_TTL });
   res.json({ token });
@@ -87,7 +100,7 @@ router.get('/qr/:token', async (req: Request, res: Response) => {
  * - 400 — no se recibió archivo.
  * - 410 — la sesión no existe o ya expiró (el archivo recibido, si lo hubo, se borra).
  */
-router.post('/:token', mobileUpload.single('file'), (req: Request, res: Response) => {
+router.post('/:token', mobileLimiter, mobileUpload.single('file'), (req: Request, res: Response) => {
   const s = mobileSessions.get(req.params.token);
   if (!s || s.expiresAt < Date.now()) {
     if (req.file) fs.unlink(req.file.path, () => {});
