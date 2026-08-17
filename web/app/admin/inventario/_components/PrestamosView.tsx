@@ -43,85 +43,90 @@ function EstadoBadge({ vencido, activo, permanente }: { vencido: boolean; activo
   return <span className="rounded-full bg-admin-green-light px-2.25 py-0.75 text-[10px] font-bold text-admin-green uppercase">Devuelto</span>;
 }
 
-/** Fila de un préstamo individual (sin grupo). Ofrece devolución total o parcial y generación del comprobante Word. */
+/** Fila de un préstamo individual (sin grupo). Usa el mismo diseño de tarjeta
+ *  flexible que {@link GroupCard} para que la información se vea igual y no se
+ *  oculte en pantallas medianas. Ofrece devolución total o parcial y comprobante. */
 function LoanRow({ loan, onReturnFull, onReturnPartial, onEdit, onGenerateWord }: { loan: Loan; onReturnFull: (id: string) => void; onReturnPartial: (id: string) => void; onEdit: (id: string) => void; onGenerateWord: (id: string) => void }) {
   const vencido = isVencido(loan);
 
   return (
-    <div
-      className={clsx(
-        'grid grid-cols-[44px_1fr_160px_160px_100px_auto] items-center gap-3 border-b border-admin-border px-4.5 py-3.5 transition-colors max-[1100px]:grid-cols-[44px_1fr_130px_auto_auto] max-[700px]:grid-cols-[44px_1fr_auto_auto] last:border-b-0 dark:border-white/10',
-        vencido ? 'bg-red-50 hover:bg-red-100 dark:bg-red-950/20' : 'hover:bg-admin-light dark:hover:bg-admin-dark-alt'
-      )}
-    >
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-admin-blue-light text-admin-blue dark:bg-admin-blue/15">
-        <IconPackage size={20} />
-      </div>
-      <div className="min-w-0">
-        <div className="truncate text-[13px] font-bold">{loan.equipoDesc || loan.inventoryId}</div>
-        <div className="font-mono text-[11px] text-admin-text-sec dark:text-admin-dark-text-sec">
-          {loan.inventoryId} · <span className="font-extrabold text-admin-blue">{loan.id}</span>
+    <div className={clsx('border-b border-admin-border px-4.5 py-3.5 transition-colors last:border-b-0 dark:border-white/10', vencido ? 'bg-red-50 dark:bg-red-950/20' : 'hover:bg-admin-light dark:hover:bg-admin-dark-alt')}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-admin-blue-light text-admin-blue dark:bg-admin-blue/15">
+              <IconPackage size={20} />
+            </div>
+            <div className="min-w-0">
+              <div className="truncate text-[13px] font-bold">{loan.equipoDesc || loan.inventoryId}</div>
+              <div className="font-mono text-[11px] text-admin-text-sec dark:text-admin-dark-text-sec">
+                {loan.inventoryId} · <span className="font-extrabold text-admin-blue">{loan.id}</span>
+              </div>
+            </div>
+            <div className="ml-auto">
+              <EstadoBadge vencido={vencido} activo={loan.estado === 'activo'} permanente={loan.permanente} />
+            </div>
+          </div>
+
+          <div className="mt-2 flex items-center gap-1 pl-1 text-[12.5px] font-semibold">
+            <IconUser size={11} /> {loan.empleado}
+            {loan.departamento && <span className="font-normal text-admin-gray"> · {loan.departamento}</span>}
+          </div>
+
+          {loan.cantidad > 1 && (
+            <div className="mt-1 pl-1 font-mono text-[11px] text-admin-text-sec dark:text-admin-dark-text-sec">
+              Cantidad: {loan.cantidad} · Devuelto: {loan.cantidadDevuelta}
+              {loan.estado === 'activo' ? ` · Pendiente: ${loan.cantidad - loan.cantidadDevuelta}` : ''}
+            </div>
+          )}
+
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-0.5 pl-1">
+            <span className="flex items-center gap-1 text-[11px] text-admin-text-sec dark:text-admin-dark-text-sec">
+              <IconCalendarPlus size={10} /> {loan.fechaPrestamo}
+            </span>
+            {loan.fechaDevolucionEstimada && (
+              <span className={clsx('flex items-center gap-1 text-[11px]', vencido ? 'font-semibold text-admin-red dark:text-red-300' : 'text-admin-text-sec dark:text-admin-dark-text-sec')}>
+                <IconCalendarMinus size={10} /> Est. {loan.fechaDevolucionEstimada}
+              </span>
+            )}
+            {loan.fechaDevolucionReal && (
+              <span className="flex items-center gap-1 text-[11px] font-semibold text-admin-green">
+                <IconCheck size={10} /> Devuelto: {loan.fechaDevolucionReal}
+              </span>
+            )}
+            {loan.autorizadoPor && (
+              <span className="flex items-center gap-1 text-[11px] text-admin-gray">
+                <IconUserCheck size={10} /> Autorizado por: {loan.autorizadoPor}
+              </span>
+            )}
+          </div>
         </div>
-        {loan.cantidad > 1 && (
-          <div className="font-mono text-[11px] text-admin-text-sec dark:text-admin-dark-text-sec">
-            Cantidad: {loan.cantidad} · Devuelto: {loan.cantidadDevuelta}
-            {loan.estado === 'activo' ? ` · Pendiente: ${loan.cantidad - loan.cantidadDevuelta}` : ''}
-          </div>
-        )}
-      </div>
-      <div className="max-[700px]:hidden">
-        <div className="flex items-center gap-1 text-[13px] font-semibold">
-          <IconUser size={11} /> {loan.empleado}
-        </div>
-        {loan.departamento && <div className="mt-0.5 text-[11px] text-admin-gray">{loan.departamento}</div>}
-        {loan.autorizadoPor && (
-          <div className="mt-0.5 flex items-center gap-1 text-[11px] text-admin-gray">
-            <IconUserCheck size={10} /> Autorizado por: {loan.autorizadoPor}
-          </div>
-        )}
-      </div>
-      <div className="flex flex-col gap-0.75 max-[1100px]:hidden">
-        <div className="flex items-center gap-1 text-[11px] text-admin-text-sec dark:text-admin-dark-text-sec">
-          <IconCalendarPlus size={10} /> {loan.fechaPrestamo}
-        </div>
-        {loan.fechaDevolucionEstimada && (
-          <div className={clsx('flex items-center gap-1 text-[11px]', vencido ? 'font-semibold text-admin-red dark:text-red-300' : 'text-admin-text-sec dark:text-admin-dark-text-sec')}>
-            <IconCalendarMinus size={10} /> Est. {loan.fechaDevolucionEstimada}
-          </div>
-        )}
-        {loan.fechaDevolucionReal && (
-          <div className="flex items-center gap-1 text-[11px] font-semibold text-admin-green">
-            <IconCheck size={10} /> Devuelto: {loan.fechaDevolucionReal}
-          </div>
-        )}
-      </div>
-      <div className="flex justify-center">
-        <EstadoBadge vencido={vencido} activo={loan.estado === 'activo'} permanente={loan.permanente} />
-      </div>
-      <div className="flex flex-col gap-1.5">
-        {loan.estado === 'activo' &&
-          (loan.cantidad > 1 ? (
-            <button type="button" onClick={() => onReturnPartial(loan.id)} className="inline-flex items-center gap-1.25 rounded-lg bg-linear-to-br from-emerald-600 to-admin-green px-3 py-1.5 text-[11px] font-bold whitespace-nowrap text-white">
-              <IconCheck size={12} /> Devolver ({loan.cantidad - loan.cantidadDevuelta} pend.)
+
+        <div className="flex flex-col gap-1.5">
+          {loan.estado === 'activo' &&
+            (loan.cantidad > 1 ? (
+              <button type="button" onClick={() => onReturnPartial(loan.id)} className="inline-flex items-center gap-1.25 rounded-lg bg-linear-to-br from-emerald-600 to-admin-green px-3 py-1.5 text-[11px] font-bold whitespace-nowrap text-white">
+                <IconCheck size={12} /> Devolver ({loan.cantidad - loan.cantidadDevuelta} pend.)
+              </button>
+            ) : (
+              <button type="button" onClick={() => onReturnFull(loan.id)} className="inline-flex items-center gap-1.25 rounded-lg bg-linear-to-br from-emerald-600 to-admin-green px-3 py-1.5 text-[11px] font-bold whitespace-nowrap text-white">
+                <IconCheck size={12} /> Retornado
+              </button>
+            ))}
+          {loan.estado === 'activo' && (
+            <button type="button" onClick={() => onEdit(loan.id)} className="inline-flex items-center gap-1.25 rounded-lg border-[1.5px] border-admin-border bg-white px-3 py-1.5 text-[11px] font-bold whitespace-nowrap text-admin-text-sec hover:border-admin-blue hover:text-admin-blue dark:bg-admin-dark-alt dark:text-admin-dark-text-sec">
+              <IconPencil size={12} /> Editar
             </button>
-          ) : (
-            <button type="button" onClick={() => onReturnFull(loan.id)} className="inline-flex items-center gap-1.25 rounded-lg bg-linear-to-br from-emerald-600 to-admin-green px-3 py-1.5 text-[11px] font-bold whitespace-nowrap text-white">
-              <IconCheck size={12} /> Retornado
-            </button>
-          ))}
-        {loan.estado === 'activo' && (
-          <button type="button" onClick={() => onEdit(loan.id)} className="inline-flex items-center gap-1.25 rounded-lg border-[1.5px] border-admin-border bg-white px-3 py-1.5 text-[11px] font-bold whitespace-nowrap text-admin-text-sec hover:border-admin-blue hover:text-admin-blue dark:bg-admin-dark-alt dark:text-admin-dark-text-sec">
-            <IconPencil size={12} /> Editar
+          )}
+          <button
+            type="button"
+            onClick={() => onGenerateWord(loan.id)}
+            title={loan.estado === 'devuelto' ? 'Generar comprobante de devolución (Word)' : 'Generar comprobante de préstamo (Word)'}
+            className="inline-flex items-center gap-1.25 rounded-lg border-[1.5px] border-admin-border bg-white px-3 py-1.5 text-[11px] font-bold whitespace-nowrap text-admin-text-sec hover:border-admin-blue hover:text-admin-blue dark:bg-admin-dark-alt dark:text-admin-dark-text-sec"
+          >
+            <IconFileTypeDoc size={12} /> {loan.estado === 'devuelto' ? 'Comprobante devolución' : 'Comprobante'}
           </button>
-        )}
-        <button
-          type="button"
-          onClick={() => onGenerateWord(loan.id)}
-          title={loan.estado === 'devuelto' ? 'Generar comprobante de devolución (Word)' : 'Generar comprobante de préstamo (Word)'}
-          className="inline-flex items-center gap-1.25 rounded-lg border-[1.5px] border-admin-border bg-white px-3 py-1.5 text-[11px] font-bold whitespace-nowrap text-admin-text-sec hover:border-admin-blue hover:text-admin-blue dark:bg-admin-dark-alt dark:text-admin-dark-text-sec"
-        >
-          <IconFileTypeDoc size={12} /> {loan.estado === 'devuelto' ? 'Comprobante devolución' : 'Comprobante'}
-        </button>
+        </div>
       </div>
     </div>
   );
