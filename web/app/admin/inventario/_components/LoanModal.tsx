@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { IconExchange, IconCheck, IconLoader2, IconCamera, IconTrash } from '@tabler/icons-react';
 import { Modal, FormField, Input, Select, Textarea, Autocomplete } from '@/components/ui';
 import type { AdminUser, InventoryItem, UsuarioListado } from '@/lib/types';
+import { staffLabel } from '@/lib/staff';
 import { fileUrl } from '@/lib/api';
 import { invDisponible } from '../_lib/invHelpers';
 import { QRPhotosModal } from './QRPhotosModal';
@@ -225,7 +226,7 @@ export function LoanModal({ open, preselectedItemId, inventory, usuarios, admins
               <option value="">Sin especificar</option>
               {admins.map((a) => (
                 <option key={a.id} value={a.id}>
-                  {a.nombre} ({a.rol})
+                  {staffLabel(a)}
                 </option>
               ))}
             </Select>

@@ -51,9 +51,12 @@ function isVideo(name: string) {
   return /\.(mp4|mov|avi|webm|3gp)$/i.test(name);
 }
 
-/** Una entrada del historial de mensajes visto por el empleado; el autor de staff siempre se muestra como "Soporte Técnico" (nunca su nombre real). */
+/** Una entrada del historial de mensajes visto por el empleado. El staff se muestra
+ *  como "Soporte Técnico" (nunca su nombre real), salvo el superadmin, que se firma
+ *  con el username que ya trae `c.user` (ver `autorDisplay` en api/src/ticketLoader.ts). */
 function CommentItem({ c }: { c: TicketComment }) {
-  const isUser = c.rolNivel < 2;
+  const isUser  = c.rolNivel < 2;
+  const autor   = isUser || c.rolNivel >= 4 ? c.user || '—' : 'Soporte Técnico';
   return (
     <div
       className={
@@ -66,7 +69,7 @@ function CommentItem({ c }: { c: TicketComment }) {
       ) : (
         <IconHeadset size={12} className="mr-1 inline-block align-[-1px] text-portal-gray" />
       )}
-      <strong>{isUser ? c.user || '—' : 'Soporte Técnico'}</strong> ({c.ts}): {c.text}
+      <strong>{autor}</strong> ({c.ts}): {c.text}
     </div>
   );
 }

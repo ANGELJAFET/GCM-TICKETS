@@ -382,8 +382,11 @@ CREATE PROCEDURE sp_GetComentarios
 AS
 BEGIN
   SET NOCOUNT ON;
+  -- autor_username acompaña al nombre porque el superadmin se muestra por su
+  -- username en vez de su nombre real (la regla vive en ticketLoader.ts).
   SELECT CASE WHEN u.id IS NULL THEN c.autor_nombre
               ELSE LTRIM(RTRIM(CONCAT(u.nombre, ' ', ISNULL(u.apellido, '')))) END AS autor_display,
+         u.username AS autor_username,
          r.nivel AS autor_rol_nivel,
          c.texto, c.created_at
   FROM comentarios c

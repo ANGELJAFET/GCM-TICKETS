@@ -7,6 +7,23 @@ import db from './db';
 import { fmtDate, fmtTs } from './helpers';
 import { Ticket } from './types';
 
+/** Nivel de rol del superadmin (`roles.nivel`). */
+const NIVEL_SUPERADMIN = 4;
+
+/**
+ * Nombre con el que se firma un comentario o nota. El superadmin se muestra por
+ * su username (ej. "SOPORTEMILCIEN") en vez de su nombre real, para que su
+ * identidad y su rol no queden expuestos en el hilo del ticket; el resto del
+ * staff y los empleados conservan su nombre.
+ * @param fila Fila de comentario/nota con `autor_display`, `autor_username` y `autor_rol_nivel`.
+ * @returns El nombre a mostrar como autor.
+ */
+function autorDisplay(fila: any): string {
+  if (fila.autor_rol_nivel === NIVEL_SUPERADMIN && fila.autor_username)
+    return String(fila.autor_username).trim();
+  return fila.autor_display;
+}
+
 /**
  * Combina la fila base de un ticket con sus relaciones (comentarios, notas,
  * historial, adjuntos) en el objeto `Ticket` que consume el frontend,
@@ -31,8 +48,8 @@ function shapeTicket(row: any, comments: any[], notes: any[], history: any[], at
     reporterId: row.reporter_id || null,
     fecha:     fmtDate(row.created_at),
     fechaTs:   new Date(row.created_at).getTime(),
-    comments:  comments.map(c => ({ ts: fmtTs(c.created_at), user: c.autor_display, rolNivel: c.autor_rol_nivel, text: c.texto })),
-    notes:     notes.map(n => ({ ts: fmtTs(n.created_at), user: n.autor_display, rolNivel: n.autor_rol_nivel, text: n.texto })),
+    comments:  comments.map(c => ({ ts: fmtTs(c.created_at), user: autorDisplay(c), rolNivel: c.autor_rol_nivel, text: c.texto })),
+    notes:     notes.map(n => ({ ts: fmtTs(n.created_at), user: autorDisplay(n), rolNivel: n.autor_rol_nivel, text: n.texto })),
     history:   history.map(h => ({ ts: fmtTs(h.created_at), user: h.usuario_display, accion: h.accion })),
     attachments: attachments.map(a => ({
       name: a.nombre_original,
@@ -81,6 +98,7 @@ async function loadAllTickets(): Promise<Ticket[]> {
     SELECT c.ticket_id,
            CASE WHEN u.id IS NULL THEN c.autor_nombre
                 ELSE LTRIM(RTRIM(CONCAT(u.nombre,' ',ISNULL(u.apellido,'')))) END AS autor_display,
+           u.username AS autor_username,
            r.nivel AS autor_rol_nivel, c.texto, c.created_at
     FROM comentarios c
     LEFT JOIN usuarios u ON u.id = c.autor_id

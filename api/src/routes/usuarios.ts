@@ -273,8 +273,10 @@ router.patch('/usuarios/:id/permisos', ...requireRole(4), async (req: Request, r
   }
 });
 
-/** Etiqueta legible por nivel de rol (staff), usada solo para mostrar en autocompletados. */
-const ROL_LABEL: Record<number, string> = { 2: 'Técnico', 3: 'Admin', 4: 'Superadmin' };
+/** Etiqueta legible por nivel de rol (staff), usada solo para mostrar en autocompletados.
+ *  El superadmin (nivel 4) se omite a propósito: su cuenta no muestra etiqueta de
+ *  rol, para no revelar en los selectores quién tiene el nivel máximo del sistema. */
+const ROL_LABEL: Record<number, string> = { 2: 'Técnico', 3: 'Admin' };
 
 /**
  * GET /api/usuarios/lista
@@ -287,7 +289,9 @@ const ROL_LABEL: Record<number, string> = { 2: 'Técnico', 3: 'Admin', 4: 'Super
  *
  * Respuesta 200: `Array<{ id, nombre, esPortal: boolean, detalle: string }>`
  * - `esPortal`: `true` si es empleado (rol_nivel 1); `detalle` muestra su departamento/área.
- * - Si no es empleado, `detalle` muestra la etiqueta de su rol (Técnico/Admin/Superadmin).
+ * - Si no es empleado, `detalle` muestra la etiqueta de su rol (Técnico/Admin).
+ * - El superadmin (nivel 4) se identifica por su `username` en vez de su nombre y
+ *   viaja con `detalle` vacío, para no exponer ni su nombre real ni su rol.
  *
  * Códigos de estado:
  * - 200 — listado cargado.
@@ -299,6 +303,7 @@ router.get('/usuarios/lista', ...requireRole(2), async (req: Request, res: Respo
     const rows = await db.query<any>(
       `SELECT u.id,
               LTRIM(RTRIM(CONCAT(u.nombre, ' ', ISNULL(u.apellido, '')))) AS nombre,
+              u.username,
               u.area,
               d.nombre AS departamento,
               r.nivel
@@ -309,10 +314,13 @@ router.get('/usuarios/lista', ...requireRole(2), async (req: Request, res: Respo
        ORDER BY u.nombre`
     );
     res.json(rows.map(u => {
-      const esPortal = u.nivel === 1;
+      const esPortal     = u.nivel === 1;
+      const esSuperadmin = u.nivel === 4;
       return {
         id:       u.id,
-        nombre:   (u.nombre || '').trim(),
+        // El superadmin aparece con su username (ej. "SOPORTEMILCIEN") en lugar
+        // de su nombre real, y sin etiqueta de rol (ver ROL_LABEL).
+        nombre:   ((esSuperadmin ? u.username : u.nombre) || '').trim(),
         esPortal,
         detalle:  esPortal
           ? ((u.departamento || u.area || 'Sin departamento asignado').trim())

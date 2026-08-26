@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { IconEdit, IconCheck, IconLoader2, IconPackage } from '@tabler/icons-react';
 import { Modal, FormField, Input, Select, Textarea, Autocomplete } from '@/components/ui';
 import type { AdminUser, Loan, UsuarioListado } from '@/lib/types';
+import { staffLabel } from '@/lib/staff';
 
 /** Campos editables de un préstamo (compartidos por todos los equipos de un grupo). */
 export interface EditLoanValues {
@@ -143,7 +144,7 @@ export function EditLoanModal({ open, loan, groupLoans, usuarios, admins, onClos
               <option value="">Sin especificar</option>
               {admins.map((a) => (
                 <option key={a.id} value={a.id}>
-                  {a.nombre} ({a.rol})
+                  {staffLabel(a)}
                 </option>
               ))}
             </Select>
