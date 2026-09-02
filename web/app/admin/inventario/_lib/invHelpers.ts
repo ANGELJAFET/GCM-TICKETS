@@ -5,6 +5,7 @@
  * libre + estado, y estado de garantía.
  */
 import type { InventoryItem, InvEstado, InvCondicion, Loan } from '@/lib/types';
+import { matchesQuery } from '@/lib/search';
 
 /** Etiqueta legible por estado de inventario. */
 export const INV_ESTADO_LABEL: Record<InvEstado, string> = {
@@ -63,12 +64,15 @@ export function invGroupKey(item: InventoryItem): string {
   return [item.tipo, item.marca, item.modelo].map((v) => (v || '').trim().toLowerCase()).join('|');
 }
 
-function normalize(s: string) {
-  return s.toLowerCase();
-}
-
-function invSearchText(i: InventoryItem): string {
+/**
+ * Todo lo buscable de un equipo en un solo texto: código, tipo, marca,
+ * modelo, N° de serie, color, ubicación, responsable, notas, condición y
+ * estado. Lo usan tanto el buscador de la vista "Equipos" como el
+ * autocompletado de equipos del modal de préstamo.
+ */
+export function invSearchText(i: InventoryItem): string {
   return [
+    i.id,
     i.tipo,
     i.marca,
     i.modelo,
@@ -89,9 +93,10 @@ function invSearchText(i: InventoryItem): string {
 }
 
 /**
- * Filtra equipos por texto libre (todos los términos deben aparecer, en
- * cualquier orden, sobre un texto de búsqueda que concatena todos los
- * campos relevantes) y por `estado` exacto. Para ítems de tipo `'cantidad'`,
+ * Filtra equipos por texto libre ({@link matchesQuery} sobre {@link invSearchText}:
+ * todos los términos deben aparecer, en cualquier orden y sobre cualquier campo,
+ * ignorando palabras de relleno — "dell color negro" encuentra las Dell negras),
+ * por `estado` y por `condicion` exactos. Para ítems de tipo `'cantidad'`,
  * los estados `'en_prestamo'`/`'disponible'` se derivan de `cantidadPrestada`
  * en vez de comparar contra `item.estado` directamente.
  * @param items Equipos a filtrar.
@@ -100,9 +105,9 @@ function invSearchText(i: InventoryItem): string {
  * @param desde Fecha de ingreso mínima (`YYYY-MM-DD`, inclusive; vacío = sin límite inferior).
  * @param hasta Fecha de ingreso máxima (`YYYY-MM-DD`, inclusive; vacío = sin límite superior).
  */
-export function filterInventory(items: InventoryItem[], query: string, estado: string, desde = '', hasta = ''): InventoryItem[] {
-  const q = normalize(query.trim());
+export function filterInventory(items: InventoryItem[], query: string, estado: string, desde = '', hasta = '', condicion = ''): InventoryItem[] {
   return items.filter((i) => {
+    if (condicion && i.condicion !== condicion) return false;
     if (estado) {
       if (i.tipoManejo === 'cantidad') {
         const prestadas = i.cantidadPrestada || 0;
@@ -117,12 +122,7 @@ export function filterInventory(items: InventoryItem[], query: string, estado: s
     // Comparación lexicográfica de fechas ISO (YYYY-MM-DD), inclusiva en ambos extremos.
     if (desde && (i.fechaIngresoISO || '') < desde) return false;
     if (hasta && (i.fechaIngresoISO || '') > hasta) return false;
-    if (q) {
-      const texto = invSearchText(i);
-      const terminos = q.split(/\s+/);
-      if (!terminos.every((t) => texto.includes(t))) return false;
-    }
-    return true;
+    return matchesQuery(invSearchText(i), query);
   });
 }
 
@@ -153,17 +153,11 @@ function loanSearchText(l: Loan): string {
  * @param hasta Fecha de préstamo máxima (`YYYY-MM-DD`, inclusive; vacío = sin límite superior).
  */
 export function filterLoans(loans: Loan[], query: string, estado: string, desde = '', hasta = ''): Loan[] {
-  const q = normalize(query.trim());
   return loans.filter((l) => {
     if (estado && l.estado !== estado) return false;
     if (desde && (l.fechaPrestamoISO || '') < desde) return false;
     if (hasta && (l.fechaPrestamoISO || '') > hasta) return false;
-    if (q) {
-      const texto = loanSearchText(l);
-      const terminos = q.split(/\s+/);
-      if (!terminos.every((t) => texto.includes(t))) return false;
-    }
-    return true;
+    return matchesQuery(loanSearchText(l), query);
   });
 }
 

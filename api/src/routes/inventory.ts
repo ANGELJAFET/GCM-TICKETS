@@ -191,7 +191,11 @@ router.post('/devices', ...requireSuperadminOrAcceso('inventario'), async (req: 
  *
  * Auth: superadmin, o acceso al módulo `'inventario'`.
  *
- * Respuesta 200: `Array<{ id, tipo, marca, modelo, serie, color, condicion, estado, tipoManejo, cantidadTotal, cantidadPrestada, ubicacion, responsable, foto, notas, garantia, fechaIngreso, fechaTs, historial: [] }>`
+ * Respuesta 200: `Array<{ id, tipo, marca, modelo, serie, color, condicion, estado, tipoManejo, cantidadTotal, cantidadPrestada, ubicacion, responsable, responsableRegistrado, foto, notas, garantia, fechaIngreso, fechaTs, historial: [] }>`
+ *
+ * `responsable` puede venir de la FK a usuarios o, si el equipo está prestado
+ * a alguien sin cuenta, del nombre escrito en el préstamo activo;
+ * `responsableRegistrado` distingue ambos casos (ver `sp_GetInventory`).
  *
  * Códigos de estado:
  * - 200 — listado cargado.
@@ -216,6 +220,7 @@ router.get('/inventory', ...requireSuperadminOrAcceso('inventario'), async (req:
       cantidadPrestada: i.tipo_manejo === 'cantidad' ? (prestadoPorId[i.id] || 0) : 0,
       ubicacion: i.ubicacion,
       responsable: (i.responsable_display || '').trim() || '',
+      responsableRegistrado: !!i.responsable_registrado,
       foto: i.foto || null,
       notas: i.notas, garantia: i.garantia ? JSON.parse(i.garantia) : null,
       fechaIngreso: i.fecha_ingreso ? fmtDate(i.fecha_ingreso) : fmtDate(i.created_at),
@@ -300,7 +305,7 @@ router.post('/inventory', ...requireSuperadminOrAcceso('inventario'), async (req
 
     res.status(201).json({ id, tipo, marca, modelo, serie: modo === 'unidad' ? serie : '', color, condicion,
       estado: estadoInicial, tipoManejo: modo, cantidadTotal: cantTotal, cantidadPrestada: 0,
-      ubicacion, responsable, foto, notas, garantia, historial: [] });
+      ubicacion, responsable, responsableRegistrado: responsableId !== null, foto, notas, garantia, historial: [] });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al registrar equipo' });
@@ -480,6 +485,9 @@ router.get('/loans', ...requireSuperadminOrAcceso('prestamos'), async (req: Requ
       id: l.id,
       inventoryId: l.inventario_id,
       empleado: l.empleado_display?.trim() || l.empleado_nombre || '',
+      // Los préstamos a personas sin cuenta guardan solo el nombre escrito
+      // (empleado_id NULL); la vista de asignaciones lo señala como "sin cuenta".
+      empleadoRegistrado: l.empleado_id !== null,
       departamento: l.departamento,
       fechaPrestamo: fmtDate(l.fecha_prestamo),
       fechaPrestamoTs: new Date(l.fecha_prestamo).getTime(),

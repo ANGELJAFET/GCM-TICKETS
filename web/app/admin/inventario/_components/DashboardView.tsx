@@ -11,7 +11,7 @@ interface DashboardViewProps {
   items: InventoryItem[];
   canEquipos: boolean;
   onAddFirst: () => void;
-  onGoTo: (estado: string, tipo?: string) => void;
+  onGoTo: (estado: string, tipo?: string, condicion?: string) => void;
 }
 
 const chartDefaults = {
@@ -133,7 +133,7 @@ export function DashboardView({ items, canEquipos, onAddFirst, onGoTo }: Dashboa
               options={{
                 ...chartDefaults,
                 cutout: '68%',
-                onClick: (_, elems) => elems.length && onGoTo('', condData.keys[elems[0].index]),
+                onClick: (_, elems) => elems.length && onGoTo('', undefined, condData.keys[elems[0].index]),
               }}
             />
           </div>

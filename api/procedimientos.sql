@@ -517,10 +517,28 @@ CREATE PROCEDURE sp_GetInventory
 AS
 BEGIN
   SET NOCOUNT ON;
+  -- El responsable sale de la FK a usuarios; si el equipo está prestado a
+  -- alguien que todavía no tiene cuenta, empleado_id queda NULL y el único
+  -- registro de esa persona es el texto libre prestamos.empleado_nombre, así
+  -- que se usa como respaldo para que igual aparezca como responsable. Solo
+  -- aplica a equipos de tipo 'unidad': un lote por cantidad puede estar
+  -- repartido entre varias personas a la vez y no tiene un único responsable.
   SELECT i.*,
-         LTRIM(RTRIM(CONCAT(u.nombre, ' ', ISNULL(u.apellido, '')))) AS responsable_display
+         COALESCE(
+           NULLIF(LTRIM(RTRIM(CONCAT(u.nombre, ' ', ISNULL(u.apellido, '')))), ''),
+           NULLIF(LTRIM(RTRIM(p.empleado_nombre)), '')
+         ) AS responsable_display,
+         CASE WHEN i.responsable_id IS NOT NULL THEN 1 ELSE 0 END AS responsable_registrado
   FROM inventario i
   LEFT JOIN usuarios u ON u.id = i.responsable_id
+  OUTER APPLY (
+    SELECT TOP 1 pr.empleado_nombre
+    FROM prestamos pr
+    WHERE pr.inventario_id = i.id
+      AND pr.estado = 'activo'
+      AND i.tipo_manejo = 'unidad'
+    ORDER BY pr.fecha_prestamo DESC
+  ) p
   ORDER BY i.created_at DESC;
 END;
 GO

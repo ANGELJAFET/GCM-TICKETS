@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
+import { matchesQuery } from '@/lib/search';
 import { Pill } from './Pill';
 
 interface AutocompleteProps<T> {
@@ -11,6 +12,8 @@ interface AutocompleteProps<T> {
   onSelect: (item: T) => void;
   getLabel: (item: T) => string;
   getDetail?: (item: T) => string | undefined;
+  /** Texto sobre el que filtrar (por defecto solo el label): úsalo para buscar también por campos que no se muestran, como N° de serie o ubicación. */
+  getSearchText?: (item: T) => string;
   /** Etiqueta corta junto al nombre (ej. distinguir portal vs panel admin). */
   getBadge?: (item: T) => { label: string; className: string } | null | undefined;
   placeholder?: string;
@@ -28,8 +31,9 @@ interface AutocompleteProps<T> {
  * @param props.value Texto actual del input (controlado por el consumidor).
  * @param props.onChange Se llama con el nuevo texto en cada tecleo.
  * @param props.onSelect Se llama con el ítem elegido al hacer click en una opción.
- * @param props.getLabel Texto principal a mostrar/filtrar por cada ítem.
+ * @param props.getLabel Texto principal a mostrar por cada ítem (y a filtrar, si no se pasa `getSearchText`).
  * @param props.getDetail Texto secundario opcional (línea gris debajo del label).
+ * @param props.getSearchText Texto alternativo sobre el que filtrar, para buscar por campos que no se muestran (N° de serie, ubicación, estado…).
  * @param props.getBadge Etiqueta corta opcional junto al label (ej. distinguir portal vs panel admin).
  */
 export function Autocomplete<T>({
@@ -39,6 +43,7 @@ export function Autocomplete<T>({
   onSelect,
   getLabel,
   getDetail,
+  getSearchText,
   getBadge,
   placeholder,
   className,
@@ -56,10 +61,11 @@ export function Autocomplete<T>({
   }, []);
 
   const filtered = useMemo(() => {
-    const q = value.trim().toLowerCase();
-    const pool = q ? items.filter((it) => getLabel(it).toLowerCase().includes(q)) : items;
+    const q = value.trim();
+    const texto = getSearchText ?? getLabel;
+    const pool = q ? items.filter((it) => matchesQuery(texto(it), q)) : items;
     return pool.slice(0, 30);
-  }, [items, value, getLabel]);
+  }, [items, value, getLabel, getSearchText]);
 
   return (
     <div ref={rootRef} className={clsx('relative', className)}>

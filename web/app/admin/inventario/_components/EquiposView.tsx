@@ -8,10 +8,12 @@ interface EquiposViewProps {
   items: InventoryItem[];
   query: string;
   estado: string;
+  condicion: string;
   fechaDesde: string;
   fechaHasta: string;
   onQueryChange: (q: string) => void;
   onEstadoChange: (e: string) => void;
+  onCondicionChange: (c: string) => void;
   onFechaDesdeChange: (v: string) => void;
   onFechaHastaChange: (v: string) => void;
   onAdd: () => void;
@@ -22,8 +24,8 @@ interface EquiposViewProps {
   onDelete: (id: string) => void;
 }
 
-/** Vista "Equipos": buscador + filtro de estado y rango de fecha de ingreso, y grilla de tarjetas ({@link InvCard}). Es un componente controlado; el filtrado real ocurre en el padre (`invHelpers.filterInventory`). */
-export function EquiposView({ allCount, items, query, estado, fechaDesde, fechaHasta, onQueryChange, onEstadoChange, onFechaDesdeChange, onFechaHastaChange, onAdd, onOpenSimilar, onLoan, onReturn, onEdit, onDelete }: EquiposViewProps) {
+/** Vista "Equipos": buscador + filtros de estado, condición y rango de fecha de ingreso, y grilla de tarjetas ({@link InvCard}). Es un componente controlado; el filtrado real ocurre en el padre (`invHelpers.filterInventory`). */
+export function EquiposView({ allCount, items, query, estado, condicion, fechaDesde, fechaHasta, onQueryChange, onEstadoChange, onCondicionChange, onFechaDesdeChange, onFechaHastaChange, onAdd, onOpenSimilar, onLoan, onReturn, onEdit, onDelete }: EquiposViewProps) {
   return (
     <div className="flex flex-col gap-3.5">
       <div className="flex flex-wrap items-center gap-2.5">
@@ -33,7 +35,7 @@ export function EquiposView({ allCount, items, query, estado, fechaDesde, fechaH
             type="text"
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
-            placeholder="Buscar por marca, modelo, serie, condición, estado, ubicación, responsable…"
+            placeholder="Buscar libremente: marca, modelo, serie, color, condición, estado, ubicación, responsable…"
             className="h-9.5 w-full rounded-[10px] border-[1.5px] border-admin-border bg-admin-light pr-3.5 pl-9.5 text-[13px] outline-none focus:border-admin-blue focus:bg-white dark:border-white/10 dark:bg-admin-dark-bg dark:focus:bg-admin-dark-bg"
           />
         </div>
@@ -48,6 +50,18 @@ export function EquiposView({ allCount, items, query, estado, fechaDesde, fechaH
           <option value="en_prestamo">En préstamo</option>
           <option value="en_reparacion">En reparación</option>
           <option value="de_baja">De baja</option>
+        </select>
+        <select
+          value={condicion}
+          onChange={(e) => onCondicionChange(e.target.value)}
+          className="h-9.5 rounded-[10px] border-[1.5px] border-admin-border bg-admin-light px-3 text-[13px] outline-none focus:border-admin-blue dark:border-white/10 dark:bg-admin-dark-bg"
+        >
+          <option value="">Condición</option>
+          <option value="nuevo">Nuevo</option>
+          <option value="excelente">Excelente</option>
+          <option value="bueno">Bueno</option>
+          <option value="regular">Regular</option>
+          <option value="danado">Dañado</option>
         </select>
         <DateRangeFilter label="Ingreso" desde={fechaDesde} hasta={fechaHasta} onDesde={onFechaDesdeChange} onHasta={onFechaHastaChange} />
       </div>

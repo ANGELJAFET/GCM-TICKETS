@@ -86,6 +86,8 @@ export interface InventoryItem {
   cantidadPrestada: number;
   ubicacion: string;
   responsable: string;
+  /** `false` cuando el responsable proviene del nombre escrito en un préstamo activo y no de un usuario registrado. */
+  responsableRegistrado: boolean;
   foto: string | null;
   notas: string;
   garantia: Garantia | null;
@@ -102,6 +104,8 @@ export interface Loan {
   id: string;
   inventoryId: string;
   empleado: string;
+  /** `false` cuando el préstamo se registró a una persona que aún no tiene cuenta (solo se guardó su nombre). */
+  empleadoRegistrado: boolean;
   departamento: string;
   fechaPrestamo: string;
   fechaPrestamoTs: number;

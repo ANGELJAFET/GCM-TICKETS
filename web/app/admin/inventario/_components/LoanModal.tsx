@@ -6,7 +6,7 @@ import { Modal, FormField, Input, Select, Textarea, Autocomplete } from '@/compo
 import type { AdminUser, InventoryItem, UsuarioListado } from '@/lib/types';
 import { staffLabel } from '@/lib/staff';
 import { fileUrl } from '@/lib/api';
-import { invDisponible } from '../_lib/invHelpers';
+import { invDisponible, invSearchText, CONDICION_LABEL } from '../_lib/invHelpers';
 import { QRPhotosModal } from './QRPhotosModal';
 import type { MobilePhoto } from './QRPhotoModal';
 
@@ -140,8 +140,22 @@ export function LoanModal({ open, preselectedItemId, inventory, usuarios, admins
             onChange={setItemSearch}
             onSelect={addItem}
             getLabel={(i) => `${i.marca} ${i.modelo || ''} ${i.tipo}`}
-            getDetail={(i) => `${i.id}${i.tipoManejo === 'cantidad' ? ` · ${invDisponible(i)} disponibles de ${i.cantidadTotal}` : ' · Unidad individual'}${i.ubicacion ? ` · ${i.ubicacion}` : ''}`}
-            placeholder="Buscar y agregar equipo (laptop, mouse, teclado…)"
+            getDetail={(i) =>
+              [
+                i.id,
+                i.tipoManejo === 'cantidad' ? `${invDisponible(i)} disponibles de ${i.cantidadTotal}` : 'Unidad individual',
+                i.serie ? `S/N ${i.serie}` : '',
+                i.color,
+                i.ubicacion,
+                CONDICION_LABEL[i.condicion] || i.condicion,
+              ]
+                .filter(Boolean)
+                .join(' · ')
+            }
+            // Se busca sobre todos los datos del equipo (serie, color, ubicación,
+            // condición, notas…), no solo sobre el nombre que se muestra.
+            getSearchText={invSearchText}
+            placeholder="Buscar por marca, modelo, serie, color, ubicación, condición…"
           />
           {!availableItems.length && !form.items.length && (
             <div className="mt-1.5 rounded-lg border border-admin-red/20 bg-admin-red-light px-3 py-2 text-xs font-semibold text-red-800">No hay equipos disponibles para préstamo.</div>

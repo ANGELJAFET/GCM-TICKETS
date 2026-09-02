@@ -58,6 +58,7 @@ function InventarioApp() {
   const [view, setView] = useState<InvView>('dashboard');
   const [query, setQuery] = useState('');
   const [estadoFilter, setEstadoFilter] = useState('');
+  const [condicionFilter, setCondicionFilter] = useState('');
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
   const [loanQuery, setLoanQuery] = useState('');
@@ -83,15 +84,26 @@ function InventarioApp() {
   const [editLoan, setEditLoan] = useState<Loan | null>(null);
   const editGroupLoans = editLoan ? (editLoan.grupoId ? loanList.filter((l) => l.grupoId === editLoan.grupoId) : [editLoan]) : [];
 
-  const filteredEquipos = useMemo(() => filterInventory(items, query, estadoFilter, fechaDesde, fechaHasta), [items, query, estadoFilter, fechaDesde, fechaHasta]);
+  const filteredEquipos = useMemo(
+    () => filterInventory(items, query, estadoFilter, fechaDesde, fechaHasta, condicionFilter),
+    [items, query, estadoFilter, fechaDesde, fechaHasta, condicionFilter]
+  );
   const filteredLoans = useMemo(() => filterLoans(loanList, loanQuery, loanEstadoFilter, loanFechaDesde, loanFechaHasta), [loanList, loanQuery, loanEstadoFilter, loanFechaDesde, loanFechaHasta]);
   const activosCount = loanList.filter((l) => l.estado === 'activo').length;
 
-  function goToEquipos(estado: string, tipo?: string) {
+  /**
+   * Salta a la vista "Equipos" aplicando el filtro que corresponda al elemento
+   * clicado del dashboard. Siempre reescribe los tres filtros (aunque vengan
+   * vacíos) para que no queden residuos del clic anterior.
+   */
+  function goToEquipos(estado: string, tipo?: string, condicion?: string) {
     if (!canEquipos) return;
     setView('equipos');
     setEstadoFilter(estado || '');
     setQuery(tipo || '');
+    setCondicionFilter(condicion || '');
+    setFechaDesde('');
+    setFechaHasta('');
   }
 
   async function reload() {
@@ -337,10 +349,12 @@ function InventarioApp() {
               items={filteredEquipos}
               query={query}
               estado={estadoFilter}
+              condicion={condicionFilter}
               fechaDesde={fechaDesde}
               fechaHasta={fechaHasta}
               onQueryChange={setQuery}
               onEstadoChange={setEstadoFilter}
+              onCondicionChange={setCondicionFilter}
               onFechaDesdeChange={setFechaDesde}
               onFechaHastaChange={setFechaHasta}
               onAdd={() => {
@@ -385,6 +399,7 @@ function InventarioApp() {
           {view === 'asignaciones' && canPrestamos && (
             <ResponsablesView
               items={items}
+              loans={loanList}
               onEdit={(id) => {
                 const item = items.find((i) => i.id === id);
                 if (item) {
