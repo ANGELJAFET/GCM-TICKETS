@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { IconPackage, IconEdit, IconDeviceFloppy, IconLoader2, IconShieldCheck, IconLock, IconQrcode, IconPhoto } from '@tabler/icons-react';
 import { Modal, FormField, Input, Select, Textarea, Autocomplete } from '@/components/ui';
-import { fileUrl } from '@/lib/api';
+import { ApiError, fileUrl } from '@/lib/api';
 import type { InventoryItem, InvCondicion, InvEstado, InvTipoManejo, UsuarioListado } from '@/lib/types';
 import { INV_ESTADO_LABEL } from '../_lib/invHelpers';
 import { QRPhotoModal, type MobilePhoto } from './QRPhotoModal';
@@ -111,8 +111,10 @@ export function InventoryModal({ open, editingItem, usuarios, onClose, onSave }:
     setSaving(true);
     try {
       await onSave(editingItem?.id || null, form);
-    } catch {
-      setError('Error al guardar. Verifica la conexión.');
+    } catch (e) {
+      // El backend explica el motivo (ej. serie duplicada: 409); el texto de
+      // conexión se reserva para cuando no hubo respuesta del servidor.
+      setError(e instanceof ApiError ? e.message : 'Error al guardar. Verifica la conexión.');
     } finally {
       setSaving(false);
     }

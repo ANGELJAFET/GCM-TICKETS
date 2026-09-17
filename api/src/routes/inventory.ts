@@ -87,6 +87,42 @@ async function getCantidadPrestada(inventarioId: string): Promise<number> {
 }
 
 /**
+ * Busca un equipo de tipo `'unidad'` que ya tenga ese número de serie. La BD
+ * ya lo impide con el índice único `IX_inventario_serie_unidad`, pero dejarlo
+ * solo en manos de SQL Server devuelve un 500 opaco: esto lo detecta antes del
+ * INSERT/UPDATE para responder 409 nombrando el equipo que ocupa la serie
+ * (ver {@link esViolacionDeUnicidad} como red de seguridad).
+ * @param serie Número de serie ya normalizado (sin espacios alrededor).
+ * @param excluirId Id a excluir de la búsqueda — el propio equipo, al editarlo.
+ * @returns El equipo que ya usa esa serie, o `null` si está libre.
+ */
+async function buscarSerieDuplicada(serie: string, excluirId?: string): Promise<any | null> {
+  return db.queryOne<any>(
+    `SELECT id, tipo, marca, modelo FROM inventario
+     WHERE tipo_manejo = 'unidad' AND numero_serie = ?${excluirId ? ' AND id <> ?' : ''}`,
+    excluirId ? [serie, excluirId] : [serie]
+  );
+}
+
+/** Mensaje de 409 para una serie ya registrada, nombrando el equipo que la ocupa. */
+function mensajeSerieDuplicada(serie: string, dup: any): string {
+  const desc = [dup.tipo, dup.marca, dup.modelo].filter(Boolean).join(' ').trim();
+  return `El número de serie ${serie} ya está registrado en ${dup.id}${desc ? ` (${desc})` : ''}.`;
+}
+
+/**
+ * Red de seguridad para la carrera entre {@link buscarSerieDuplicada} y el
+ * INSERT/UPDATE: dos altas simultáneas con la misma serie pasan las dos la
+ * comprobación previa y una la rechaza el índice único. Detecta esos errores
+ * de SQL Server (2601 = índice único, 2627 = constraint UNIQUE) para
+ * traducirlos a 409 en vez de 500.
+ */
+function esViolacionDeUnicidad(err: unknown): boolean {
+  const n = (err as { number?: number } | null)?.number;
+  return n === 2601 || n === 2627;
+}
+
+/**
  * GET /api/devices
  * Lista los dispositivos externos recibidos para diagnóstico/reparación
  * (equipos de clientes, no del inventario propio).
@@ -254,6 +290,7 @@ router.get('/inventory', ...requireSuperadminOrAcceso('inventario'), async (req:
  * - 201 — equipo registrado.
  * - 400 — faltan campos requeridos, o `condicion`/`tipoManejo` inválidos, o falta serie/cantidad según el modo.
  * - 403 — sin acceso al módulo.
+ * - 409 — ya existe otro equipo de tipo `'unidad'` con ese número de serie.
  * - 500 — error al registrar.
  */
 router.post('/inventory', ...requireSuperadminOrAcceso('inventario'), async (req: Request, res: Response) => {
@@ -268,14 +305,20 @@ router.post('/inventory', ...requireSuperadminOrAcceso('inventario'), async (req
     if (!TIPOS_MANEJO.includes(modo)) return res.status(400).json({ error: 'Tipo de manejo inválido' });
 
     let cantTotal: number | null = null;
+    let serieNorm = '';
     if (modo === 'unidad') {
-      if (!serie || !serie.trim()) return res.status(400).json({ error: 'El número de serie es requerido' });
+      serieNorm = typeof serie === 'string' ? serie.trim() : '';
+      if (!serieNorm) return res.status(400).json({ error: 'El número de serie es requerido' });
+      const dup = await buscarSerieDuplicada(serieNorm);
+      if (dup) return res.status(409).json({ error: mensajeSerieDuplicada(serieNorm, dup) });
     } else {
       cantTotal = parseInt(cantidadTotal, 10);
       if (!Number.isInteger(cantTotal) || cantTotal < 1)
         return res.status(400).json({ error: 'La cantidad total debe ser un número entero mayor o igual a 1' });
     }
 
+    // Después de validar: nextId consume un folio de `contadores`, y salir por
+    // error más abajo dejaría un hueco en la numeración INV-xxx.
     const id = await db.nextId('inventario', 'INV');
 
     let responsableId: number | null = null;
@@ -291,7 +334,7 @@ router.post('/inventory', ...requireSuperadminOrAcceso('inventario'), async (req
                                estado, ubicacion, responsable_id, notas, garantia, foto, fecha_ingreso,
                                tipo_manejo, cantidad_total)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), ?, ?)`,
-      [id, tipo, marca, modelo || '', modo === 'unidad' ? serie : '', color || '',
+      [id, tipo, marca, modelo || '', serieNorm, color || '',
        condicion || 'bueno', estadoInicial, ubicacion || '', responsableId,
        notas || '', garantia ? JSON.stringify(garantia) : null, foto, modo, cantTotal]
     );
@@ -303,10 +346,14 @@ router.post('/inventory', ...requireSuperadminOrAcceso('inventario'), async (req
     await logAudit(req.user!.nombre, 'Agregó equipo al inventario', 'inventario', id,
       `${id}: ${tipo} ${marca}${modelo ? ' ' + modelo : ''}`);
 
-    res.status(201).json({ id, tipo, marca, modelo, serie: modo === 'unidad' ? serie : '', color, condicion,
+    res.status(201).json({ id, tipo, marca, modelo, serie: serieNorm, color, condicion,
       estado: estadoInicial, tipoManejo: modo, cantidadTotal: cantTotal, cantidadPrestada: 0,
       ubicacion, responsable, responsableRegistrado: responsableId !== null, foto, notas, garantia, historial: [] });
   } catch (err) {
+    if (esViolacionDeUnicidad(err)) {
+      console.error(`[inventario] Alta rechazada: el número de serie "${req.body?.serie}" ya está registrado.`);
+      return res.status(409).json({ error: 'Ese número de serie ya está registrado en otro equipo.' });
+    }
     console.error(err);
     res.status(500).json({ error: 'Error al registrar equipo' });
   }
@@ -333,7 +380,7 @@ router.post('/inventory', ...requireSuperadminOrAcceso('inventario'), async (req
  * - 400 — algún valor no es válido (condición, estado, serie vacía, cantidad no entera).
  * - 403 — sin acceso al módulo.
  * - 404 — el equipo no existe.
- * - 409 — se intentó cambiar el estado de un equipo prestado, o bajar `cantidadTotal` por debajo de lo prestado.
+ * - 409 — se intentó cambiar el estado de un equipo prestado, bajar `cantidadTotal` por debajo de lo prestado, o poner un número de serie que ya usa otro equipo.
  * - 500 — error al actualizar.
  */
 router.patch('/inventory/:id', ...requireSuperadminOrAcceso('inventario'), async (req: Request, res: Response) => {
@@ -349,8 +396,13 @@ router.patch('/inventory/:id', ...requireSuperadminOrAcceso('inventario'), async
       return res.status(400).json({ error: 'Condición inválida' });
     if (req.body.estado !== undefined && !ESTADOS_INV.includes(req.body.estado))
       return res.status(400).json({ error: 'Estado inválido' });
-    if (item.tipo_manejo === 'unidad' && req.body.serie !== undefined && !req.body.serie.trim())
-      return res.status(400).json({ error: 'El número de serie es requerido' });
+    let serieNorm: string | null = null;
+    if (item.tipo_manejo === 'unidad' && req.body.serie !== undefined) {
+      serieNorm = typeof req.body.serie === 'string' ? req.body.serie.trim() : '';
+      if (!serieNorm) return res.status(400).json({ error: 'El número de serie es requerido' });
+      const dup = await buscarSerieDuplicada(serieNorm, id);
+      if (dup) return res.status(409).json({ error: mensajeSerieDuplicada(serieNorm, dup) });
+    }
 
     let nuevaCantTotal: number | null = null;
     if (item.tipo_manejo === 'cantidad' && req.body.cantidadTotal !== undefined) {
@@ -374,8 +426,11 @@ router.patch('/inventory/:id', ...requireSuperadminOrAcceso('inventario'), async
       if (item.tipo_manejo === 'cantidad' && key === 'serie') continue;
       if (req.body[key] !== undefined) {
         sets.push(`${campo} = ?`);
+        // La serie se guarda normalizada (ya validada arriba); así el índice
+        // único no ve " ABC123" y "ABC123" como series distintas.
         vals.push(campo === 'garantia'
           ? (req.body[key] ? JSON.stringify(req.body[key]) : null)
+          : campo === 'numero_serie' ? serieNorm
           : req.body[key]);
 
         if (campo === 'estado' && req.body[key] !== item.estado) {
@@ -418,6 +473,10 @@ router.patch('/inventory/:id', ...requireSuperadminOrAcceso('inventario'), async
     const updated = await db.queryOne<any>('SELECT * FROM inventario WHERE id = ?', [id]);
     res.json({ ...updated, garantia: updated.garantia ? JSON.parse(updated.garantia) : null, historial: [] });
   } catch (err) {
+    if (esViolacionDeUnicidad(err)) {
+      console.error(`[inventario] Edición de ${req.params.id} rechazada: el número de serie "${req.body?.serie}" ya está registrado.`);
+      return res.status(409).json({ error: 'Ese número de serie ya está registrado en otro equipo.' });
+    }
     console.error(err);
     res.status(500).json({ error: 'Error al actualizar equipo' });
   }

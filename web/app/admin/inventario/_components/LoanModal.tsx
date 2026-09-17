@@ -5,7 +5,7 @@ import { IconExchange, IconCheck, IconLoader2, IconCamera, IconTrash } from '@ta
 import { Modal, FormField, Input, Select, Textarea, Autocomplete } from '@/components/ui';
 import type { AdminUser, InventoryItem, UsuarioListado } from '@/lib/types';
 import { staffLabel } from '@/lib/staff';
-import { fileUrl } from '@/lib/api';
+import { ApiError, fileUrl } from '@/lib/api';
 import { invDisponible, invSearchText, CONDICION_LABEL } from '../_lib/invHelpers';
 import { QRPhotosModal } from './QRPhotosModal';
 import type { MobilePhoto } from './QRPhotoModal';
@@ -100,7 +100,12 @@ export function LoanModal({ open, preselectedItemId, inventory, usuarios, admins
     try {
       await onSave(form);
     } catch (e) {
-      setError(e instanceof Error && e.message.includes('409') ? 'No hay suficiente disponibilidad de algún equipo.' : 'Error al registrar préstamo.');
+      // El backend ya explica la causa exacta (equipo ya prestado, sin
+      // unidades disponibles, sin permiso sobre el módulo, sesión vencida…).
+      // Se muestra tal cual: el texto genérico dejaba al usuario sin forma de
+      // saber qué corregir. El fallback cubre los fallos sin respuesta del
+      // servidor (API caída o sin red), donde no hay ApiError que mostrar.
+      setError(e instanceof ApiError ? e.message : 'No se pudo contactar al servidor. Verifica que el backend esté corriendo.');
     } finally {
       setSaving(false);
     }
